@@ -26,7 +26,9 @@ jobs:
   attach:
     name: Verify and attach Windows v8 assets
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-    runs-on: ubuntu-latest
+    # Retry after the GitHub connection was reconnected; a fresh push event
+    # starts the job again without workflow_dispatch permissions.
+    runs-on: ubuntu-22.04
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: sa6i-windows-arabic-v8-test
