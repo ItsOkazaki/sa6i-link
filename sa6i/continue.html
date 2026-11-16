@@ -96,6 +96,7 @@
       <a href="STATUS.md">Status &amp; test checklist</a>
       <a href="CHANGES.md">Source changes</a>
       <a href="FALLBACK.md">Fallback</a>
+      <a href="ANDROID-EMULATOR.md">Emulator testing</a>
       <a href="CONTINUE.md">Handoff (Markdown)</a>
     </div>
 
@@ -109,7 +110,7 @@ Do not assume the previous chat's workspace files are available here: inspect th
 
 In this repo: upstream source is pinned to tag v0.1.5 (the release the Windows Arabic v8 test build patches). `sa6i/` holds the vendored v8 Windows baseline, the immutable fallback ZIP, the supplied logo, STATUS.md, CHANGES.md, FALLBACK.md, NOTICE.md, BROWSER-HYBRID.md and CONTINUE.md. The Android test APK stays external in Google Drive (file ID 1pD5q0r5UiKjOIT0xBBhWNqALevDlI7Rb); the Windows ZIP is 1DuD1SibgqDeKBGPdKx8aVtXdQmPqunaY. Branding/font/window-button changes exist only as version-locked binary patches in sa6i/baseline/windows-arabic-v8/source/ — do not rebrand upstream source strings without regenerating the Arabic catalogue.
 
-Read sa6i/STATUS.md and sa6i/CHANGES.md first, then ask me which open item to tackle next: (1) expert Arabic review + complete RTL layout, (2) Windows 7 window-button testing, (3) OPPO A54 / Android 11 real-device test, (4) performance presets, (5) source-level rebrand + catalogue regeneration, or (6) something else. No Rust, Qt or Android toolchain and no Windows 7 PC or OPPO A54 exist in the sandbox, so flag anything that cannot be verified here rather than claiming it was tested.</textarea>
+An emulator (HQarroum/docker-android) was assessed as a possible way to test the Android APK; see sa6i/ANDROID-EMULATOR.md. It can smoke-test the APK and the Android 11 system-language path, but the APK's core native library exists only for ARM while docker-android is x86_64, so ARM64 translation (or an x86_64 rebuild) is needed first, and OPPO A54 real-device testing remains required. Read sa6i/STATUS.md and sa6i/CHANGES.md first, then ask me which open item to tackle next: (1) expert Arabic review + complete RTL layout, (2) Windows 7 window-button testing, (3) OPPO A54 / Android 11 real-device test, (4) performance presets, (5) source-level rebrand + catalogue regeneration, or (6) something else. No Rust, Qt or Android toolchain and no Windows 7 PC or OPPO A54 exist in the sandbox, so flag anything that cannot be verified here rather than claiming it was tested.</textarea>
     </details>
   </div>
 
