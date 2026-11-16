@@ -21,7 +21,7 @@ point me at their Drive link or upload them.
 
 ## GitHub Release
 
-A downloadable **pre-release** now exists on GitHub: `https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test`, with the original ZIP and `SHA256SUMS.txt` attached. Verify a download with `sha256sum -c SHA256SUMS.txt` after extracting the ZIP beside the checksum file. The tag is intentionally non-`v` and marked pre-release so the imported upstream `release.yml` / `channels.yml` workflows do not publish their own binaries.
+A **pre-release** page now exists on GitHub: `https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test`. The original ZIP and `SHA256SUMS.txt` are vendored here under `sa6i/fallback/` and are the intended release assets; see the release notes for their current attachment status. Verify a download with `sha256sum -c SHA256SUMS.txt` after extracting the ZIP beside the checksum file. The tag is intentionally non-`v` and marked pre-release so the imported upstream `release.yml` / `channels.yml` workflows do not publish their own binaries.
 
 ## Original install notes (from `READ-ME-FIRST.txt`)
 
