@@ -29,6 +29,7 @@ Link logo (`sa6i/assets/sa6i-link-logo.png`).
 - [`sa6i/FALLBACK.md`](sa6i/FALLBACK.md) — the v8 baseline/fallback, install notes and the external APK
 - [`sa6i/BROWSER-HYBRID.md`](sa6i/BROWSER-HYBRID.md) — the browser idea, noted but not built
 - [`sa6i/NOTICE.md`](sa6i/NOTICE.md) — licenses and attribution
+- [`sa6i/CONTINUE.md`](sa6i/CONTINUE.md) / [`sa6i/continue.html`](sa6i/continue.html) — **Continue work** handoff for the next chat
 
 ## Not in this repository
 

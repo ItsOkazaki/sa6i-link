@@ -13,6 +13,8 @@ sa6i/
 ├── FALLBACK.md                   fallback, install notes, external APK
 ├── BROWSER-HYBRID.md             the browser idea (noted, not built)
 ├── NOTICE.md                     licences and attribution
+├── CONTINUE.md                   handoff prompt for the next chat
+├── continue.html                 "Continue work" button (copies that prompt)
 ├── assets/
 │   ├── sa6i-link-logo.png         the logo you supplied (image-1.png)
 │   └── Sa6i-Link.ico              icon from the v8 build's source overlay
@@ -97,3 +99,7 @@ Building from source still needs a proper Windows (Qt 6 + Rust) and Android
 [`../UPSTREAM-README-v0.1.5.md`](../UPSTREAM-README-v0.1.5.md) → "Building from source".
 The Qt base Arabic file `translations/qtbase_ar.qm` from the baseline must be
 staged beside/under the app just as the v8 installer notes describe.
+
+## Continuing in a new chat
+
+Open [`continue.html`](continue.html) and click **Continue work →**: it copies the handoff prompt from [`CONTINUE.md`](CONTINUE.md) to the clipboard. Paste it into a new chat so the next session starts with the full context instead of re-deriving it. The page also links to the pushed GitHub branch.
