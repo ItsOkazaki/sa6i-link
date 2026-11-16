@@ -9,6 +9,8 @@ Drive test binaries).
 Open **`sa6i/continue.html`** (or the live preview page) and click
 **Continue work →**. It copies the prompt below to the clipboard; paste it into
 a new chat to resume. The same page links straight to this branch on GitHub.
+That button sits directly beside a **Merge PR #1** button, which opens PR #1
+on GitHub (GitHub's own merge button cannot be changed from the API).
 
 ## Prompt to paste
 

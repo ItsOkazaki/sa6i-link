@@ -33,14 +33,26 @@
   .chip { font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; background: rgba(255,255,255,.02); }
   .chip b { color: var(--text); font-weight: 600; }
   .chip.open b { color: #ffbf69; }
+  .actions { display: flex; gap: 12px; align-items: stretch; }
+  .actions > * { flex: 1 1 0; min-width: 0; }
   button.continue {
-    display: block; width: 100%; border: 0; cursor: pointer; color: #fff;
-    font: 700 18px/1.2 inherit; padding: 20px 24px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; width: auto;
+    border: 0; cursor: pointer; color: #fff;
+    font: 700 18px/1.2 inherit; padding: 20px 18px; border-radius: 14px;
     background: linear-gradient(95deg, var(--violet), var(--blue));
     box-shadow: 0 12px 36px rgba(96,83,255,.28); transition: transform .15s ease, box-shadow .15s ease;
   }
   button.continue:hover { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(96,83,255,.38); }
   button.continue:active { transform: translateY(0); }
+  a.merge {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    text-decoration: none; color: #ddd8ff; font: 700 17px/1.2 inherit;
+    padding: 20px 16px; border-radius: 14px; border: 1px solid var(--violet);
+    background: rgba(139,92,246,.10); transition: background .15s ease, border-color .15s ease;
+  }
+  a.merge:hover { background: rgba(139,92,246,.20); border-color: #a78bfa; }
+  .button-note { text-align: center; color: #6f6d8c; font-size: 12px; margin: 12px 0 0; }
+  @media (max-width: 560px) { .actions { flex-direction: column; } }
   .status { min-height: 24px; text-align: center; margin: 14px 0 0; color: #9fe6b5; font-size: 14px; }
   .links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
   .links a { color: var(--muted); text-decoration: none; font-size: 14px; border: 1px solid var(--line); padding: 9px 14px; border-radius: 10px; }
@@ -73,7 +85,11 @@
   </div>
 
   <div class="card">
-    <button class="continue" id="continueBtn" type="button">Continue work →</button>
+    <div class="actions">
+      <a class="merge" id="mergeBtn" href="https://github.com/ItsOkazaki/sa6i-link/pull/1" target="_blank" rel="noopener">Merge PR #1 ↗</a>
+      <button class="continue" id="continueBtn" type="button">Continue work →</button>
+    </div>
+    <p class="button-note">The Merge PR button opens PR #1 on GitHub, where GitHub's native merge control lives. Continue work copies the handoff prompt.</p>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="links">
       <a href="https://github.com/ItsOkazaki/sa6i-link/tree/arena/b1010076-sa6i-link" target="_blank" rel="noopener">GitHub branch ↗</a>
