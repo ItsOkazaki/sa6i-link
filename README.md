@@ -28,6 +28,7 @@ Link logo (`sa6i/assets/sa6i-link-logo.png`).
 - [`sa6i/CHANGES.md`](sa6i/CHANGES.md) — exact source edits, and why upstream strings were left alone
 - [`sa6i/ANDROID-EMULATOR.md`](sa6i/ANDROID-EMULATOR.md) — can `docker-android` test the APK? Assessment + recipe
 - [`sa6i/FALLBACK.md`](sa6i/FALLBACK.md) — the v8 baseline/fallback, install notes and the external APK
+- **Windows download**: [GitHub pre-release `sa6i-windows-arabic-v8-test`](https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test) — ZIP + `SHA256SUMS.txt`
 - [`sa6i/BROWSER-HYBRID.md`](sa6i/BROWSER-HYBRID.md) — the browser idea, noted but not built
 - [`sa6i/NOTICE.md`](sa6i/NOTICE.md) — licenses and attribution
 - [`sa6i/CONTINUE.md`](sa6i/CONTINUE.md) / [`sa6i/continue.html`](sa6i/continue.html) — **Continue work** handoff for the next chat
