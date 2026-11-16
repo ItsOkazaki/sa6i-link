@@ -17,6 +17,7 @@ Legend: **done (test build)** = implemented in the Sa6i v8 Windows binary;
 | Performance presets: smoother / balanced / sharper | **not implemented** | `READ-ME-FIRST.txt`: "Performance presets are NOT included" | Design + implement + test. Never started. |
 | Window-button fixes (v5 vector caption buttons) | done (test build) | `source/patch-caption-v5.py` | **Windows 7 testing.** Unverified on real hardware; not ported to source. |
 | Real-device testing | **open** | — | See checklist below. |
+| Emulator-based APK testing | assessed, not adopted | `ANDROID-EMULATOR.md` | `HQarroum/docker-android` can install/smoke-test the APK and check the Android 11 system-language path, but the APK's core `libnectarlink_ffi.so` is ARM-only while the emulator is x86_64. Resolve ARM64 translation (or rebuild x86_64 libs) first; real-device tests stay required. |
 | Browser version / hybrid | **deferred** | `BROWSER-HYBRID.md` | No decision to build. Recorded only. |
 | Previous working build as fallback | preserved externally | `FALLBACK.md` | Keep the v4/v5 files on the Windows PC; they are not in this repo or in the connected Drive. |
 

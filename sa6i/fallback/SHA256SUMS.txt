@@ -1,0 +1,18 @@
+# Sa6i Link - Windows 7 Arabic v8 test build - SHA-256
+# Generated 2026-11-16 from the vendored Google Drive archive.
+# Verify: keep this file next to the ZIP, extract the ZIP beside it, then run
+#         sha256sum -c SHA256SUMS.txt
+78da55255ee39c31df9064258b550fbb638e47f60b5daff80142a8b29e750cad  Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip
+53a7757adc5a182cec6ba6c484120ec2823b95dc314440cb4bf253ecfb357212  Sa6i-Link-Windows-Arabic-TEST/READ-ME-FIRST.txt
+db3e5932772e6096d6906e24646c75f69bb87cf7532efa6466658b5cdc9be686  Sa6i-Link-Windows-Arabic-TEST/ARABIC-CHECK-NOTES.txt
+e7a8049c0ee079389d7ab1f8980c7e757515400444b3fabe94cb62d410f9d6ba  Sa6i-Link-Windows-Arabic-TEST/LICENSE
+f2a7598aa067eb1ed19628e73b8c958d97db3bb8e09c424a6ab14f393e33d19c  Sa6i-Link-Windows-Arabic-TEST/Sa6i-Link-Win7-UI-v8.exe
+3862e83cbdcd08022ba3bf9a23feb48506842808d8e2eef2590a4d92924d1b39  Sa6i-Link-Windows-Arabic-TEST/Start Sa6i Link v8.exe
+b15d27bad532b6196441f1065cf380913e8361dbc5db34740f85badbba2f4574  Sa6i-Link-Windows-Arabic-TEST/sa6i-icon-hook-v4.dll
+91bbc7db3e6fd40c5cbc7689af033f2f2f006a2a4736fc24f27d290dfb7de2b3  Sa6i-Link-Windows-Arabic-TEST/nectarlink_ar.qm
+e03fe68d83201543698fd7fe267dd5dfc5bfd195147e74ff2f19ac3491401263  Sa6i-Link-Windows-Arabic-TEST/translations/qtbase_ar.qm
+3ee6ef78182b2efbd6757b4147d997bbf1b1a3be9d13bff0ccd063387377dfe0  Sa6i-Link-Windows-Arabic-TEST/source/nectarlink_ar-reviewed.ts
+51276a552ccd5f34437ffa86ff38b668e00e16c50ffa1b9a7000fb855194c94f  Sa6i-Link-Windows-Arabic-TEST/source/LocalGuide-checked.qml
+03a37db8b97d3e6fa334a6e92df18b01496286cc59a56e78a86ebec0702348a6  Sa6i-Link-Windows-Arabic-TEST/source/Sa6i-Link.ico
+04195d9e7b4bda0197b4c680eebd6135278ea39ce9436edfb72ae2c2009f47f9  Sa6i-Link-Windows-Arabic-TEST/source/android-ar/strings.xml
+86bb1851ac4655e952192f8548c149900b6f1ef51fdea44c3f2d6ec5aa2e0417  Sa6i-Link-Windows-Arabic-TEST/source/android-ar/plurals.xml

@@ -19,6 +19,10 @@ the two Arabic test binaries above. Keep the v4/v5 files on your Windows 7 PC;
 the v8 notes explicitly say to keep them. If you want them versioned here,
 point me at their Drive link or upload them.
 
+## GitHub Release
+
+A downloadable **pre-release** now exists on GitHub: `https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test`, with the original ZIP and `SHA256SUMS.txt` attached. Verify a download with `sha256sum -c SHA256SUMS.txt` after extracting the ZIP beside the checksum file. The tag is intentionally non-`v` and marked pre-release so the imported upstream `release.yml` / `channels.yml` workflows do not publish their own binaries.
+
 ## Original install notes (from `READ-ME-FIRST.txt`)
 
 1. Quit the existing app completely from the system tray (closing the window

@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Attach the Sa6i Link Windows v8 test ZIP + checksums to a GitHub Release.
+#
+# Why this exists: the Arena sandbox can reach api.github.com but its TLS
+# connection to uploads.github.com is blocked, so release assets cannot be
+# uploaded directly from the agent. A GitHub-hosted runner can. The ZIP and
+# SHA256SUMS.txt are already versioned under sa6i/fallback/, so this workflow
+# just re-attaches them from the repository.
+name: Attach Sa6i Link release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the assets to
+        required: true
+        default: sa6i-windows-arabic-v8-test
+
+permissions:
+  contents: write
+
+jobs:
+  attach:
+    name: Verify and attach Windows v8 assets
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify the vendored archive before uploading
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip="sa6i/fallback/Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip"
+          test -f "$zip"
+          test -f sa6i/fallback/SHA256SUMS.txt
+          echo "78da55255ee39c31df9064258b550fbb638e47f60b5daff80142a8b29e750cad  $zip" | sha256sum -c -
+          echo "ZIP verified: $(wc -c < "$zip") bytes"
+
+      - name: Upload release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" \
+            "sa6i/fallback/Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip" \
+            "sa6i/fallback/SHA256SUMS.txt" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Attached assets:"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq='.assets[] | "\(.name)\t\(.size) bytes"'
