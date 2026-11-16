@@ -15,6 +15,11 @@ on:
         description: Release tag to attach the assets to
         required: true
         default: sa6i-windows-arabic-v8-test
+  # The Arena GitHub App cannot dispatch workflows (actions:write is denied),
+  # but it can edit a release. A `release: edited` event triggers this job on
+  # GitHub's runner, where uploads.github.com is reachable.
+  release:
+    types: [published, edited]
 
 permissions:
   contents: write
@@ -22,10 +27,13 @@ permissions:
 jobs:
   attach:
     name: Verify and attach Windows v8 assets
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.release.tag_name == 'sa6i-windows-arabic-v8-test'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: ${{ inputs.tag }}
+      TAG: ${{ inputs.tag || github.event.release.tag_name || 'sa6i-windows-arabic-v8-test' }}
     steps:
       - uses: actions/checkout@v7
 
