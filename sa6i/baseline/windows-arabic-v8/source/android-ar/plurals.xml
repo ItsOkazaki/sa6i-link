@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <plurals name="app_windows_title">
+        <item quantity="zero">لا توجد تطبيقات مفتوحة على الحاسوب (%1$d)</item>
+        <item quantity="one">تطبيق واحد مفتوح في نافذة على الحاسوب (%1$d)</item>
+        <item quantity="two">تطبيقان مفتوحان في نافذتين على الحاسوب (%1$d)</item>
+        <item quantity="few">%1$d تطبيقات مفتوحة في نوافذ على الحاسوب</item>
+        <item quantity="many">%1$d تطبيقًا مفتوحًا في نوافذ على الحاسوب</item>
+        <item quantity="other">%1$d تطبيق مفتوح في نوافذ على الحاسوب</item>
+    </plurals>
+    <plurals name="banking_chosen">
+        <item quantity="zero">لم يتم اختيار أي تطبيق (%1$d)</item>
+        <item quantity="one">تم اختيار تطبيق واحد (%1$d)</item>
+        <item quantity="two">تم اختيار تطبيقين (%1$d)</item>
+        <item quantity="few">تم اختيار %1$d تطبيقات</item>
+        <item quantity="many">تم اختيار %1$d تطبيقًا</item>
+        <item quantity="other">تم اختيار %1$d تطبيق</item>
+    </plurals>
+    <plurals name="data_clipboard_count">
+        <item quantity="zero">لم يتم حفظ أي مقطع (%1$d)</item>
+        <item quantity="one">تم حفظ مقطع واحد (%1$d)</item>
+        <item quantity="two">تم حفظ مقطعين (%1$d)</item>
+        <item quantity="few">تم حفظ %1$d مقاطع</item>
+        <item quantity="many">تم حفظ %1$d مقطعًا</item>
+        <item quantity="other">تم حفظ %1$d مقطع</item>
+    </plurals>
+    <plurals name="notification_connected_pcs">
+        <item quantity="zero">غير متصل بأي حاسوب (%1$d)</item>
+        <item quantity="one">متصل بحاسوب واحد (%1$d)</item>
+        <item quantity="two">متصل بحاسوبين (%1$d)</item>
+        <item quantity="few">متصل بـ %1$d حواسيب</item>
+        <item quantity="many">متصل بـ %1$d حاسوبًا</item>
+        <item quantity="other">متصل بـ %1$d حاسوب</item>
+    </plurals>
+    <plurals name="recorder_markers_count">
+        <item quantity="zero">لا توجد علامات (%1$d)</item>
+        <item quantity="one">علامة واحدة (%1$d)</item>
+        <item quantity="two">علامتان (%1$d)</item>
+        <item quantity="few">%1$d علامات</item>
+        <item quantity="many">%1$d علامة</item>
+        <item quantity="other">%1$d علامة</item>
+    </plurals>
+    <plurals name="transfer_files">
+        <item quantity="zero">لا توجد ملفات (%1$d)</item>
+        <item quantity="one">ملف واحد (%1$d)</item>
+        <item quantity="two">ملفان (%1$d)</item>
+        <item quantity="few">%1$d ملفات</item>
+        <item quantity="many">%1$d ملفًا</item>
+        <item quantity="other">%1$d ملف</item>
+    </plurals>
+    <plurals name="transfer_items">
+        <item quantity="zero">لا توجد عناصر (%1$d)</item>
+        <item quantity="one">عنصر واحد (%1$d)</item>
+        <item quantity="two">عنصران (%1$d)</item>
+        <item quantity="few">%1$d عناصر</item>
+        <item quantity="many">%1$d عنصرًا</item>
+        <item quantity="other">%1$d عنصر</item>
+    </plurals>
+</resources>

@@ -1,0 +1,11 @@
+ARABIC REVIEW — PRIVATE TEST, NOT FINAL LOCALIZATION
+
+Locally checked with open-source LanguageTool 6.6 (Arabic rules) and Hunspell using Debian's AyaSpell Arabic dictionary. The final pass included Windows catalogue entries, Android strings and plural forms, and the standalone local guide: 3,179 records, 2,568 distinct values; 105 checker batches completed with no failed batches. LanguageTool reported 2,165 possible matches. Hunspell flagged 60 distinct Arabic word forms; valid technical terms and proper names are among them. These are leads, not verified errors; do not blindly apply their suggestions.
+
+We applied 272 curated English-source overrides across 521 entries, 515 narrowly selected earlier checker-inspired spelling/wording edits, 155 selected clarity edits, all 24 Qt plural forms for four messages, all 42 Android plural forms for seven resources, and selected guide corrections. Exact replacement counts are editing operations, not independent verified translations. Formats/placeholders in the reviewed Windows catalogue and Android strings were checked against their English source; zero mismatches. Plural placeholder counts were checked separately. Resource strings may still have semantic errors or unclear language; expert human review and tests are essential.
+
+Guide corrections were patched into the v8 Windows binary. Android reviewed strings and plurals are in the separately distributed Android APK. This audit does not prove that all displayed app text is translatable, that the Android 11 language picker works, or that right-to-left layout is complete. User-facing runtime and actual hardware remain to be tested.
+
+LanguageTool: https://github.com/languagetool-org/languagetool
+AyaSpell: https://github.com/linuxscout/ayaspell
+Hunspell: https://github.com/hunspell/hunspell

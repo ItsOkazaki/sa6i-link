@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continue · Sa6i Link</title>
+<style>
+  :root {
+    --bg: #07070c;
+    --panel: #11111d;
+    --line: #26263c;
+    --text: #f3f2fb;
+    --muted: #a7a5c4;
+    --violet: #8b5cf6;
+    --blue: #3d7bff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+    background-image:
+      radial-gradient(900px 400px at 15% -10%, rgba(139,92,246,.18), transparent 70%),
+      radial-gradient(800px 400px at 90% 0%, rgba(61,123,255,.16), transparent 70%);
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 24px 64px; }
+  .logo { display: block; width: 260px; max-width: 70%; height: auto; margin: 0 auto 8px; }
+  .eyebrow { text-align: center; color: var(--muted); letter-spacing: .16em; text-transform: uppercase; font-size: 12px; margin-bottom: 28px; }
+  h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.15; margin: 0 0 12px; text-align: center; font-weight: 750; }
+  h1 span { background: linear-gradient(90deg, var(--violet), var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { text-align: center; color: var(--muted); max-width: 620px; margin: 0 auto 32px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 28px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 28px; }
+  .chip { font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; background: rgba(255,255,255,.02); }
+  .chip b { color: var(--text); font-weight: 600; }
+  .chip.open b { color: #ffbf69; }
+  .actions { display: flex; gap: 12px; align-items: stretch; }
+  .actions > * { flex: 1 1 0; min-width: 0; }
+  button.continue {
+    display: flex; align-items: center; justify-content: center; width: auto;
+    border: 0; cursor: pointer; color: #fff;
+    font: 700 18px/1.2 inherit; padding: 20px 18px; border-radius: 14px;
+    background: linear-gradient(95deg, var(--violet), var(--blue));
+    box-shadow: 0 12px 36px rgba(96,83,255,.28); transition: transform .15s ease, box-shadow .15s ease;
+  }
+  button.continue:hover { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(96,83,255,.38); }
+  button.continue:active { transform: translateY(0); }
+  a.merge {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    text-decoration: none; color: #ddd8ff; font: 700 17px/1.2 inherit;
+    padding: 20px 16px; border-radius: 14px; border: 1px solid var(--violet);
+    background: rgba(139,92,246,.10); transition: background .15s ease, border-color .15s ease;
+  }
+  a.merge:hover { background: rgba(139,92,246,.20); border-color: #a78bfa; }
+  .button-note { text-align: center; color: #6f6d8c; font-size: 12px; margin: 12px 0 0; }
+  @media (max-width: 560px) { .actions { flex-direction: column; } }
+  .status { min-height: 24px; text-align: center; margin: 14px 0 0; color: #9fe6b5; font-size: 14px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+  .links a { color: var(--muted); text-decoration: none; font-size: 14px; border: 1px solid var(--line); padding: 9px 14px; border-radius: 10px; }
+  .links a:hover { color: var(--text); border-color: var(--violet); }
+  details { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 18px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  textarea {
+    width: 100%; height: 320px; margin-top: 14px; resize: vertical; color: var(--text);
+    background: #0b0b14; border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .foot { text-align: center; color: #6f6d8c; font-size: 12.5px; margin-top: 30px; }
+  code { color: #c8c4ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="assets/sa6i-link-logo.png" alt="Sa6i Link">
+  <p class="eyebrow">Private test rebrand · session handoff</p>
+
+  <h1>Continue the <span>Sa6i Link</span> work</h1>
+  <p class="lede">One click copies a complete handoff prompt. Paste it into a new chat
+  and the next session picks up exactly where this one stopped — no lost context.</p>
+
+  <div class="chips">
+    <span class="chip"><b>Base</b> NectarLink v0.1.5</span>
+    <span class="chip"><b>Arabic</b> wired into source</span>
+    <span class="chip"><b>Fallback</b> v8 baseline vendored</span>
+    <span class="chip open"><b>Open</b> RTL · review · devices · presets</span>
+  </div>
+
+  <div class="card">
+    <div class="actions">
+      <a class="merge" id="mergeBtn" href="https://github.com/ItsOkazaki/sa6i-link/pull/1" target="_blank" rel="noopener">Merge PR #1 ↗</a>
+      <button class="continue" id="continueBtn" type="button">Continue work →</button>
+    </div>
+    <p class="button-note">The Merge PR button opens PR #1 on GitHub, where GitHub's native merge control lives. Continue work copies the handoff prompt.</p>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <div class="links">
+      <a href="https://github.com/ItsOkazaki/sa6i-link/tree/arena/b1010076-sa6i-link" target="_blank" rel="noopener">GitHub branch ↗</a>
+      <a href="STATUS.md">Status &amp; test checklist</a>
+      <a href="CHANGES.md">Source changes</a>
+      <a href="FALLBACK.md">Fallback</a>
+      <a href="CONTINUE.md">Handoff (Markdown)</a>
+    </div>
+
+    <details id="details">
+      <summary>Preview the continuation prompt</summary>
+      <textarea id="prompt" readonly spellcheck="false">Continue the Sa6i Link private test rebrand on branch `arena/b1010076-sa6i-link` of https://github.com/ItsOkazaki/sa6i-link.
+
+Context: Sa6i Link is a private rebrand of NectarLink (upstream https://github.com/thtbee/nectarlink) for a Windows 7 x64 PC and an OPPO A54 on Android 11. Keep NectarLink's existing UI and use the supplied Sa6i Link logo. The Windows 7 compatibility patch already worked for Wi-Fi pairing, phone mirroring and PC control; transparent branding and a new font also worked. Arabic under Settings → General → Language covers the app and the local guide; it was checked with open-source LanguageTool 6.6 and Hunspell/AyaSpell with selected translations and plurals corrected, but still needs expert human review, complete RTL layout and real-device testing. Android 11 in-app language selection is unresolved — the test is intended to follow the phone's system language. The local guide uses Sa6i Link content. Performance presets (smoother, balanced, sharper) are requested but NOT implemented. Window-button fixes need Windows 7 testing. Keep the previous working v4/v5 build as a fallback. A browser hybrid (native phone + PC services, browser interface) was suggested but I have not decided to build it — do not build it without asking.
+
+Do not assume the previous chat's workspace files are available here: inspect the connected GitHub repository and ask me which repo to use if needed.
+
+In this repo: upstream source is pinned to tag v0.1.5 (the release the Windows Arabic v8 test build patches). `sa6i/` holds the vendored v8 Windows baseline, the immutable fallback ZIP, the supplied logo, STATUS.md, CHANGES.md, FALLBACK.md, NOTICE.md, BROWSER-HYBRID.md and CONTINUE.md. The Android test APK stays external in Google Drive (file ID 1pD5q0r5UiKjOIT0xBBhWNqALevDlI7Rb); the Windows ZIP is 1DuD1SibgqDeKBGPdKx8aVtXdQmPqunaY. Branding/font/window-button changes exist only as version-locked binary patches in sa6i/baseline/windows-arabic-v8/source/ — do not rebrand upstream source strings without regenerating the Arabic catalogue.
+
+Read sa6i/STATUS.md and sa6i/CHANGES.md first, then ask me which open item to tackle next: (1) expert Arabic review + complete RTL layout, (2) Windows 7 window-button testing, (3) OPPO A54 / Android 11 real-device test, (4) performance presets, (5) source-level rebrand + catalogue regeneration, or (6) something else. No Rust, Qt or Android toolchain and no Windows 7 PC or OPPO A54 exist in the sandbox, so flag anything that cannot be verified here rather than claiming it was tested.</textarea>
+    </details>
+  </div>
+
+  <p class="foot">Branch <code>arena/b1010076-sa6i-link</code> · Windows 7 x64 + OPPO A54 (Android 11) · private test, not a release</p>
+</div>
+<script>
+  const btn = document.getElementById('continueBtn');
+  const prompt = document.getElementById('prompt');
+  const status = document.getElementById('status');
+  const details = document.getElementById('details');
+
+  btn.addEventListener('click', async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(prompt.value);
+      ok = true;
+    } catch (e) {
+      details.open = true;
+      prompt.focus();
+      prompt.select();
+      try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    }
+    if (ok) {
+      status.textContent = 'Copied — paste it into a new chat to continue.';
+      btn.textContent = 'Copied ✓';
+    } else {
+      status.textContent = 'Clipboard blocked — the prompt is open above; select and copy it manually.';
+      btn.textContent = 'Try again';
+    }
+    setTimeout(() => { btn.textContent = 'Continue work →'; }, 2600);
+  });
+</script>
+</body>
+</html>

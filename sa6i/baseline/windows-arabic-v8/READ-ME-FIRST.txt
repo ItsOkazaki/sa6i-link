@@ -1,0 +1,29 @@
+SA6I LINK — ARABIC LANGUAGE TEST FOR WINDOWS 7 (v8 reviewed)
+
+EXPERIMENTAL: keep your working v4/v5 version as a fallback. This is not a finished translation or a fully tested release.
+
+WHAT CHANGED
+- Arabic is offered in Settings > General > Language > More > العربية, alongside the existing languages. Select English in the same row to return to English.
+- The existing app translation system loads an Arabic draft covering 1,876 entries in its source translation catalogue. Translations are machine-generated with selected contextual corrections, checked locally with LanguageTool 6.6 and Hunspell/AyaSpell. They have not been fully reviewed by a human Arabic-language expert. Some wording may be wrong and some dynamically generated, system, or hard-coded text may stay in English.
+- The local Sa6i Link guide follows the app language. Its previous separate Arabic switch is removed.
+- The v5 vector window buttons and v4 logo/font changes are retained. Arabic text is shaped and right-aligned where Qt does that automatically; complete right-to-left layout is not finished. Global layout mirroring was not enabled because it caused anchor-loop warnings in testing.
+- Performance presets are NOT included. Phone storage in Windows Explorer remains unsupported by the compatibility shim.
+
+TESTING SO FAR
+In the previous build, Wine showed Arabic in General settings and the guide with a simulated offline phone. This build passed a Wine guide UI smoke check with an Arabic preference and no QML warnings. This is not a Windows 7 or real-phone test. The on-screen language selection itself, guide buttons, changes between languages while the app is open, and actual mirroring have not been reliably tested in this build. The temporary Wine-only dependencies used for the test are NOT included and should not be installed on Windows.
+
+INSTALL
+1. Quit the existing app completely from the system tray; closing the window may not exit it. Check Task Manager if necessary. Keep the v4/v5 files.
+2. Copy these FOUR files into the existing working app folder beside the Qt DLLs and your existing cldapi.dll:
+   Sa6i-Link-Win7-UI-v8.exe
+   Start Sa6i Link v8.exe
+   sa6i-icon-hook-v4.dll
+   nectarlink_ar.qm
+   The icon helper is unchanged from v5. Keep the existing one if already present.
+3. Copy translations/qtbase_ar.qm into the existing translations folder, creating that folder if needed. Do not overwrite other language files or any system DLLs. If there is already a qtbase_ar.qm there, keep a backup first.
+4. Enable VxKex for Sa6i-Link-Win7-UI-v8.exe just as with v4/v5. Run Start Sa6i Link v8.exe.
+5. Go to Settings > General > Language > More, choose العربية. Test the guide and phone mirroring/control. To return to English, choose English in the language row. If needed, quit this version and run the old v4/v5 launcher. Note: versions share preferences and pairings, so back them up if possible.
+6. Do not use the original updater. Do not copy the DLLs from this package into Windows system directories.
+
+PROVENANCE
+This is a private experimental binary/resource patch of official NectarLink 0.1.5 x64, not an official or source-compiled Sa6i build. EXE SHA-256: f2a7598aa067eb1ed19628e73b8c958d97db3bb8e09c424a6ab14f393e33d19c. Source/ includes the modifications, translation draft, guide, launcher, previous patch chain and licence texts. Original corresponding upstream code: https://github.com/thtbee/nectarlink/tree/v0.1.5. Qt's Arabic base catalogue is supplied separately under its Qt licensing; see source/QT-TRANSLATIONS-COPYRIGHT.txt.
