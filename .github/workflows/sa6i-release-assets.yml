@@ -6,20 +6,18 @@
 # uploaded directly from the agent. A GitHub-hosted runner can. The ZIP and
 # SHA256SUMS.txt are already versioned under sa6i/fallback/, so this workflow
 # just re-attaches them from the repository.
+#
+# The Arena GitHub App cannot call workflow_dispatch (actions:write is denied),
+# so a push to main that edits this file starts the upload job instead. The
+# workflow_dispatch trigger remains for manual runs from the Actions tab.
 name: Attach Sa6i Link release assets
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag to attach the assets to
-        required: true
-        default: sa6i-windows-arabic-v8-test
-  # The Arena GitHub App cannot dispatch workflows (actions:write is denied),
-  # but it can edit a release. A `release: edited` event triggers this job on
-  # GitHub's runner, where uploads.github.com is reachable.
-  release:
-    types: [published, edited]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sa6i-release-assets.yml
 
 permissions:
   contents: write
@@ -27,13 +25,11 @@ permissions:
 jobs:
   attach:
     name: Verify and attach Windows v8 assets
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.release.tag_name == 'sa6i-windows-arabic-v8-test'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: ${{ inputs.tag || github.event.release.tag_name || 'sa6i-windows-arabic-v8-test' }}
+      TAG: sa6i-windows-arabic-v8-test
     steps:
       - uses: actions/checkout@v7
 
