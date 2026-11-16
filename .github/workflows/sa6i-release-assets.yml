@@ -3,7 +3,8 @@
 #
 # Why this exists: the Arena sandbox can reach api.github.com but its TLS
 # connection to uploads.github.com is blocked, so release assets cannot be
-# uploaded directly from the agent. A GitHub-hosted runner can. The ZIP and
+# uploaded directly from the agent. A GitHub-hosted runner can.
+# Third attempt: re-check whether the account billing/spending block is cleared. The ZIP and
 # SHA256SUMS.txt are already versioned under sa6i/fallback/, so this workflow
 # just re-attaches them from the repository.
 #
