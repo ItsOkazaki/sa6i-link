@@ -1,8 +1,11 @@
-# Source changes carried over from the Sa6i v8 build
+# Source changes
 
-All seven edits below are **straight carry-overs** of artefacts that already
-exist in `baseline/windows-arabic-v8/source/`. Nothing was newly designed or
-implemented. The imported upstream tree is otherwise byte-for-byte `v0.1.5`.
+The seven changes below were carried over from artefacts in
+`baseline/windows-arabic-v8/source/`. Additional desktop labels and Android
+strings now use Sa6i Link in source builds. Desktop labels retain their original
+translation keys and replace the visible name after translation; installer,
+updater and some platform labels still use the upstream name. These later
+source changes are not part of the downloadable v8 binary.
 
 | # | File | Change | Source artefact |
 |---|---|---|---|

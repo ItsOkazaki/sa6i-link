@@ -94,9 +94,9 @@ FocusScope {
     ]
 
     readonly property var stepTitles: [
-        qsTr("Welcome to NectarLink"),
+        qsTr("Welcome to NectarLink").replace(/NectarLink/g, "Sa6i Link"),
         qsTr("Your data stays on your devices"),
-        qsTr("Install NectarLink on your phone"),
+        qsTr("Install NectarLink on your phone").replace(/NectarLink/g, "Sa6i Link"),
         qsTr("Pair your phone and PC"),
         qsTr("Choose what to share"),
         qsTr("Optional setup"),
@@ -107,7 +107,7 @@ FocusScope {
         qsTr("Your Android phone and your PC, working together on your local network."),
         qsTr("No accounts, no cloud servers, and no telemetry."),
         qsTr("Get the Android app from GitHub Releases or install the APK over USB."),
-        qsTr("Scan the QR code from the NectarLink Android app, or pick your phone from nearby devices."),
+        qsTr("Scan the QR code from the NectarLink Android app, or pick your phone from nearby devices.").replace(/NectarLink/g, "Sa6i Link"),
         qsTr("Safe features are on by default. Higher-trust access stays off until you turn it on."),
         qsTr("Three quick checks so notifications and discovery work reliably on your PC."),
         qsTr("Reopen it from Settings or the Command Palette.")
@@ -1551,7 +1551,7 @@ FocusScope {
 
                                         Txt {
                                             Layout.fillWidth: true
-                                            text: qsTr("Keep NectarLink ready in the system tray when you sign in.")
+                                            text: qsTr("Keep NectarLink ready in the system tray when you sign in.").replace(/NectarLink/g, "Sa6i Link")
                                             role: "caption"
                                             color: Theme.surfaceContentVariant
                                             wrapMode: Text.WordWrap
@@ -1651,7 +1651,7 @@ FocusScope {
                                             : qsTr("Pair a phone anytime from Home"),
                                         body: walkthrough.hasPairedDevice
                                             ? qsTr("Your phone is linked and ready on your local network.")
-                                            : qsTr("Open the NectarLink Android app whenever you are ready to scan the QR code.")
+                                            : qsTr("Open the NectarLink Android app whenever you are ready to scan the QR code.").replace(/NectarLink/g, "Sa6i Link")
                                     },
                                     {
                                         icon: Icons.search,
@@ -1661,7 +1661,7 @@ FocusScope {
                                     {
                                         icon: Icons.book,
                                         title: qsTr("Features guide"),
-                                        body: qsTr("Browse every feature in NectarLink, see what permissions it needs, and jump straight to it.")
+                                        body: qsTr("Browse every feature in NectarLink, see what permissions it needs, and jump straight to it.").replace(/NectarLink/g, "Sa6i Link")
                                     }
                                 ]
 

@@ -13,7 +13,7 @@ import app.nectarlink
 Window {
     id: shelfWin
 
-    title: qsTr("NectarLink Shelf")
+    title: qsTr("NectarLink Shelf").replace(/NectarLink/g, "Sa6i Link")
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     visible: true

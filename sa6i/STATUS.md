@@ -1,11 +1,11 @@
 # Test status
 
-Sa6i Link v8 is an experimental Windows 7 x64 binary/resource patch based on NectarLink 0.1.5. The assembled full-folder package has not been tested on Windows 7 or with a phone. A previous Windows 7 build was reported to work for Wi-Fi pairing, mirroring and PC control; retesting v8 is still needed.
+Sa6i Link v8 is an experimental binary/resource patch. A previous build was reported to work for Wi-Fi pairing, mirroring and PC control. The assembled v8 folder has since been reported to fail at startup on Windows 7 with a `CoIncrementMTAUsage` / `ole32.dll` error; the VxKex setting was also reported not to stay enabled. The cause and a working fix have not been verified. See [startup troubleshooting](STARTUP-TROUBLESHOOTING.md).
 
 ## Available in the v8 test
 
 - Arabic in **Settings → General → Language → More → العربية** and in the local guide. The translation has been checked with language tools but still needs expert human review.
-- Sa6i Link branding, font and vector window buttons. These are binary patches and have not been fully ported to source; the window buttons need Windows 7 testing.
+- Sa6i Link branding, font and vector window buttons. The v8 branding is a binary patch and has not been fully ported to source; the window buttons need Windows 7 testing. Additional source-level desktop labels and Android strings now use Sa6i Link, but these changes have not been built into the downloadable v8 package. Some installer, updater and platform labels still use the upstream name.
 - A `cldapi.dll` compatibility shim. Phone storage in Windows Explorer is not supported by the shim.
 
 ## Known limitations
