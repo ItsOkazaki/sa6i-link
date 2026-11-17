@@ -4,7 +4,7 @@ The v8 Windows package is experimental. Keep your previous working v4/v5 install
 
 ## Windows v8 full folder
 
-Download `Sa6i-Link.zip` from the [GitHub prerelease](https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test). It contains the v8 app files and runtime files from the supplied app folder, but is not an installer and does not include VxKex. The assembled folder has not been tested on Windows 7 or with a phone.
+Download `Sa6i-Link.zip` from the [GitHub prerelease](https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test). It contains the v8 app files and runtime files from the supplied app folder, but is not an installer and does not include VxKex. A startup error has been reported; see [startup troubleshooting](STARTUP-TROUBLESHOOTING.md). Phone testing is still needed.
 
 1. Extract the ZIP to a new folder without overwriting your existing installation.
 2. Read `START-HERE.txt` in the extracted folder. Enable VxKex for `Sa6i-Link-Win7-UI-v8.exe` as with the previous build.

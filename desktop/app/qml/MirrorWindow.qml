@@ -22,7 +22,7 @@ Window {
 
     visible: true
     title: info.app ? qsTr("%1 · %2").arg(info.title).arg(deviceName)
-         : deviceName.length > 0 ? qsTr("%1 · NectarLink").arg(deviceName) : qsTr("Phone screen · NectarLink")
+         : deviceName.length > 0 ? qsTr("%1 · NectarLink").replace(/NectarLink/g, "Sa6i Link").arg(deviceName) : qsTr("Phone screen · NectarLink").replace(/NectarLink/g, "Sa6i Link")
     color: "black"
     minimumWidth: 240
     minimumHeight: 240
@@ -527,7 +527,7 @@ Window {
             wrapMode: Text.WordWrap
             role: "bodySmall"
             color: "white"
-            text: qsTr("To control the phone, turn on Control from your PC in NectarLink's settings on the phone.")
+            text: qsTr("To control the phone, turn on Control from your PC in NectarLink's settings on the phone.").replace(/NectarLink/g, "Sa6i Link")
         }
         Button {
             id: notifyPhoneBtn

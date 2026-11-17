@@ -2,6 +2,7 @@
 
 - [STATUS.md](STATUS.md) — test status and known limitations.
 - [FALLBACK.md](FALLBACK.md) — downloads, installation and fallback notes.
+- [STARTUP-TROUBLESHOOTING.md](STARTUP-TROUBLESHOOTING.md) — startup error and compatibility checks.
 - [CHANGES.md](CHANGES.md) — source changes and Windows patch details.
 - [NOTICE.md](NOTICE.md) — licences and attribution.
 - `assets/` — Sa6i Link logo and icon.
