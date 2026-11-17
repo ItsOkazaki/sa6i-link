@@ -34,7 +34,6 @@ not verified translations; expert human review is still required.
 
 ## Private test notice
 
-The Windows ZIP and Android APK are described by their Drive metadata as
-private, not fully tested / not tested on device. They have not been run on the
-target Windows 7 x64 PC or OPPO A54 in this session. No original updater
-should be used with them.
+The Windows v8 package and Android APK are experimental. The assembled Windows
+folder and Android APK still need testing on Windows 7 and the OPPO A54. Do not
+use the original updater with the Windows test build.
