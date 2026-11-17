@@ -695,8 +695,8 @@ Each phase ends with a usable, releasable product. Phase sizes are relative; act
 ## 10. Decisions & open questions
 
 ### 10.1 Name: **NectarLink** (done)
-- Repo: `github.com/thtbee/nectarlink` (private until most things work locally; no pushing before that).
-- Checks done: no conflicting products found on the web; `nectarlink.app`, `nectarlink.dev`, `getnectarlink.com` and the GitHub name were free (2026-10-05).
+- Repo: the original upstream repository (private until most things work locally; no pushing before that).
+- Checks done: no conflicting products found on the web; the candidate domains and GitHub name were free (2026-10-05).
 - **Still to do before any announcement:** official trademark searches (USPTO, TMview, IP India), register the domain, X handle, and reserve `nectar-link` as a redirect.
 - History: "Hive" (folder codename) and "Waggle" were dropped. Hive collides with Centrica's smart-home brand; WAGGLE is a **registered, active US trademark** (Nimble Wireless, class 9, reg. 9 May 2023) that covers "software for transmission of voice, data, images, audio, and video between devices". Dozens of other candidates were checked and rejected (Honeylink, Tandem, Skein, Wingbeat, Murmur and others).
 

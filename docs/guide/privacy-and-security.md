@@ -54,7 +54,7 @@ Every post-pairing session (`ALPN = "nectarlink/0"`) runs over **QUIC** (via `ir
 
 To keep your installation current without an app store, installed copies check this project's GitHub repository over HTTPS. Each check sends only a `User-Agent` such as `Nectarlink/<version> (Windows)`, with no personal or device information.
 
-- **What's fetched**: your channel's feed, `https://raw.githubusercontent.com/thtbee/nectarlink/channels/<stable|nightly>.json`, or the GitHub Releases API if no feed is published. A download is only accepted from this repository's own release files, and only if its SHA-256 matches.
+- **What's fetched**: the upstream update feed or the GitHub Releases API if no feed is published. A download is only accepted from the upstream release files, and only if its SHA-256 matches.
 - **How often on the PC**: 30 seconds after startup, then every 12 hours on Stable or every 2 hours on Nightly.
 - **How often on Android**: at most once a day on Stable or every 6 hours on Nightly, in the background and when the app comes to the front, and when you tap **Check for updates**. A paired device can tell another that a build is out, which only starts the same check sooner. It can't name a file.
 - **Installing on Windows**: with **Install updates automatically** on (the default), the update runs at a quiet moment, or when you click **Update**. The installer registers a Windows task, **Nectarlink Update**, that runs the update as SYSTEM so no administrator prompt is needed. It takes no input from whoever starts it, only installs an official build, and writes what it did to `update.log` in the install folder.
