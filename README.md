@@ -1,52 +1,21 @@
 # Sa6i Link
 
-Private, experimental rebrand of [NectarLink](https://github.com/thtbee/nectarlink)
-for a **Windows 7 x64 PC** and an **OPPO A54 (Android 11)**. This is not an
-official NectarLink build. It keeps NectarLink's UI and uses the supplied Sa6i
-Link logo (`sa6i/assets/sa6i-link-logo.png`).
+Sa6i Link is an experimental rebrand of [NectarLink](https://github.com/thtbee/nectarlink) for connecting an Android phone to a computer. This private test is based on NectarLink 0.1.5 and is not an official NectarLink release.
 
-## What is in this repository
+## Download
 
-| | |
-|---|---|
-| **Base source** | `thtbee/nectarlink` at tag **`v0.1.5`** (`58e530f27726aee19a66746576b0e6c764d4278d`), imported verbatim except for the seven Arabic carry-over edits listed in [`sa6i/CHANGES.md`](sa6i/CHANGES.md). v0.1.5 is the exact release the existing Sa6i Link test build was patched against. Upstream's own README is kept at [`UPSTREAM-README-v0.1.5.md`](UPSTREAM-README-v0.1.5.md) (its "Building from source" section still applies). |
-| **Sa6i workspace** | [`sa6i/`](sa6i/README.md) — logo, the vendored Windows Arabic v8 baseline + immutable fallback archive, status, change log, fallback instructions and licensing notes. |
-| **Arabic** | Wired into the source tree (desktop `.ts` catalogue + `LANGUAGES`, Android `values-ar`, `locales_config.xml`, `AppLanguage.kt`) and already offered in the v8 Windows test build under **Settings → General → Language → More → العربية**. Reviewed with LanguageTool 6.6 and Hunspell/AyaSpell, **not yet reviewed by a human Arabic expert**. |
+Download the [Windows Arabic v8 test package](https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test). The release includes the app folder and a checksum file. It is not an installer.
 
-> **This is a test, not a release.** Arabic needs expert human review; complete
-> RTL layout is not finished; the Android 11 in-app picker is unresolved (the
-> test follows the phone's system language); performance presets
-> (smoother / balanced / sharper) are requested but **not implemented**; and
-> window-button fixes still need Windows 7 testing. Nothing here has been run
-> on the target PC or the OPPO A54. Keep your previous working build as a
-> fallback: [`sa6i/FALLBACK.md`](sa6i/FALLBACK.md).
+For Windows 7 x64, extract the package to a new folder, enable VxKex for `Sa6i-Link-Win7-UI-v8.exe`, and run `Start Sa6i Link v8.exe`. VxKex is not included. Read `START-HERE.txt` in the package before testing, and keep your previous working version as a backup.
 
-## Start here
+To select Arabic in the Windows app, open **Settings → General → Language → More → العربية**.
 
-- [`sa6i/README.md`](sa6i/README.md) — layout, provenance, what was validated and what was not
-- [`sa6i/STATUS.md`](sa6i/STATUS.md) — per-feature state and the remaining test checklist
-- [`sa6i/CHANGES.md`](sa6i/CHANGES.md) — exact source edits, and why upstream strings were left alone
-- [`sa6i/ANDROID-EMULATOR.md`](sa6i/ANDROID-EMULATOR.md) — can `docker-android` test the APK? Assessment + recipe
-- [`sa6i/FALLBACK.md`](sa6i/FALLBACK.md) — the v8 baseline/fallback, install notes and the external APK
-- **Windows download**: [GitHub pre-release `sa6i-windows-arabic-v8-test`](https://github.com/ItsOkazaki/sa6i-link/releases/tag/sa6i-windows-arabic-v8-test) — the ZIP and `SHA256SUMS.txt` live under `sa6i/fallback/`; the release notes state the current asset status
-- [`sa6i/BROWSER-HYBRID.md`](sa6i/BROWSER-HYBRID.md) — the browser idea, noted but not built
-- [`sa6i/NOTICE.md`](sa6i/NOTICE.md) — licenses and attribution
-- [`sa6i/CONTINUE.md`](sa6i/CONTINUE.md) / [`sa6i/continue.html`](sa6i/continue.html) — **Continue work** handoff for the next chat
+## Test status
 
-## Not in this repository
+The assembled Windows package has not been tested on Windows 7 or with a phone. Arabic needs further human review, full right-to-left layout is unfinished, and the requested performance presets are not included. On Android 11, the test app is intended to follow the phone's system language; in-app language selection remains unresolved. See [test status](sa6i/STATUS.md) for details.
 
-- The previous known-good **v4/v5 Windows files** (keep them on your PC — they
-  are not here and were not found in the connected Drive).
-- The **Android test APK** (53 MB) — it stays external in Drive by design.
-- A browser/hybrid build — the idea is recorded only, no decision to build it.
-- Any new implementation of presets, full RTL mirroring or a source-level
-  rebrand. This pass only carries across work that already exists in the Sa6i
-  version.
+## Source and licences
 
-## Licensing
+The source is based on [NectarLink v0.1.5](https://github.com/thtbee/nectarlink/tree/v0.1.5). The Windows test is a binary/resource patch, not a source-built Sa6i Link release. Build instructions for the upstream source are in [UPSTREAM-README-v0.1.5.md](UPSTREAM-README-v0.1.5.md).
 
-Upstream is apps GPL-3.0-or-later, core MPL-2.0, docs CC-BY-4.0 (see
-[`LICENSE`](LICENSE) and [`LICENSES/`](LICENSES/)). NectarLink's
-[`TRADEMARKS.md`](TRADEMARKS.md) requires forks to use their own name and logo,
-which the Sa6i Link brand does. Qt's Arabic base catalogue is distributed under
-its own licence; see [`sa6i/NOTICE.md`](sa6i/NOTICE.md).
+See [licensing and attribution](sa6i/NOTICE.md), [LICENSE](LICENSE), and [LICENSES](LICENSES/).

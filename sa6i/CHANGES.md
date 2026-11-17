@@ -21,8 +21,8 @@ implemented. The imported upstream tree is otherwise byte-for-byte `v0.1.5`.
   `lrelease` compile `nectarlink_ar.qm` for source and installer builds.
   `app_helpers.cpp` loads `nectarlink_<locale>.qm` plus `qtbase_<locale>.qm`
   from `translations/`, which the v8 baseline supplies.
-- `i18n.rs`'s own `every_offered_language_is_fully_translated` test passes
-  because the reviewed catalogue has no `type="unfinished"` entries.
+- The reviewed catalogue has no `type="unfinished"` entries. The source build
+  and its tests still need to be run in a suitable build environment.
 - `MainWindow.qml` guards its page wiring with `("deviceId" in item)` and
   `if (item.<signal>)` checks, so the simpler Sa6i guide (which has
   `pairRequested`, `showMeRequested`, `restartWalkthroughRequested`) loads
@@ -84,5 +84,4 @@ LocalesTest invariants: 0 missing strings, 0 missing plurals
 v8 EXE SHA-256:         f2a7598a…19c == READ-ME-FIRST.txt
 ```
 
-No compiler, `lrelease`, Gradle or device was available in this sandbox, so
-these are static checks only — not a build or a runtime test.
+These are static checks only — not a source build or a runtime test.
