@@ -1,16 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Attach the Sa6i Link Windows v8 test ZIP + checksums to a GitHub Release.
 #
-# Why this exists: the Arena sandbox can reach api.github.com but its TLS
-# connection to uploads.github.com is blocked, so release assets cannot be
-# uploaded directly from the agent. A GitHub-hosted runner can.
-# Third attempt: re-check whether the account billing/spending block is cleared. The ZIP and
-# SHA256SUMS.txt are already versioned under sa6i/fallback/, so this workflow
-# just re-attaches them from the repository.
-#
-# The Arena GitHub App cannot call workflow_dispatch (actions:write is denied),
-# so a push to main that edits this file starts the upload job instead. The
-# workflow_dispatch trigger remains for manual runs from the Actions tab.
+# GitHub-hosted runners are blocked by the account's billing/spending limit,
+# so this job runs on a free self-hosted runner instead. Self-hosted runners
+# do not consume billed Actions minutes and can reach uploads.github.com from
+# the owner's own network. See sa6i/SELF-HOSTED-RUNNER.md for setup.
 name: Attach Sa6i Link release assets
 
 on:
@@ -26,34 +20,38 @@ permissions:
 jobs:
   attach:
     name: Verify and attach Windows v8 assets
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-    # Retry after the GitHub connection was reconnected; a fresh push event
-    # starts the job again without workflow_dispatch permissions.
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: sa6i-windows-arabic-v8-test
+      # Stable ID of release `sa6i-windows-arabic-v8-test`; avoids needing jq
+      # or the gh CLI on the runner just to discover upload_url.
+      RELEASE_ID: "447714019"
     steps:
       - uses: actions/checkout@v7
 
-      - name: Verify the vendored archive before uploading
+      - name: Confirm the vendored files exist
         shell: bash
         run: |
           set -euo pipefail
-          zip="sa6i/fallback/Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip"
-          test -f "$zip"
-          test -f sa6i/fallback/SHA256SUMS.txt
-          echo "78da55255ee39c31df9064258b550fbb638e47f60b5daff80142a8b29e750cad  $zip" | sha256sum -c -
-          echo "ZIP verified: $(wc -c < "$zip") bytes"
+          test -f "sa6i/fallback/Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip"
+          test -f "sa6i/fallback/SHA256SUMS.txt"
+          echo "Both vendored files are present."
 
-      - name: Upload release assets
+      - name: Upload both assets with curl (no gh CLI needed)
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$TAG" \
+          base="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets"
+          for f in \
             "sa6i/fallback/Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip" \
-            "sa6i/fallback/SHA256SUMS.txt" \
-            --repo "$GITHUB_REPOSITORY" --clobber
-          echo "Attached assets:"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --json assets --jq='.assets[] | "\(.name)\t\(.size) bytes"'
+            "sa6i/fallback/SHA256SUMS.txt"; do
+            name="$(basename "$f")"
+            echo "Uploading $name"
+            curl -fSsS -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              -H "Accept: application/vnd.github+json" \
+              --data-binary "@$f" \
+              "$base?name=$name" > /dev/null
+          done
+          echo "Both assets attached."

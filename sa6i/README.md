@@ -14,13 +14,15 @@ sa6i/
 ├── BROWSER-HYBRID.md             the browser idea (noted, not built)
 ├── NOTICE.md                     licences and attribution
 ├── ANDROID-EMULATOR.md           can docker-android test the APK? (assessment)
+├── SELF-HOSTED-RUNNER.md         free way to attach the release assets
 ├── CONTINUE.md                   handoff prompt for the next chat
 ├── continue.html                 "Continue work" button (copies that prompt)
 ├── assets/
 │   ├── sa6i-link-logo.png         the logo you supplied (image-1.png)
 │   └── Sa6i-Link.ico              icon from the v8 build's source overlay
 ├── fallback/
-│   └── Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip   immutable Drive archive
+│   ├── Sa6i-Link-Windows-Arabic-v8-Reviewed-TEST.zip   immutable Drive archive
+│   └── SHA256SUMS.txt             ZIP + 13 extracted-file checksums
 └── baseline/windows-arabic-v8/    that ZIP, extracted as the working baseline
     ├── READ-ME-FIRST.txt          original install + provenance notes
     ├── ARABIC-CHECK-NOTES.txt     LanguageTool / Hunspell / AyaSpell review notes
