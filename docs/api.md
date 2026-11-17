@@ -74,7 +74,7 @@ Sends files, a URL, or text to a paired phone (defaults to the first online or p
 {
   "device": "Pixel 9 Pro",
   "paths": ["C:\\Users\\Alice\\Pictures\\diagram.png"],
-  "url": "https://nectarlink.dev",
+  "url": "https://example.com",
   "text": "Meeting notes"
 }
 ```

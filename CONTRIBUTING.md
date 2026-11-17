@@ -79,7 +79,7 @@ These come from the plan and will grow into a full style guide:
 ## Questions and ideas
 
 Questions, ideas that need talking through, and "how do I…" belong in
-[Discussions](https://github.com/thtbee/nectarlink/discussions), not issues.
+this repository, not the upstream project.
 
 ## Reporting bugs
 

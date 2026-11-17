@@ -1,5 +1,7 @@
 # Getting Started
 
+This is historical upstream documentation, not installation instructions for the Sa6i Link test package. See the [main README](../../README.md) for the current test.
+
 This guide walks you through installing NectarLink on Windows, Linux and Android, completing the first-run setup walkthrough, pairing your devices, and choosing the Android power level that fits how you work.
 
 ## System Requirements
@@ -22,26 +24,8 @@ This guide walks you through installing NectarLink on Windows, Linux and Android
 
 ### On Linux
 
-Open a terminal and run:
-
-```bash
-curl -fsSL https://github.com/thtbee/nectarlink/releases/latest/download/install.sh | sh
-```
-
-It shows each step as it runs, and `sudo` asks for your password once. It:
-
-1. Checks that your system can run NectarLink.
-2. Downloads the package for your system (a `.deb` with apt on Ubuntu and Debian, an `.rpm` with dnf on Fedora or zypper on openSUSE, the tarball elsewhere) and checks it against the release's `SHA256SUMS.txt`. If it doesn't match, nothing is installed.
-3. Installs it with the libraries and tools it needs, and adds NectarLink to your app menu.
-4. Sets up the phone as a webcam: installs the `v4l2loopback` driver and loads it as **NectarLink Webcam**, now and at every start. On Fedora the driver comes from RPM Fusion, which the installer doesn't add for you; it tells you how. With Secure Boot on, it also tells you how to enroll the driver's key.
-5. Lets the phone type and move the pointer: a udev rule gives the signed-in user access to `/dev/uinput`, as game controller drivers do.
-6. Opens NectarLink's ports (7718, mDNS on 5353, and LocalSend on 53317) in ufw or firewalld, to your local network only.
-
-To install only the app, end the command with `sh -s -- --no-extras` instead of `sh`. Without `sudo` or `doas`, it installs the tarball in your home folder and skips steps 4 to 6.
-
-You can also download a package from the GitHub Releases page yourself: `nectarlink_<version>_amd64.deb`, `nectarlink-<version>-1.x86_64.rpm`, `Nectarlink-<version>-x86_64.AppImage`, or `Nectarlink-<version>-linux-x86_64.tar.gz` (run its `install.sh`). The AppImage adds itself to your app menu the first time it runs. **Connection Doctor** in NectarLink's **Settings › Connection & About** finds anything still missing for the webcam, input or firewall and says how to fix it.
-
-Each kind of install updates itself the same way it was installed.
+A Sa6i Link Linux package has not been provided or tested. The Windows test
+package is described in the [main README](../../README.md).
 
 ### On Android
 
@@ -54,7 +38,7 @@ Each kind of install updates itself the same way it was installed.
 ### Uninstalling
 
 - **Windows:** open **Settings › Apps › Installed apps**, choose **NectarLink**, then **Uninstall**. This removes the app, its firewall rule, update task, shortcuts and Share sheet entry, and deletes its settings and pairings on this PC. Files you received and voice recordings stay where they were saved.
-- **Linux:** run `curl -fsSL https://github.com/thtbee/nectarlink/releases/latest/download/install.sh | sh -s -- --uninstall`. This removes the app however it was installed, its webcam, input and firewall settings, its menu entry and starting with your computer. Your settings and pairings stay in `~/.local/share/Nectarlink`; delete that folder to remove them too. An AppImage is removed by deleting the file.
+- **Linux:** Uninstall using the method supplied with the package you installed. A Sa6i Link Linux package is not currently available.
 - **Android:** uninstall it like any other app.
 
 ## First-Run Setup Walkthrough

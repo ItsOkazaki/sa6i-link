@@ -1,5 +1,7 @@
 # Changelog
 
+Historical upstream release notes follow; listed filenames are not Sa6i Link downloads. For the current test package, see the [README](README.md).
+
 All notable changes to NectarLink. Versions follow
 [semantic versioning](https://semver.org); before 1.0, a minor version may
 change things that need a step from you, and its notes say so.
@@ -14,32 +16,31 @@ what people reported since 0.1.4.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.5-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/Nectarlink-0.1.5-x64-setup.exe) | Windows | Windows 10 (2004+) or 11, 64-bit Intel or AMD (Phone as webcam needs Windows 11) |
-| [Nectarlink-0.1.5-arm64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/Nectarlink-0.1.5-arm64-setup.exe) | Windows on ARM | Windows 11 on ARM (Snapdragon) |
-| [nectarlink_0.1.5_amd64.deb](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/nectarlink_0.1.5_amd64.deb) | Ubuntu, Debian | Ubuntu 24.04 or newer, Debian 13, 64-bit Intel or AMD |
-| [nectarlink-0.1.5-1.x86_64.rpm](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/nectarlink-0.1.5-1.x86_64.rpm) | Fedora, openSUSE | Fedora 40 or newer, 64-bit Intel or AMD |
-| [Nectarlink-0.1.5-x86_64.AppImage](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/Nectarlink-0.1.5-x86_64.AppImage) | Other Linux | A distribution from 2024 or newer, 64-bit Intel or AMD |
-| [Nectarlink-0.1.5-linux-x86_64.tar.gz](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/Nectarlink-0.1.5-linux-x86_64.tar.gz) | Other Linux | As the AppImage |
-| [Nectarlink-0.1.5-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/Nectarlink-0.1.5-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.5-x64-setup.exe | Windows | Windows 10 (2004+) or 11, 64-bit Intel or AMD (Phone as webcam needs Windows 11) |
+| Nectarlink-0.1.5-arm64-setup.exe | Windows on ARM | Windows 11 on ARM (Snapdragon) |
+| nectarlink_0.1.5_amd64.deb | Ubuntu, Debian | Ubuntu 24.04 or newer, Debian 13, 64-bit Intel or AMD |
+| nectarlink-0.1.5-1.x86_64.rpm | Fedora, openSUSE | Fedora 40 or newer, 64-bit Intel or AMD |
+| Nectarlink-0.1.5-x86_64.AppImage | Other Linux | A distribution from 2024 or newer, 64-bit Intel or AMD |
+| Nectarlink-0.1.5-linux-x86_64.tar.gz | Other Linux | As the AppImage |
+| Nectarlink-0.1.5-android.apk | Android | Android 8.0 or newer |
 
-All are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.5/SHA256SUMS.txt).
-On Linux, `curl -fsSL https://github.com/thtbee/nectarlink/releases/latest/download/install.sh | sh`
-picks the right one. Installed copies update themselves.
+All are listed with their SHA-256 hashes in SHA256SUMS.txt.
+The historical Linux installer is not a Sa6i Link package.
 
 ### New
 
 - **Nix flake.** `nix run` starts the PC app on Linux, and `nix develop` gives a
   development shell. Thanks to [@m-uvex](https://github.com/m-uvex)
-  ([#173](https://github.com/thtbee/nectarlink/pull/173)).
+  (#173).
 - **Delete photos from the PC.** Select them on the Photos page and they go to
   the phone's trash, where you can still restore them. It needs All files
   access on the phone
-  ([#174](https://github.com/thtbee/nectarlink/issues/174)).
+  (#174).
 - **SD cards in File Explorer.** With All files access, an SD card or USB
   drive in the phone shows as a folder of its own (such as **SD card**)
   beside the internal storage's folders. Before Android 11, Android lets
   apps only read SD cards
-  ([D#149](https://github.com/thtbee/nectarlink/discussions/149)).
+  (D#149).
 - **Turkish.** The Android and PC apps speak Turkish (Türkçe): pick it in
   Settings, or they follow the system's language. Thanks to
   [@sedatdagg](https://github.com/sedatdagg).
@@ -48,63 +49,63 @@ picks the right one. Installed copies update themselves.
   headphones, with no mirror window. With Elevated it starts right away;
   otherwise the phone asks once, as for mirroring. The phone goes quiet
   meanwhile and its media volume comes back after
-  ([#94](https://github.com/thtbee/nectarlink/issues/94)).
+  (#94).
 - **Sharing your PC's screen with the phone uses H.265** when both sides
   can, and H.264 otherwise. Thanks to [@AS8148](https://github.com/AS8148)
-  ([#66](https://github.com/thtbee/nectarlink/pull/66)).
+  (#66).
 - **Hardware video for screen sharing on Linux.** With FFmpeg 6 to 9
   installed, sharing the PC's screen and showing a shared screen use the
   GPU (VAAPI, NVIDIA or Intel QSV) and fall back to software H.264 when it
   can't. Thanks to [@AS8148](https://github.com/AS8148)
-  ([#67](https://github.com/thtbee/nectarlink/pull/67)).
+  (#67).
 - **Elevated over USB.** Plug the phone into the PC with USB debugging
   allowed and Elevated starts by itself, without setting up Wireless
   debugging. It runs while the cable is in, and needs Android's `adb` running on the PC
   (Google's platform-tools, then `adb start-server`). The PC only starts NectarLink's
   own helper, on the phone that asked
-  ([#70](https://github.com/thtbee/nectarlink/issues/70)).
+  (#70).
 - **Mirroring wakes the phone's screen.** With Elevated, starting mirroring
   from the PC turns the phone's screen on if it's off, so the phone can stay
   in a pocket; a locked phone shows its lock screen in the window
-  ([#82](https://github.com/thtbee/nectarlink/issues/82)).
+  (#82).
 - **Watch the PC and move its pointer at once.** Control PC's Screen tab
   on the phone has a touchpad under the PC's screen (it hides in full
   screen). Thanks to [@waytoo-average](https://github.com/waytoo-average)
-  ([#104](https://github.com/thtbee/nectarlink/pull/104)).
+  (#104).
 - **Call or text a copied number from the command palette.** Copy a phone
   number anywhere, open the palette with its shortcut, and Call and Text
   for that number are at the top
-  ([#83](https://github.com/thtbee/nectarlink/issues/83)).
+  (#83).
 - **Connect over Tailscale.** With Tailscale on the phone and the PC, they
   reach each other directly through it from different networks, without
   relays. Pair once while Tailscale is up on both. On
   Windows, mark the Tailscale network Private so the firewall lets it in
   (`docs/technical/tailscale.md` has the command). Thanks to
   [@waytoo-average](https://github.com/waytoo-average)
-  ([#105](https://github.com/thtbee/nectarlink/pull/105)).
+  (#105).
 - **A native installer for Windows on ARM** (Snapdragon PCs):
   `Nectarlink-<version>-arm64-setup.exe`, next to the x64 one. Thanks to
   [@HosseinDianati](https://github.com/HosseinDianati)
-  ([#14](https://github.com/thtbee/nectarlink/pull/14)).
+  (#14).
 - **Elevated through Shizuku.** If you use Shizuku, **Use Shizuku** in
   Elevated's settings starts it through Shizuku instead of NectarLink's own
   Wireless debugging pairing, so it keeps working away from Wi-Fi while
   Shizuku runs. Shizuku asks once whether NectarLink may use it. The helper
   still runs as the shell user, never as root
-  ([#110](https://github.com/thtbee/nectarlink/issues/110)).
+  (#110).
 - **Pick the SIM for a call from the PC.** On a phone with two SIMs, the
   Calls page has **Call with** under the dial pad. It starts on the phone's
   default SIM for calls and remembers your pick for each phone. Before,
-  the phone's own SIM prompt came up and the call didn't go out ([#112](https://github.com/thtbee/nectarlink/issues/112)).
+  the phone's own SIM prompt came up and the call didn't go out (#112).
 - **Battery alerts for phones that stop charging at 80%.** Settings has a
   **Full charge target**: at **80% (Protect battery)**, the PC tells you the
   phone is charged when it reaches 80% on the charger. Thanks to
   [@Armone0](https://github.com/Armone0)
-  ([#98](https://github.com/thtbee/nectarlink/pull/98)).
+  (#98).
 - **Nicknames for your phones on the PC.** **Set nickname** on Home names a
   paired phone for this PC only; leave it blank to use the phone's own name.
   Thanks to [@Armone0](https://github.com/Armone0)
-  ([#98](https://github.com/thtbee/nectarlink/pull/98)).
+  (#98).
 - **The PC app on Linux**, for Ubuntu 24.04 or newer, Debian 13, Fedora 40
   or newer and other distributions from 2024 on, as a `.deb`, an `.rpm`,
   an AppImage or a tarball. It does what the Windows app does: notifications with
@@ -117,15 +118,15 @@ picks the right one. Installed copies update themselves.
   Wayland doesn't give background apps the clipboard, so there it syncs only
   while NectarLink's window has focus. Thanks
   to Jochen Kirstätter for the port
-  ([#34](https://github.com/thtbee/nectarlink/pull/34),
-  [#38](https://github.com/thtbee/nectarlink/pull/38),
-  [#41](https://github.com/thtbee/nectarlink/pull/41),
-  [#42](https://github.com/thtbee/nectarlink/pull/42),
-  [#43](https://github.com/thtbee/nectarlink/pull/43),
-  [#44](https://github.com/thtbee/nectarlink/pull/44)).
+  (#34,
+  #38,
+  #41,
+  #42,
+  #43,
+  #44).
 - **One command installs NectarLink on Linux** with everything it needs,
   showing each step:
-  `curl -fsSL https://github.com/thtbee/nectarlink/releases/latest/download/install.sh | sh`.
+  the historical upstream installer.
   It picks the package for your system, checks it against the release's
   sums, installs it with its dependencies, and sets up the phone as webcam,
   the phone as keyboard and mouse, and the firewall for your local network.
@@ -137,7 +138,7 @@ picks the right one. Installed copies update themselves.
   never sent), photos copied on the phone, and notifications. Screen
   mirroring, recordings, PC audio, phone storage and the virtual camera
   aren't there yet, and phones show them as unavailable. Thanks to
-  saivinay1805 ([#24](https://github.com/thtbee/nectarlink/pull/24)).
+  saivinay1805 (#24).
 - **Play on phone.** A switch on Home, under Phone as speaker (and a button
   on the PC's media card), moves what plays on the PC to your phone. The
   switch waits, greyed out, until a video plays. Streaming services that protect their video
@@ -159,7 +160,7 @@ picks the right one. Installed copies update themselves.
   an output of your choice. With a virtual audio cable such as VB-CABLE
   installed, NectarLink plays into it by itself, and its other end is a
   microphone Discord, Zoom, OBS or Teams can pick
-  ([#7](https://github.com/thtbee/nectarlink/issues/7)). A microphone of
+  (#7). A microphone of
   NectarLink's own, without the cable, needs an audio driver and comes
   later. A volume slider sets how loud it plays, and the phone evens out a
   quiet voice where it can. The request also shows on the phone's Home,
@@ -187,7 +188,7 @@ has a Stop button. Choosing another
   then connects only while the app is open, and the notification goes
   away. Mirroring, file transfers, the webcam and the mic still finish
   before it disconnects. Thanks to Abinanthan
-  ([#22](https://github.com/thtbee/nectarlink/pull/22)).
+  (#22).
 - **Pair a phone with a tablet (or another phone).** In NectarLink's
   pairing screen, **Pair a phone or tablet instead** shows a code to scan
   from the other device. Once paired, each shows the other on Home with its
@@ -195,16 +196,16 @@ has a Stop button. Choosing another
   show on the tablet; dismiss one there and it goes on the phone too.
 - **The Windows app follows the system language**, and speaks Simplified
   Chinese, by [@zzz1465720680](https://github.com/zzz1465720680)
-  ([#16](https://github.com/thtbee/nectarlink/pull/16),
-  [#17](https://github.com/thtbee/nectarlink/pull/17)), or the language
+  (#16,
+  #17), or the language
   you pick in **Settings › General**. Its messages, errors and the
   Features guide are translated too, with the timeline's wording from
   [@zzz1465720680](https://github.com/zzz1465720680)
-  ([#18](https://github.com/thtbee/nectarlink/pull/18)).
+  (#18).
 - **Disconnect from a device without unpairing it.** **Disconnect** on
   Home (**Stop reconnecting** while it isn't connected) keeps a phone or PC
   disconnected, even after a restart, until you tap **Reconnect**
-  ([#48](https://github.com/thtbee/nectarlink/issues/48)).
+  (#48).
 - **The phone's volume buttons control your PC** while it plays music or
   video, in 4% steps, as with KDE Connect. When the phone plays something
   itself, or the PC is paused, they work on the phone as usual. Turn it off
@@ -212,12 +213,12 @@ has a Stop button. Choosing another
 - **App windows bring the phone's sound to the PC.** It starts with the
   first app window and stops with the last, and the phone goes quiet
   meanwhile. The speaker button in any app window mutes it
-  ([#121](https://github.com/thtbee/nectarlink/issues/121)).
+  (#121).
 - **Start the camera and microphone without asking.** For a PC you trust,
   turn it on under that PC in the phone's **Settings › PCs**: its webcam
   and microphone requests start right away, even with the screen off,
   with no tap. Needs Elevated; it's off by default
-  ([#132](https://github.com/thtbee/nectarlink/issues/132)).
+  (#132).
 - **A Nightly channel.** Pick **Stable** or **Nightly** under Updates in
   Settings, on the PC and on the phone. Nightly gets a build of the latest
   code every couple of hours when it changes, each named for a flower
@@ -243,17 +244,17 @@ has a Stop button. Choosing another
   title bar over NectarLink's, Snap and resizing work, and the caption
   buttons show. Phone as webcam still needs Windows 11. Thanks to
   [@waytoo-average](https://github.com/waytoo-average)
-  ([#103](https://github.com/thtbee/nectarlink/pull/103)).
+  (#103).
 - **Send to your phone from more Linux file managers.** Right-click files
   or folders in Nemo (Cinnamon) or Thunar (XFCE) as well as GNOME Files,
   Dolphin and Caja, and folders now work in all of them
-  ([#49](https://github.com/thtbee/nectarlink/issues/49)).
+  (#49).
 - **Smaller Linux installs.** The app no longer needs the ffmpeg program:
   recordings add the phone's audio themselves. ffmpeg, the webcam driver
   and NetworkManager are only suggested now; the one-command install still
   adds the webcam driver. Thanks to
   [@jochenkirstaetter](https://github.com/jochenkirstaetter)
-  ([#156](https://github.com/thtbee/nectarlink/pull/156)).
+  (#156).
 - **Setup on Windows asks about the desktop shortcut and the folder.**
   Untick **Add a desktop shortcut** to skip it. Updates leave it as you
   had it, so one you deleted no longer comes back. **Change** next to
@@ -261,7 +262,7 @@ has a Stop button. Choosing another
   Program Files, and updates go there too. Setup locks the folder like
   Program Files. If a folder above it can be changed without
   administrator rights, updates there ask for your permission each time
-  ([#102](https://github.com/thtbee/nectarlink/issues/102)).
+  (#102).
 - **Files received on Windows are marked as from another device,** the way
   a browser marks a download, so Windows checks a program with SmartScreen
   before it runs and Office opens documents in Protected View.
@@ -269,7 +270,7 @@ has a Stop button. Choosing another
   the phone checks the app in front every 15 seconds instead of several
   times a second, and checks again as soon as the screen turns on. By
   [@alexfoxtm](https://github.com/alexfoxtm)
-  ([#61](https://github.com/thtbee/nectarlink/pull/61)).
+  (#61).
 - **The phone app starts about twice as fast right after an update.**
   Android compiles an app installed outside the Play Store only during
   idle maintenance, often days later. With Elevated set up, NectarLink
@@ -289,7 +290,7 @@ has a Stop button. Choosing another
 - **The PC's window opens where you left it.** It comes back on the same
   monitor, at the same size and place, and maximized if it was. If that
   monitor is gone or smaller, it fits the window on screen. Thanks to
-  Jochen Kirstätter ([#26](https://github.com/thtbee/nectarlink/issues/26)).
+  Jochen Kirstätter (#26).
 
 ### Fixed
 
@@ -298,8 +299,8 @@ has a Stop button. Choosing another
 - **Files on a slow connection, such as over a relay, kept dropping the connection and could fail with "Transfer failed after 5 attempts".** The sender only waited 30 seconds for the other device to confirm a file, however much of it was still on its way, and NectarLink's regular check on the connection closed connections that were working but full. Both now wait while data is still moving, and a transfer that's making progress no longer runs out of attempts.
 - **The Screen tab lagged further and further behind on a slow connection, such as over a relay.** The PC sent more video than the link could carry and it queued on the way, so what you did showed up seconds later, and eventually the stream stopped. The phone now reports what has arrived, and the PC holds video back and lowers the bitrate to what the link carries. In a test at 700 kbit/s, frames that reached 16 seconds old now stay around half a second old. Mirroring your phone to the PC gets the same limit on delay. Both devices need this version.
 - **A file resumed over a shaky connection could fail its integrity check.** When a connection dropped and came straight back, the old and new attempts could both write to the same partial file. They now take turns, and a resumed file is checked as it is on disk before it's saved.
-- **Phone as webcam on phones whose encoder has no low latency mode.** The camera opened and closed again, because the encoder refused to start. NectarLink now starts it without that mode. Thanks to [@i5alidx](https://github.com/i5alidx) for finding the cause ([#202](https://github.com/thtbee/nectarlink/issues/202)).
-- **The Connection Doctor could say NectarLink isn't allowed through Windows Firewall** when it was. It couldn't read any firewall rule, so it never saw the one allowing NectarLink, and its **Allow** button seemed to fail too. Thanks to [@Codlight](https://github.com/Codlight) for sticking with this ([#160](https://github.com/thtbee/nectarlink/discussions/160)).
+- **Phone as webcam on phones whose encoder has no low latency mode.** The camera opened and closed again, because the encoder refused to start. NectarLink now starts it without that mode. Thanks to [@i5alidx](https://github.com/i5alidx) for finding the cause (#202).
+- **The Connection Doctor could say NectarLink isn't allowed through Windows Firewall** when it was. It couldn't read any firewall rule, so it never saw the one allowing NectarLink, and its **Allow** button seemed to fail too. Thanks to [@Codlight](https://github.com/Codlight) for sticking with this (#160).
 - **Clips waiting to send are protected.** Text, images and links waiting for a device to come online were readable in the app's database, and stayed after you cleared your history. They're now encrypted like clipboard history (on Windows and Android), removed when they expire, and removed when you clear clipboard history or everything.
 - **Connect over mobile data takes effect right away, both ways.** It used to need a restart: turned on, it did nothing until then, and turned off, it kept publishing your device's addresses until then. Your device's name is also no longer published. After turning it off, one idle connection to the relay, carrying nothing, stays until the next restart.
 - **Delete works on any number of photos.** More than 24 at once used to hide the button.
@@ -308,28 +309,28 @@ has a Stop button. Choosing another
   Android can store the service's name in a short form, and Pause didn't
   recognise it, so it turned debugging off but not the service, and banking
   apps that check for it still refused to open
-  ([#147](https://github.com/thtbee/nectarlink/issues/147)).
+  (#147).
 - **A USB connection that stopped answering recovers by itself.** Before, the
   phone stayed offline until you replugged the cable. Thanks to
   [@TheGeekyM](https://github.com/TheGeekyM)
-  ([#191](https://github.com/thtbee/nectarlink/pull/191)).
+  (#191).
 - **Phone storage on Linux says why it can't list files,** such as Permission
   denied when storage access isn't granted on the phone, instead of an
   input/output error. Thanks to [@TheGeekyM](https://github.com/TheGeekyM), who
   also wrote up how the mount works
-  ([#185](https://github.com/thtbee/nectarlink/pull/185),
-  [#186](https://github.com/thtbee/nectarlink/pull/186)).
+  (#185,
+  #186).
 - **Messages on the PC.** A conversation opens at the latest message and stays
   there as pictures load and after you send, one you read lately opens at once,
   and one you've read here stops showing as unread. The phone keeps its own
   count unless NectarLink is its default SMS app
-  ([#176](https://github.com/thtbee/nectarlink/issues/176)).
+  (#176).
 - **Mirroring: lock the phone, and keep its sound on it.** A **Lock phone**
   button in the mirror window, and taps from the PC now reach the phone as
   finger touches, so a launcher's double tap can see them
-  ([#153](https://github.com/thtbee/nectarlink/issues/153)). **Play the sound
+  (#153). **Play the sound
   on the phone** gives the sound back to the phone, not just mutes it here
-  ([#178](https://github.com/thtbee/nectarlink/issues/178)).
+  (#178).
 - **Unpairing a phone clears what the PC kept from it.** Its messages, call
   log, contacts, photo thumbnails and opened photos, and its transfers in the
   list. Files you saved stay, and so do the Timeline and clipboard history.
@@ -354,7 +355,7 @@ has a Stop button. Choosing another
   address the PC uses to reach your network first, and the PC looks for
   phones on all of its networks. Thanks to
   [@samsarajr](https://github.com/samsarajr) for the packet capture that
-  found it ([#148](https://github.com/thtbee/nectarlink/issues/148)).
+  found it (#148).
 - **Your paired phone no longer shows twice on Home.** NectarLink on the
   phone also answers LocalSend, so it was listed under LocalSend nearby as
   well, with a second Send files. Paired devices are left out of that list,
@@ -362,34 +363,34 @@ has a Stop button. Choosing another
 - **App windows stayed empty when the phone's screen was off.** Android
   started their display asleep too, so the app never drew. Opening one now
   wakes the phone's screen first, as mirroring does
-  ([#152](https://github.com/thtbee/nectarlink/issues/152)).
+  (#152).
 - **A transfer paused and quickly resumed on the receiving device could stay
   paused on the sending one** for good. It now carries on.
 - **App windows failed with "invalid mirroring options"** after Keep
   phone awake or Turn phone screen off was turned on in any mirror window,
   until the PC app restarted. Both settings now reach app windows once
-  they open ([#124](https://github.com/thtbee/nectarlink/issues/124)).
+  they open (#124).
 - **Turn phone screen off while mirroring left the screen on,** only
   dimmed, on recent Android. It now turns the panel off, on Android 15 and
   later through the system's own call for it, while the mirrored screen or
   app windows keep running
-  ([#122](https://github.com/thtbee/nectarlink/issues/122)).
+  (#122).
 - **An app window could freeze on its last picture** when the PC fell
   behind decoding: it now shows a new picture at least five times a second
   even then, and the log says when nothing could be shown
-  ([#125](https://github.com/thtbee/nectarlink/issues/125)).
+  (#125).
 - **A home network numbered outside the private ranges** (such as
   192.1.1.0/24) only connected with Connect over mobile data on. A
   device's address counts as this network when it announces itself there,
   and Connection Doctor names the address instead of blaming AP isolation
-  ([#131](https://github.com/thtbee/nectarlink/issues/131)).
+  (#131).
 - **The Apps page showed "android:11"** on phones older than Android 11.
   It now says app windows need Android 11 or newer
-  ([#134](https://github.com/thtbee/nectarlink/issues/134)).
+  (#134).
 - **A landscape-only app or game in an app window came out sideways,**
   and taps landed in the wrong place. The window now turns to the app's
   shape, so the picture is upright and taps land where you click
-  ([#126](https://github.com/thtbee/nectarlink/issues/126)).
+  (#126).
 - **Clear all on the PC cleared ongoing notifications too** (a timer, a
   battery monitor), which the phone keeps, so they vanished from the PC
   until the app next updated them. They now stay, without a dismiss
@@ -398,13 +399,13 @@ has a Stop button. Choosing another
   can't work. They now use the app's `--register-vcam`, and say why a
   debug build's camera fails to start. Thanks to
   [@Parth412100](https://github.com/Parth412100)
-  ([#117](https://github.com/thtbee/nectarlink/pull/117)).
+  (#117).
 - **Add folder in Synced folders only ever added DCIM to Pictures.** It now
   asks which folder on the phone (with shortcuts for Camera, Screenshots,
   Download and others), where it goes on the PC, and whether to sync one
   way or both ways. Sync now also says when the phone hasn't let the PC
   into its files, instead of "Folders are up to date"
-  ([#111](https://github.com/thtbee/nectarlink/issues/111)).
+  (#111).
 - **Screen readers couldn't open a step of the first-run walkthrough** from
   its step dots on the PC. Pressing one now goes to that step.
 - **Typing on the phone from the PC with a non-US keyboard.** Characters
@@ -412,7 +413,7 @@ has a Stop button. Choosing another
   dropped in the mirror window and in Type on phone. Ctrl+C, Ctrl+X and
   Ctrl+A now copy, cut and select all on the phone, too; what you copy
   there reaches the PC with the clipboard
-  ([#107](https://github.com/thtbee/nectarlink/issues/107)).
+  (#107).
 - **A big phone folder showed only part of its files** in File Explorer (a
   camera folder of thousands of photos, say). Folders now come in pages, so
   every file shows, and listing one no longer holds up the connection.
@@ -423,18 +424,18 @@ has a Stop button. Choosing another
   Elevated, the PC's keys reach the phone through a virtual keyboard that
   stayed connected, so Android hid the on-screen keyboard in every app. It
   now goes away 10 seconds after the last key from the PC
-  ([#93](https://github.com/thtbee/nectarlink/issues/93)).
+  (#93).
 - **Renaming the phone reached the PC only after the app restarted.** It
-  now shows on the PC right away ([#87](https://github.com/thtbee/nectarlink/issues/87)).
+  now shows on the PC right away (#87).
 - **The phone's folder in File Explorer said the network was unavailable**
   when the phone had turned it away. It now says access is denied, and a
-  notification on the PC says what to turn on ([#88](https://github.com/thtbee/nectarlink/issues/88)).
+  notification on the PC says what to turn on (#88).
 - **The phone rang twice during a call** while Phone as speaker was on:
   the PC's ringtone was played on the phone as well.
 - **NectarLink never appeared in the Windows Share sheet,** even with
   Developer Mode on, because its package didn't register. It does now,
   and if Windows refuses it, `sparse-package.log` in the install folder
-  says why ([#84](https://github.com/thtbee/nectarlink/issues/84)).
+  says why (#84).
 - **An update could keep the old Phone as webcam driver.** While Windows'
   camera service has it loaded, the file can't be replaced, and setup
   quietly kept the old one, even after a restart. Setup now moves it
@@ -444,21 +445,21 @@ has a Stop button. Choosing another
 - **The Calls page showed "PC call audio connected"** on Windows, sometimes
   with a headset's name. Windows doesn't let apps carry a phone call's
   audio, so the panel is gone there; call audio stays on the phone
-  ([#86](https://github.com/thtbee/nectarlink/issues/86)).
+  (#86).
 - **A Phone Status widget was listed for the Widgets board** but never
   showed anything. It's removed until a working one is built
-  ([#85](https://github.com/thtbee/nectarlink/issues/85)).
+  (#85).
 - **Find my phone could ring too quietly to hear** when the alarm volume
   was low. It now rings at full alarm volume and puts your volume back
   afterwards, even if the app is closed mid-ring. Do Not Disturb still
   decides whether it sounds. By [@alexfoxtm](https://github.com/alexfoxtm)
-  ([#56](https://github.com/thtbee/nectarlink/issues/56),
-  [#58](https://github.com/thtbee/nectarlink/pull/58)).
+  (#56,
+  #58).
 - **Call controls on the PC went to the wrong call** when a second call
   came in during one: hanging up or holding from the PC acted on the
   waiting call. They now stay on the call in progress. By
   [@alexfoxtm](https://github.com/alexfoxtm)
-  ([#59](https://github.com/thtbee/nectarlink/pull/59)).
+  (#59).
 - **A resumed transfer showed as paused** on the sending side until the
   other device answered.
 - **The phone forgot how to wake the PC** when the PC's network dropped,
@@ -472,19 +473,19 @@ has a Stop button. Choosing another
 - **Wake when PC is nearby** never found the PC: the Windows app didn't
   start its Bluetooth beacon, and the phone looked for the wrong bytes in
   it. Both are fixed, and the Linux app broadcasts the beacon too
-  ([#47](https://github.com/thtbee/nectarlink/issues/47)).
+  (#47).
 - **Typing on the PC from the phone lost letters** when voice typing
   rewrote what it had typed: the PC turned away the burst of backspaces
   as too fast. The PC now takes typing at full speed, and the phone
   resends anything an older PC turns away
-  ([#52](https://github.com/thtbee/nectarlink/issues/52)).
+  (#52).
 - **Phone as webcam never showed up in other apps.** Windows couldn't
   start NectarLink's camera, though Settings said it was ready. It now
   appears as **NectarLink Webcam** in Zoom, Teams, OBS, the Camera app
   and others. Frames also stay on the graphics card on the way, and the
   phone sends H.265 when the PC can decode it, with H.264 otherwise.
   Thanks to [@AS8148](https://github.com/AS8148)
-  ([#51](https://github.com/thtbee/nectarlink/pull/51)).
+  (#51).
 - **A file being sent from the PC showed up twice on Home**, once under
   Waiting to send with a bar that kept flickering, and again under
   Transfers. Each file now has one row with one smooth bar that shows
@@ -493,23 +494,23 @@ has a Stop button. Choosing another
   cloned app), only one of them could connect over USB, and the PC kept
   offering to pair the other. Each profile now connects over USB, and the
   phone's name says which one it is, such as "Pixel 9a (Work)"
-  ([#25](https://github.com/thtbee/nectarlink/issues/25)).
+  (#25).
 - Plugging the phone in while it's connected over Wi-Fi moves the
   connection to USB sooner, and reconnecting after the phone restarts no
   longer tries a stale USB address first. PC audio sent to the phone
   drops a moment of sound under load rather than holding up everything
   else. Thanks to Jochen Kirstätter
-  ([#23](https://github.com/thtbee/nectarlink/pull/23)).
+  (#23).
 - Copying text on the phone that also carried a link to a file sent the
   wrong thing to the PC, or treated it as an image. The text now comes
   through as text, and files that aren't images aren't sent as images.
   Thanks to Jochen Kirstätter
-  ([#27](https://github.com/thtbee/nectarlink/issues/27)).
+  (#27).
 - The Timeline showed thumbnails only for photos saved from the phone,
   and some of those came out empty. Images you send or receive now get
   one too, files without one get an icon for their type, and Copy works
   for them. Thanks to Jochen Kirstätter
-  ([#28](https://github.com/thtbee/nectarlink/issues/28)).
+  (#28).
 - Turning on LocalSend closed the Windows app.
 - Play on phone froze on the phone when the player's window was
   minimized, and showed the whole screen when it couldn't find the
@@ -529,8 +530,8 @@ has a Stop button. Choosing another
 - The PC's log filled with network adapter warnings and kept only a few
   hours.
 - From an audit by [@kunal4060](https://github.com/kunal4060)
-  ([#72](https://github.com/thtbee/nectarlink/pull/72) to
-  [#79](https://github.com/thtbee/nectarlink/pull/79)):
+  (#72 to
+  #79):
   - **Text typed in one conversation could be sent in another**: the
     message box kept it when you switched. Each conversation now keeps its
     own draft.
@@ -577,10 +578,10 @@ and the fixes for what people ran into in the first days after launch.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.4-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.4/Nectarlink-0.1.4-x64-setup.exe) | Windows | Windows 11, 64-bit (Windows 10 works, without Phone as webcam) |
-| [Nectarlink-0.1.4-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.4/Nectarlink-0.1.4-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.4-x64-setup.exe | Windows | Windows 11, 64-bit (Windows 10 works, without Phone as webcam) |
+| Nectarlink-0.1.4-android.apk | Android | Android 8.0 or newer |
 
-Both are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.4/SHA256SUMS.txt).
+Both are listed with their SHA-256 hashes in SHA256SUMS.txt.
 Installed copies update themselves.
 
 ### New
@@ -593,7 +594,7 @@ Installed copies update themselves.
   they open.
 - **Simplified Chinese** for the Android app, by
   [@zzz1465720680](https://github.com/zzz1465720680)
-  ([#13](https://github.com/thtbee/nectarlink/pull/13)). It follows the
+  (#13). It follows the
   phone's language.
 - **Turn the phone's screen off from an app window**, as screen mirroring
   could: the phone stays awake with its screen dark, and the apps keep
@@ -607,7 +608,7 @@ Installed copies update themselves.
   troubleshooting explain what to do when Play Protect blocks the APK with
   no **Install anyway** button, as it now does in India and many other
   countries, by [@eren-998](https://github.com/eren-998)
-  ([#11](https://github.com/thtbee/nectarlink/pull/11)). The README points
+  (#11). The README points
   there from the downloads.
 
 ### Changed
@@ -653,7 +654,7 @@ Installed copies update themselves.
   frame in about 47 ms, over the 33 ms a frame has at 30 fps, so frames were
   dropped. It now decodes on the GPU when there is one and converts on several
   cores, about 19 ms a frame
-  ([#6](https://github.com/thtbee/nectarlink/issues/6)).
+  (#6).
 - **Webcam resolution.** The resolution buttons on the PC and the phone
   follow what's actually streaming, whichever side changed it; held upright,
   the phone's showed none selected. 4K is offered only when the camera in
@@ -690,7 +691,7 @@ Installed copies update themselves.
   force stop it, or when Phone as webcam's preview comes back (the same fix
   covers the QR scanner and Continuity Camera).
 - Android: changing the theme in Settings no longer jumps back to Home
-  ([#8](https://github.com/thtbee/nectarlink/issues/8)).
+  (#8).
 - Android: on Hive, the category chips at the top of Settings and the
   Home/Settings bar are solid, so the honeycomb and the list no longer show
   through them.
@@ -704,8 +705,8 @@ Installed copies update themselves.
 
 To [@zzz1465720680](https://github.com/zzz1465720680) for the Simplified
 Chinese translation and the reports in
-[#6](https://github.com/thtbee/nectarlink/issues/6) and
-[#8](https://github.com/thtbee/nectarlink/issues/8),
+#6 and
+#8,
 [@eren-998](https://github.com/eren-998) for the Play Protect guide,
 [@jochenkirstaetter](https://github.com/jochenkirstaetter) for testing on a
 Pixel and the Linux port in progress, and everyone who reported problems on
@@ -720,10 +721,10 @@ slow or unsteady connections and show how far they are.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.3-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.3/Nectarlink-0.1.3-x64-setup.exe) | Windows | Windows 11, 64-bit |
-| [Nectarlink-0.1.3-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.3/Nectarlink-0.1.3-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.3-x64-setup.exe | Windows | Windows 11, 64-bit |
+| Nectarlink-0.1.3-android.apk | Android | Android 8.0 or newer |
 
-Both are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.3/SHA256SUMS.txt).
+Both are listed with their SHA-256 hashes in SHA256SUMS.txt.
 Installed copies update themselves. If **Update** in 0.1.2 or earlier closes
 NectarLink and nothing happens, install this version from the link above
 once; updates after it work from the app.
@@ -776,10 +777,10 @@ an update or a restart.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.2-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.2/Nectarlink-0.1.2-x64-setup.exe) | Windows | Windows 11, 64-bit |
-| [Nectarlink-0.1.2-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.2/Nectarlink-0.1.2-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.2-x64-setup.exe | Windows | Windows 11, 64-bit |
+| Nectarlink-0.1.2-android.apk | Android | Android 8.0 or newer |
 
-Both are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.2/SHA256SUMS.txt).
+Both are listed with their SHA-256 hashes in SHA256SUMS.txt.
 Installed copies update themselves.
 
 ### Fixed
@@ -816,10 +817,10 @@ back permissions, and Graphite as the phone's default look.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.1-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.1/Nectarlink-0.1.1-x64-setup.exe) | Windows | Windows 11, 64-bit |
-| [Nectarlink-0.1.1-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.1/Nectarlink-0.1.1-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.1-x64-setup.exe | Windows | Windows 11, 64-bit |
+| Nectarlink-0.1.1-android.apk | Android | Android 8.0 or newer |
 
-Both are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.1/SHA256SUMS.txt).
+Both are listed with their SHA-256 hashes in SHA256SUMS.txt.
 Installed copies update themselves.
 
 ### Changed
@@ -863,10 +864,10 @@ encrypted, with no account and no cloud service.
 
 | Download | For | Needs |
 |---|---|---|
-| [Nectarlink-0.1.0-x64-setup.exe](https://github.com/thtbee/nectarlink/releases/download/v0.1.0/Nectarlink-0.1.0-x64-setup.exe) | Windows | Windows 11, 64-bit |
-| [Nectarlink-0.1.0-android.apk](https://github.com/thtbee/nectarlink/releases/download/v0.1.0/Nectarlink-0.1.0-android.apk) | Android | Android 8.0 or newer |
+| Nectarlink-0.1.0-x64-setup.exe | Windows | Windows 11, 64-bit |
+| Nectarlink-0.1.0-android.apk | Android | Android 8.0 or newer |
 
-Both are listed with their SHA-256 hashes in [SHA256SUMS.txt](https://github.com/thtbee/nectarlink/releases/download/v0.1.0/SHA256SUMS.txt).
+Both are listed with their SHA-256 hashes in SHA256SUMS.txt.
 
 The Android app is signed with the project's release key. The Windows
 installer isn't code-signed yet, so SmartScreen asks once: choose **More
@@ -1088,4 +1089,4 @@ testing. It builds on Windows and Linux.
 - Windows adds its own copy button to some code notifications, so a popup can
   show two.
 
-See [Known limitations](https://github.com/thtbee/nectarlink/blob/main/docs/guide/known-limitations.md) for the details.
+See Known limitations for the details.

@@ -16,7 +16,7 @@ This is a review by the project, not an independent audit. It says what the code
 ### What isn't protected
 
 - **After turning off Connect over mobile data, one idle relay connection stays until the next restart.** Nothing is published, looked up or relayed by then, and non-LAN sessions are closed. iroh 1.3 only lets go of its home relay when the endpoint closes.
-- **On Linux the device key and clipboard history aren't sealed.** `identity.key` is stored with `0600` permissions and no platform protection, and the core logs that it is. Anything running as your user can read it, and so can anyone who reads the disk without full-disk encryption. A Secret Service option is under review for after 0.1.5 ([#189](https://github.com/thtbee/nectarlink/pull/189)).
+- **On Linux the device key and clipboard history aren't sealed.** `identity.key` is stored with `0600` permissions and no platform protection, and the core logs that it is. Anything running as your user can read it, and so can anyone who reads the disk without full-disk encryption. A Secret Service option is under review for after 0.1.5 (#189).
 - **Windows DPAPI protects against other accounts and offline disks, not against programs running as you.** The same goes for anything else a program running as you can read.
 - **Release binaries aren't code-signed (Authenticode).** Trust in downloads rests on HTTPS to GitHub and the published checksums. Android APKs are signed, and updates must carry the same signature.
 - **LocalSend is an open LAN protocol.** Any device on the network can offer a file. It's off by default, and nothing is written until you accept.

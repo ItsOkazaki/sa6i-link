@@ -1,8 +1,6 @@
 # Licences and attribution
 
-Sa6i Link is a private test rebrand of **NectarLink 0.1.5**
-(`https://github.com/thtbee/nectarlink/tree/v0.1.5`). This is not an official
-NectarLink build.
+Sa6i Link is a private test rebrand of **NectarLink 0.1.5**, originally created by thtbee. This is not an official NectarLink build.
 
 | Part | Licence | Where |
 |---|---|---|

@@ -20,7 +20,7 @@ cargo build --release --manifest-path tools/powertoys-extension/Cargo.toml
 ```powershell
 nectarlink-ptrun query ""
 nectarlink-ptrun query "ring"
-nectarlink-ptrun query "https://nectarlink.dev"
+nectarlink-ptrun query "https://example.com"
 ```
 
 Outputs a JSON array of palette commands (`send-clipboard`, `ring`, `camera` `photo`/`scan`, `send-url`, `send-text`, plus recent timeline items).
@@ -32,7 +32,7 @@ nectarlink-ptrun invoke ring
 nectarlink-ptrun invoke send-clipboard
 nectarlink-ptrun invoke camera photo
 nectarlink-ptrun invoke camera scan
-nectarlink-ptrun invoke send-url "https://nectarlink.dev"
+nectarlink-ptrun invoke send-url "https://example.com"
 nectarlink-ptrun invoke send-text "Copied from PowerToys"
 nectarlink-ptrun invoke send-file "C:\Users\Alice\Desktop\notes.pdf"
 ```
