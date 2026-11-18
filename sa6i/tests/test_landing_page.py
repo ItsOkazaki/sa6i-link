@@ -34,7 +34,8 @@ class LandingPageTests(unittest.TestCase):
         self.assertNotIn("Experimental builds", page)
         self.assertNotIn("TEST BUILD", page)
         self.assertNotIn("Arabic test", page)
-        self.assertIn("Keep your working version", page)
+        self.assertNotIn('className="notice"', page)
+        self.assertIn("keep your original as a backup", page)
         self.assertIn("Not an installer", page)
 
 

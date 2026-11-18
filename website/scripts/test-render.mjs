@@ -16,9 +16,10 @@ try {
   assert.match(html, /in sync\./);
   assert.match(html, /Download Windows ZIP/);
   assert.match(html, /Download Android APK/);
-  assert.match(html, /sa6i-link\.jpg/);
+  assert.match(html, /sa6i-link\.png/);
   assert.match(html, /Interactive example only/);
-  assert.match(html, /Keep your working version/);
+  assert.match(html, /keep your original as a backup/i);
+  assert.doesNotMatch(html, /class="notice"/);
   assert.match(html, /aria-expanded="false"/);
   assert.doesNotMatch(html, /Arabic test|test builds?|experimental builds/i);
   console.log('React render smoke test passed');
