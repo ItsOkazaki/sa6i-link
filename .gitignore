@@ -54,6 +54,8 @@ Thumbs.db
 desktop.ini
 
 # ---- Logs and tool output ----
+__pycache__/
+*.py[cod]
 *.log
 aqtinstall.log
 

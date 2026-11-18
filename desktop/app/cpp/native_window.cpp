@@ -362,16 +362,12 @@ private:
 NativeWindow::NativeWindow(QWindow *parent)
     : QQuickWindow(parent)
 {
-    // Qt removes the system title bar and lets content fill the window.
+    // Use one client-drawn title bar on all Windows versions. On some Windows
+    // 11 configurations ExpandedClientAreaHint can leave a system caption
+    // visible above the app's own controls. The native frame styles are
+    // restored in applyFrame(), while WM_NCCALCSIZE removes the caption.
 #ifdef _WIN32
-    if (systemBackdropSupported()) {
-        setFlags(flags() | Qt::ExpandedClientAreaHint);
-    } else {
-        // Windows 10 keeps drawing its own caption (icon, title, buttons) over an
-        // expanded client area. A frameless window has no caption at all; the
-        // app bar's buttons and WM_NCHITTEST still give drag, resize and maximize.
-        setFlags(flags() | Qt::FramelessWindowHint);
-    }
+    setFlags(flags() | Qt::FramelessWindowHint);
     setColor(Qt::transparent);
 #elif defined(__linux__)
     setFlags(flags() | Qt::FramelessWindowHint);
@@ -582,21 +578,19 @@ void NativeWindow::applyFrame()
     // its own caption buttons over the app's.
     const MARGINS margins { 0, 0, 0, 0 };
     DwmExtendFrameIntoClientArea(hwnd, &margins);
-    if (!systemBackdropSupported()) {
-        // Windows 10, frameless: give back the frame styles so Snap, Win+arrow,
-        // min/max animations and the shadow work. WM_NCCALCSIZE below keeps the
-        // whole window as client area, so no caption is drawn.
-        const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
-        const LONG_PTR want = (style & ~LONG_PTR(WS_POPUP))
-            | WS_THICKFRAME | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
-        if (style != want) {
-            SetWindowLongPtrW(hwnd, GWL_STYLE, want);
-            SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                         SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        }
-        const MARGINS shadow { 0, 0, 1, 0 };  // a 1px frame keeps the DWM shadow
-        DwmExtendFrameIntoClientArea(hwnd, &shadow);
+    // Give back the frame styles so Snap, Win+arrow, min/max animations and
+    // the shadow work. WM_NCCALCSIZE keeps the window as client area, so the
+    // system does not draw a second title bar over the app's controls.
+    const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+    const LONG_PTR want = (style & ~LONG_PTR(WS_POPUP))
+        | WS_THICKFRAME | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
+    if (style != want) {
+        SetWindowLongPtrW(hwnd, GWL_STYLE, want);
+        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
+    const MARGINS shadow { 0, 0, 1, 0 };  // a 1px frame keeps the DWM shadow
+    DwmExtendFrameIntoClientArea(hwnd, &shadow);
     const BOOL dark = m_darkFrame;
     DwmSetWindowAttribute(hwnd, kUseImmersiveDarkMode, &dark, sizeof(dark));
     // Windows 10 has no system backdrop or caption color: skip both, and the
@@ -686,8 +680,9 @@ bool NativeWindow::nativeEvent(const QByteArray &eventType, void *message, qintp
 
     switch (msg->message) {
     case WM_NCCALCSIZE:
-        // Windows 10 (frame styles on a frameless window): all client area.
-        if (msg->wParam == TRUE && !systemBackdropSupported()) {
+        // Frame styles on a frameless window: use the whole client area on
+        // Windows 11 too, so a native caption cannot duplicate the app bar.
+        if (msg->wParam == TRUE) {
             if (IsZoomed(msg->hwnd)) {
                 // Maximized windows hang their frame off-screen: pull it back in.
                 auto *params = reinterpret_cast<NCCALCSIZE_PARAMS *>(msg->lParam);

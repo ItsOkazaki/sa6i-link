@@ -162,7 +162,7 @@
     <string name="transfer_pause">Duraklat</string>
     <string name="transfer_resume">Sürdür</string>
     <string name="transfer_paused_progress">Duraklatıldı · %1$s / %2$s</string>
-    <string name="transfer_received_from">Kaynak: %1$s · Download/Nectarlink klasöründe</string>
+    <string name="transfer_received_from">Kaynak: %1$s · Download/Sa6i Link klasöründe</string>
     <string name="transfer_sent_to">%1$s cihazına gönderildi</string>
     <string name="transfer_cancelled">İptal edildi</string>
     <string name="transfer_denied">%1$s bu telefondan dosya kabul etmiyor.</string>
@@ -265,21 +265,21 @@
     <string name="action_pair_new">Başka bir bilgisayar eşleştir</string>
     <string name="action_refresh">Yenile</string>
     <string name="action_update">Güncelle</string>
-    <string name="update_title">NectarLink %1$s kullanılabilir</string>
+    <string name="update_title">Sa6i Link %1$s kullanılabilir</string>
     <string name="update_text">En son iyileştirmeleri ve düzeltmeleri edinin.</string>
     <string name="update_downloading">İndiriliyor…</string>
     <string name="update_downloading_progress">İndiriliyor · %1$s / %2$s</string>
     <string name="update_waiting_network">Bağlantı bekleniyor. İndirme kaldığı yerden devam eder.</string>
     <string name="update_installing">Kuruluyor. Android onaylamanızı isteyebilir.</string>
-    <string name="update_not_allowed">NectarLink\'in güncellemelerini kurmasına izin verin. Geri döndüğünüzde güncelleme devam eder.</string>
+    <string name="update_not_allowed">Sa6i Link\'in güncellemelerini kurmasına izin verin. Geri döndüğünüzde güncelleme devam eder.</string>
     <string name="update_damaged">İndirilen dosya bozuk olduğu için kurulmadı. Tekrar deneyin.</string>
     <string name="update_offline">Güncelleme indirilemedi. İnternete bağlandığınızda tekrar deneyin.</string>
     <string name="update_install_failed">Android güncellemeyi kurmadı. Tekrar deneyin.</string>
     <string name="update_whats_new">Yenilikler</string>
     <string name="update_check">Güncellemeleri denetle</string>
     <string name="update_checking">Güncellemeler denetleniyor…</string>
-    <string name="update_up_to_date_version">NectarLink %1$s güncel.</string>
-    <string name="update_current_version">NectarLink %1$s sürümü yüklü.</string>
+    <string name="update_up_to_date_version">Sa6i Link %1$s güncel.</string>
+    <string name="update_current_version">Sa6i Link %1$s sürümü yüklü.</string>
     <string name="update_check_failed">Güncellemeler denetlenemedi. İnternet bağlantınızı kontrol edin.</string>
     <string name="action_lock_pc">Bilgisayarı kilitle</string>
     <string name="action_sleep_pc">Uyut</string>
@@ -1034,7 +1034,7 @@
     <string name="guide_files_pc_1">Dosyaları bilgisayarınızdaki Sa6i Link penceresine veya ekranın üst kenarındaki Island\'a sürükleyin.</string>
     <string name="guide_files_opt_1">Dosya gönder / Klasör gönder: Tek tek dosyaları veya klasör ağaçlarının tamamını aktarır.</string>
     <string name="guide_files_opt_2">Duraklat / Sürdür: Yarıda kalan aktarımları, tamamlanmış baytları yeniden göndermeden sürdürür.</string>
-    <string name="guide_files_privacy">Dosyalar QUIC TLS 1.3 üzerinden BLAKE3 bütünlük doğrulamasıyla Download/Nectarlink klasörüne aktarılır.</string>
+    <string name="guide_files_privacy">Dosyalar QUIC TLS 1.3 üzerinden BLAKE3 bütünlük doğrulamasıyla Download/Sa6i Link klasörüne aktarılır.</string>
     <string name="guide_files_limits">Tek seferde en fazla 5.000 dosya.</string>
 
     <!-- 8. Send queue -->
@@ -1312,9 +1312,9 @@
     <string name="pair_link_unknown_pc">bu cihaz</string>
     <string name="data_clear_failed">Geçmişin bir kısmı temizlenemedi. Tekrar deneyin.</string>
     <string name="channel_updates">Güncellemeler</string>
-    <string name="update_ready_title">NectarLink %1$s hazır</string>
+    <string name="update_ready_title">Sa6i Link %1$s hazır</string>
     <string name="update_ready_text">Güncellemeyi kurmak için dokunun.</string>
-    <string name="update_done_title">NectarLink %1$s sürümüne güncellendi</string>
+    <string name="update_done_title">Sa6i Link %1$s sürümüne güncellendi</string>
     <string name="update_done_text">Açmak için dokunun. Bilgisayarlarınız kendiliğinden yeniden bağlanır.</string>
     <string name="update_auto_title">Güncellemeleri otomatik kur</string>
     <string name="update_auto_text">GitHub\'daki yeni sürümler arka planda kurulur.</string>

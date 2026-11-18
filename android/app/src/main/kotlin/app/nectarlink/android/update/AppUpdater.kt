@@ -120,8 +120,8 @@ class AppUpdater(context: Context) {
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    /** Whether this build updates itself. */
-    val enabled: Boolean get() = !BuildConfig.DEBUG
+    /** The upstream updater must not install a differently signed app. Use the Sa6i release page instead. */
+    val enabled: Boolean get() = false
 
     private val _autoInstall = MutableStateFlow(prefs.getBoolean(AUTO_INSTALL, true))
 
