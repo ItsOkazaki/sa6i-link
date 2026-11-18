@@ -16,7 +16,30 @@ The user confirmed that VxKex 1.2.1.2229 is enabled for `Sa6i-Link-Win7-UI-v8.ex
 
 For a read-only check, open **Task Scheduler → Task Scheduler Library** and look for **VxKex Configuration Elevation Task**. Note its **Last Run Time** and **Last Run Result**, if present. Do not run, disable or delete it. A missing or older task result is not proof of a cause.
 
-## Check the VxKex setting
+## VxKex transaction error and the renamed package
+
+A screenshot of VxKex 1.2.1.2229 showed a failure to apply settings to
+`Sa6i Link.exe`, with a French message saying the name is reserved by another
+transaction. The VxKex configuration tool uses a Windows registry transaction;
+the error suggests a transaction conflict, but the screenshot does not identify
+its cause. A restart may clear a transient conflict; this has not been verified.
+Do not delete registry keys, reset transactional logs, reinstall VxKex, or change
+the working installation to troubleshoot this without further evidence.
+
+In the separately packaged candidate, `Sa6i Link.exe` is the small launcher,
+not the actual app: the launcher starts `Sa6i Link App.exe`. On Windows 7, apply
+VxKex to **`Sa6i Link App.exe`**, in the extracted folder, then launch
+`Sa6i Link.exe`. Do not rename either file: the launcher uses that exact app
+filename. Close all VxKex property dialogs and Sa6i Link windows before trying;
+if the conflict persists, restart Windows once and retry. Reopen the target's
+properties to check whether the setting stayed enabled. If it fails again,
+record the exact error and whether the target or launcher was selected. Keep
+using the original working folder until the candidate is confirmed working.
+VxKex in this setup targets Windows 7; the candidate's separate Windows 11
+window change still needs testing and does not establish compatibility for all
+versions of Windows.
+
+## Check the VxKex setting for the original v8 filenames
 
 1. Extract the whole app ZIP to a normal folder first; don't run it inside the ZIP. Keep it separate from the previous installation.
 2. In the extracted folder, right-click **`Sa6i-Link-Win7-UI-v8.exe`** (the application, not `Start Sa6i Link v8.exe` or a shortcut) and open **Properties → VxKex**.

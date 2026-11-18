@@ -162,7 +162,7 @@
     <string name="transfer_pause">Pause</string>
     <string name="transfer_resume">Resume</string>
     <string name="transfer_paused_progress">Paused · %1$s / %2$s</string>
-    <string name="transfer_received_from">From %1$s · in Download/Nectarlink</string>
+    <string name="transfer_received_from">From %1$s · in Download/Sa6i Link</string>
     <string name="transfer_sent_to">Sent to %1$s</string>
     <string name="transfer_cancelled">Cancelled</string>
     <string name="transfer_denied">%1$s doesn’t accept files from this phone.</string>
@@ -265,21 +265,21 @@
     <string name="action_pair_new">Pair another PC</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_update">Update</string>
-    <string name="update_title">NectarLink %1$s is available</string>
+    <string name="update_title">Sa6i Link %1$s is available</string>
     <string name="update_text">Get the latest improvements and fixes.</string>
     <string name="update_downloading">Downloading…</string>
     <string name="update_downloading_progress">Downloading · %1$s of %2$s</string>
     <string name="update_waiting_network">Waiting for a connection. The download continues where it stopped.</string>
     <string name="update_installing">Installing. Android may ask you to confirm.</string>
-    <string name="update_not_allowed">Allow NectarLink to install its updates. The update continues when you come back.</string>
+    <string name="update_not_allowed">Allow Sa6i Link to install its updates. The update continues when you come back.</string>
     <string name="update_damaged">The download was damaged, so it wasn’t installed. Try again.</string>
     <string name="update_offline">The update couldn’t be downloaded. Try again when you’re online.</string>
     <string name="update_install_failed">Android didn’t install the update. Try again.</string>
     <string name="update_whats_new">What’s new</string>
     <string name="update_check">Check for updates</string>
     <string name="update_checking">Checking for updates…</string>
-    <string name="update_up_to_date_version">NectarLink %1$s is up to date.</string>
-    <string name="update_current_version">You have NectarLink %1$s.</string>
+    <string name="update_up_to_date_version">Sa6i Link %1$s is up to date.</string>
+    <string name="update_current_version">You have Sa6i Link %1$s.</string>
     <string name="update_check_failed">Couldn’t check for updates. Check your internet connection.</string>
     <string name="action_lock_pc">Lock PC</string>
     <string name="action_sleep_pc">Sleep</string>
@@ -1035,7 +1035,7 @@
     <string name="guide_files_pc_1">Drag files onto the Sa6i Link window or top-edge island on your PC.</string>
     <string name="guide_files_opt_1">Send files / Send a folder: Transfers individual files or full folder trees.</string>
     <string name="guide_files_opt_2">Pause / Resume: Resumes interrupted transfers without re-sending completed bytes.</string>
-    <string name="guide_files_privacy">Files stream over QUIC TLS 1.3 with BLAKE3 integrity verification into Download/Nectarlink.</string>
+    <string name="guide_files_privacy">Files stream over QUIC TLS 1.3 with BLAKE3 integrity verification into Download/Sa6i Link.</string>
     <string name="guide_files_limits">Up to 5,000 files per batch.</string>
 
     <!-- 8. Send queue -->
@@ -1313,9 +1313,9 @@
     <string name="pair_link_unknown_pc">this device</string>
     <string name="data_clear_failed">Some history couldn\'t be cleared. Try again.</string>
     <string name="channel_updates">Updates</string>
-    <string name="update_ready_title">NectarLink %1$s is ready</string>
+    <string name="update_ready_title">Sa6i Link %1$s is ready</string>
     <string name="update_ready_text">Tap to install the update.</string>
-    <string name="update_done_title">NectarLink is updated to %1$s</string>
+    <string name="update_done_title">Sa6i Link is updated to %1$s</string>
     <string name="update_done_text">Tap to open it. Your PCs reconnect on their own.</string>
     <string name="update_auto_title">Install updates automatically</string>
     <string name="update_auto_text">New versions from GitHub install in the background.</string>

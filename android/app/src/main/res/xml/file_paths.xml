@@ -4,7 +4,9 @@
      a PC put on the clipboard (see clipboard/PhoneClipboard.kt), and
      outgoing MMS PDUs (see sms/PhoneSms.kt). -->
 <paths>
-    <external-files-path name="received" path="Download/Nectarlink/" />
+    <external-files-path name="received" path="Download/Sa6i Link/" />
+    <!-- Keep old app-specific downloads shareable; existing files are not moved. -->
+    <external-files-path name="received_legacy" path="Download/Nectarlink/" />
     <cache-path name="clipboard" path="clipboard/" />
     <cache-path name="mms" path="mms/" />
 </paths>

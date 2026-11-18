@@ -10,6 +10,7 @@ Sa6i Link v8 is an experimental binary/resource patch. A previous build was repo
 
 ## Known limitations
 
+- On a Windows 11 PC, the v8 launcher was reported to show a Windows title bar in addition to the app's custom minimize, maximize and close buttons. The cause is unconfirmed. The source-only attempt uses the existing frameless/WM_NCCALCSIZE approach on Windows 11 as well; it has not been built. A separate test ZIP contains an alternative, version-locked QML workaround that selects a frameless window only on Windows 11; it does not contain the source C++ change. Neither attempt has been tested on Windows. Retest Windows 11 and Windows 7 with normal and maximized windows, minimize, restore, close, dragging, resizing, DPI scaling, Snap and backdrops before treating either as a fix. Keep the original working installation.
 - Complete right-to-left layout is unfinished; global mirroring was disabled because of layout warnings.
 - Smoother, balanced and sharper performance presets are not implemented.
 - On Android 11 the test app is intended to follow the phone's system language. In-app language selection is unresolved; the APK needs real-device testing.
