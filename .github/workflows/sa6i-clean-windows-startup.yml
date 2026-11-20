@@ -33,9 +33,19 @@ jobs:
           $env:NECTARLINK_NO_ADB = '1'
           $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
           $null = $app.Handle
-          if (-not $app.WaitForExit(120000)) {
+          if (-not $app.WaitForExit(45000)) {
+            $app.Refresh()
+            Write-Host "::error::Application did not exit; responding=$($app.Responding), title=$($app.MainWindowTitle), PID=$($app.Id)"
+            if (Test-Path $stderr) {
+              Get-Content $stderr -Tail 30 | ForEach-Object { if ($_) { Write-Host "::error::STDERR $_" } }
+            }
+            Get-ChildItem $data -Recurse -File -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '\.(log|txt)$' } | ForEach-Object {
+                Get-Content $_.FullName -Tail 20 -ErrorAction SilentlyContinue |
+                  ForEach-Object { if ($_) { Write-Host "::error::DATA LOG $_" } }
+              }
             $app.Kill()
-            throw 'Application failed to close within 2 minutes'
+            throw 'Application failed to close within 45 seconds'
           }
           $log = Get-Content $stderr -Raw
           if ($log) { Write-Host $log }
