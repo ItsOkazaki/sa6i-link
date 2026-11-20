@@ -79,9 +79,17 @@ try {
     if (![Sa6iSmokeWin32]::SetWindowPos($window, [IntPtr]::Zero, 0, 0, ($oldParent.right - $oldParent.left + 120), ($oldParent.bottom - $oldParent.top + 80), 0x16)) { throw 'Could not resize host window' }
     if (!(Wait-Until {
         $newChild = New-Object Sa6iSmokeWin32+RECT
-        if ([Sa6iSmokeWin32]::GetWindowRect($child, [ref]$newChild) -and
-            ($newChild.right - $newChild.left) -ge ($oldChild.right - $oldChild.left + 90) -and
-            ($newChild.bottom - $newChild.top) -ge ($oldChild.bottom - $oldChild.top + 50)) { $true }
+        $newParent = New-Object Sa6iSmokeWin32+RECT
+        if ([Sa6iSmokeWin32]::GetWindowRect($child, [ref]$newChild) -and [Sa6iSmokeWin32]::GetWindowRect($window, [ref]$newParent)) {
+            $parentWidthChange = ($newParent.right - $newParent.left) - ($oldParent.right - $oldParent.left)
+            $parentHeightChange = ($newParent.bottom - $newParent.top) - ($oldParent.bottom - $oldParent.top)
+            $childWidthChange = ($newChild.right - $newChild.left) - ($oldChild.right - $oldChild.left)
+            $childHeightChange = ($newChild.bottom - $newChild.top) - ($oldChild.bottom - $oldChild.top)
+            # Qt may clamp the requested window size to the hosted screen.
+            if ($parentWidthChange -gt 0 -and $parentHeightChange -gt 0 -and
+                [Math]::Abs($parentWidthChange - $childWidthChange) -le 2 -and
+                [Math]::Abs($parentHeightChange - $childHeightChange) -le 2) { $true }
+        }
     } 8)) {
         $newParent = New-Object Sa6iSmokeWin32+RECT
         $newChild = New-Object Sa6iSmokeWin32+RECT
