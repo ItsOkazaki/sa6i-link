@@ -11,6 +11,8 @@ public static class Sa6iSmokeWin32 {
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int left, top, right, bottom; }
     public delegate bool EnumProc(IntPtr hwnd, IntPtr value);
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint message, IntPtr wp, IntPtr lp);
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EnumProc cb, IntPtr v);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
@@ -70,11 +72,47 @@ try {
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not become a visible child of the app window' }
     Write-Host '::notice::PASS: actual Qt app opened a synthetic child in the same window'
+    $oldParent = New-Object Sa6iSmokeWin32+RECT
+    $oldChild = New-Object Sa6iSmokeWin32+RECT
+    if (![Sa6iSmokeWin32]::GetWindowRect($window, [ref]$oldParent) -or ![Sa6iSmokeWin32]::GetWindowRect($child, [ref]$oldChild)) { throw 'Could not read window geometry' }
+    # Keep position and z-order; increase outer dimensions by 120x80 pixels.
+    if (![Sa6iSmokeWin32]::SetWindowPos($window, [IntPtr]::Zero, 0, 0, ($oldParent.right - $oldParent.left + 120), ($oldParent.bottom - $oldParent.top + 80), 0x16)) { throw 'Could not resize host window' }
+    if (!(Wait-Until {
+        $newChild = New-Object Sa6iSmokeWin32+RECT
+        if ([Sa6iSmokeWin32]::GetWindowRect($child, [ref]$newChild) -and
+            ($newChild.right - $newChild.left) -ge ($oldChild.right - $oldChild.left + 90) -and
+            ($newChild.bottom - $newChild.top) -ge ($oldChild.bottom - $oldChild.top + 50)) { $true }
+    } 8)) { throw 'Child did not resize with the app' }
+    if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get resized client bounds' }
+    $entryX = $rect.right - 216
+    Write-Host '::notice::PASS: child resized with the app'
     [Sa6iSmokeWin32]::Click($window, 50, 80)
     if (!(Wait-Until { if (![Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Back did not hide the synthetic child' }
     [Sa6iSmokeWin32]::Click($window, $entryX, 26)
     if (!(Wait-Until { if ([Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Reopening did not show the same synthetic child' }
     Write-Host '::notice::PASS: Back and re-open hide and show the same child'
+    # Default Windows close-to-tray should reap the synthetic cleaner before
+    # unloading the window, and reactivation must allow a fresh clean launch.
+    [void][Sa6iSmokeWin32]::PostMessage($window, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)
+    if (!$childProc.WaitForExit(15000)) { throw 'Synthetic child did not exit during close-to-tray' }
+    if (!(Wait-Until { $app.Refresh(); if (!$app.HasExited -and ![Sa6iSmokeWin32]::IsWindowVisible($window)) { $true } } 12)) { throw 'Window did not close to tray' }
+    $activate = Start-Process $exe -ArgumentList '--data-dir', "`"$data`"" -PassThru
+    $null = $activate.Handle
+    if (!$activate.WaitForExit(15000) -or $activate.ExitCode -ne 0) { throw 'Reactivation request failed' }
+    $window = Wait-Until { $app.Refresh(); $h = $app.MainWindowHandle; if (!$app.HasExited -and $h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
+    if (!$window) { throw 'App window did not reopen after tray close' }
+    Start-Sleep -Seconds 2
+    if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get reopened client bounds' }
+    $entryX = $rect.right - 216
+    [Sa6iSmokeWin32]::Click($window, $entryX, 26)
+    $childProc = Wait-Until {
+        $match = Get-CimInstance Win32_Process -Filter "Name='Sa6i Clean Integration.exe' AND ParentProcessId=$($app.Id)" | Select-Object -First 1
+        if ($match) { Get-Process -Id $match.ProcessId -ErrorAction SilentlyContinue }
+    } 35
+    if (!$childProc) { throw 'No synthetic child after tray reactivation' }
+    $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
+    if (!$child) { throw 'Synthetic child did not attach after tray reactivation' }
+    Write-Host '::notice::PASS: tray close, reactivate and fresh child launch'
     $quit = Start-Process $exe -ArgumentList '--data-dir', "`"$data`"", '--quit' -PassThru
     $null = $quit.Handle
     if (!$quit.WaitForExit(15000) -or $quit.ExitCode -ne 0) { throw 'Quit request process failed' }
