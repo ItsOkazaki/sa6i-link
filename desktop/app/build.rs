@@ -109,6 +109,22 @@ fn fonts_qrc() -> PathBuf {
     out
 }
 
+/// The reviewed Sa6i Link artwork for the visible in-app mark.
+fn branding_qrc() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../sa6i/assets/windows/Square150x150Logo.png")
+        .canonicalize()
+        .expect("missing Sa6i Link artwork");
+    println!("cargo::rerun-if-changed={}", path.display());
+    let path = path.display().to_string().trim_start_matches(r"\\?\").replace('\\', "/");
+    let qrc = format!(
+        "<RCC>\n  <qresource prefix=\"/branding\">\n    <file alias=\"sa6i-link.png\">{path}</file>\n  </qresource>\n</RCC>\n"
+    );
+    let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR")).join("branding.qrc");
+    write_if_changed(&out, qrc);
+    out
+}
+
 /// Icon sizes in the .exe: what Explorer, the taskbar and Start ask for at
 /// 100–200% scale.
 const ICON_SIZES: &[u32] = &[16, 20, 24, 32, 40, 48, 64, 256];
@@ -418,6 +434,7 @@ fn main() {
             "cpp/video_view.cpp",
         ])
         .qrc(fonts_qrc())
+        .qrc(branding_qrc())
         .qrc(shaders_qrc())
         .files([
             "src/bridge/native.rs",

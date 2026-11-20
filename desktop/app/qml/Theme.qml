@@ -236,10 +236,11 @@ QtObject {
     readonly property string fontUi: "Figtree"
     readonly property string fontDisplay: graphite ? "Instrument Serif" : "Figtree"
     readonly property string fontMono: "Space Mono"
-    // Caption button glyphs: Segoe Fluent Icons ships with Windows 11 only;
-    // Windows 10's Segoe MDL2 Assets has the same code points.
+    // Windows 7 may have neither icon font. An empty family makes caption
+    // buttons use their vector paths instead of unrelated fallback glyphs.
     readonly property string captionIconFont: Qt.fontFamilies().indexOf("Segoe Fluent Icons") >= 0
-        ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
+        ? "Segoe Fluent Icons"
+        : (Qt.fontFamilies().indexOf("Segoe MDL2 Assets") >= 0 ? "Segoe MDL2 Assets" : "")
     readonly property var typography: Tokens.data.typography
     readonly property var labelStyle: graphite ? Tokens.data.themes.graphite.label
         : (hive ? Tokens.data.themes.hive.label : Tokens.data.themes.bloom.label)

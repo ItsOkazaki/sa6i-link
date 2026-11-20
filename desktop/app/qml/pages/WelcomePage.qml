@@ -18,13 +18,12 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 52; height: 52
             radius: Theme.radiusMd
-            color: Theme.graphite ? Theme.surfaceContent : Theme.primary
-            Icon {
-                anchors.centerIn: parent
-                width: 26; height: 26
-                path: Icons.mark
-                stroke: 2.4
-                color: Theme.graphite ? Theme.surface : Theme.primaryContent
+            color: "black"
+            Image {
+                anchors.fill: parent
+                anchors.margins: 2
+                fillMode: Image.PreserveAspectFit
+                source: "qrc:/branding/sa6i-link.png"
             }
         }
         Column {
