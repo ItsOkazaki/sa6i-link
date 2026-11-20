@@ -34,6 +34,8 @@ typedef struct {
     // 0 follows the cleaner default; 1 light and 2 dark are passed only as
     // fixed switches to the separately prepared experimental fixture.
     int initial_theme;
+    // Explicit compatibility-mode launch request; not a sandbox.
+    BOOL software_rendering;
     EmbedStatus status;
     EmbedStatus before_close;
     DWORD error;

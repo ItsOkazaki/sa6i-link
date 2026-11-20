@@ -2,6 +2,7 @@
 #include "qt_embed_adapter.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QtEnvironmentVariables>
 #include <QtCore/QTimer>
 #include <QtCore/QThread>
 #include <atomic>
@@ -178,6 +179,8 @@ bool QtEmbedAdapter::startImpl(const QString &directory, int initialTheme) {
     d->closeDuringLaunch = false;
     EmbedHost launchHost = d->host;
     launchHost.initial_theme = initialTheme;
+    // Separate experimental opt-in; never change normal application builds.
+    launchHost.software_rendering = qEnvironmentVariableIntValue("SA6I_CLEAN_WIN7_SOFTWARE") == 1;
     auto *worker = new LaunchWorker(launchHost, directory.toStdWString(), this);
     d->worker = worker;
     QObject::connect(worker, &QThread::finished, this, [this, worker] {

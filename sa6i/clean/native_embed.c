@@ -223,6 +223,7 @@ BOOL embed_start(EmbedHost *host, const wchar_t *directory) {
     // Only fixed, internal switches are appended; no user input is used.
     if (host->initial_theme == 1) lstrcatW(command, L" --sa6i-theme-light");
     else if (host->initial_theme == 2) lstrcatW(command, L" --sa6i-theme-dark");
+    if (host->software_rendering) lstrcatW(command, L" --disable-gpu");
     ZeroMemory(&startup, sizeof(startup)); ZeroMemory(&process, sizeof(process));
     startup.cb = sizeof(startup);
     if (!CreateProcessW(exe, command, NULL, NULL, FALSE, 0, NULL, directory, &startup, &process)) {

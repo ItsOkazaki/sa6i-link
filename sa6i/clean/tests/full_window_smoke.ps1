@@ -7,6 +7,7 @@ param([Parameter(Mandatory=$true)][string]$AppDir,
       [switch]$IntegratedHeader,
       [switch]$ClippingContainer,
       [switch]$ExpectHostTheme,
+      [switch]$ExpectSoftwareFlag,
       [double]$Scale = 1.0)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
@@ -82,6 +83,11 @@ function Confirm-SyntheticProfile([int]$ProcessId) {
     $theme = [string](Get-Content $themeMarker -Raw)
     if ($ExpectHostTheme -and $theme -notin @('light', 'dark')) { throw 'Electron did not receive the host theme switch' }
     if (!$ExpectHostTheme -and $theme -ne 'system') { throw 'Old desktop unexpectedly passed a host theme switch' }
+    $gpuMarker = Join-Path $profile 'synthetic-disable-gpu.txt'
+    if (!(Wait-Until { if (Test-Path $gpuMarker) { $true } } 10)) { throw 'Synthetic Electron did not create its GPU flag marker' }
+    $gpuFlag = [string](Get-Content $gpuMarker -Raw)
+    if ($ExpectSoftwareFlag -and $gpuFlag -ne 'yes') { throw 'Electron did not receive --disable-gpu' }
+    if (!$ExpectSoftwareFlag -and $gpuFlag -ne 'no') { throw 'Unexpected Electron GPU switch' }
     return $profile
 }
 $exe = (Resolve-Path (Join-Path $AppDir 'synthetic-test-desktop.exe')).Path
@@ -92,6 +98,8 @@ $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-stderr.txt'
 $env:NECTARLINK_NO_ADB = '1'
 $env:QT_QUICK_BACKEND = 'software'
 $env:SA6I_CLEAN_WIN7_COMPAT = '1'
+if ($ExpectSoftwareFlag) { $env:SA6I_CLEAN_WIN7_SOFTWARE = '1' }
+else { Remove-Item Env:SA6I_CLEAN_WIN7_SOFTWARE -ErrorAction SilentlyContinue }
 if ($Scale -lt 1 -or $Scale -gt 2) { throw 'Unsupported smoke-test scale' }
 $env:QT_SCALE_FACTOR = $Scale.ToString([System.Globalization.CultureInfo]::InvariantCulture)
 $app = $null

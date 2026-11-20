@@ -22,7 +22,7 @@ static DWORD last_error, hash_kind;
 static int exe_reads, asar_reads, process_alive, child_exists, window_available;
 static int fail_hash, fail_launch, fail_parent, fail_post, fail_wait, fail_show, launch_count, close_messages;
 static int fail_temp, invalid_temp, fail_mkdir, force_collision, process_closed, layout_count, last_show, child_parented;
-static int show_requests, last_command_theme;
+static int show_requests, last_command_theme, last_command_software;
 static int container_exists, container_visible, container_destroyed, fail_container, fail_container_position;
 static RECT child_rect;
 static int made_count;
@@ -34,7 +34,7 @@ static void reset_mock(void) {
     exe_reads = asar_reads = process_alive = child_exists = window_available = 0;
     fail_hash = fail_launch = fail_parent = fail_post = fail_wait = fail_show = launch_count = close_messages = 0;
     fail_temp = invalid_temp = fail_mkdir = force_collision = process_closed = layout_count = last_show = child_parented = 0;
-    show_requests = 0; last_command_theme = 0;
+    show_requests = 0; last_command_theme = 0; last_command_software = 0;
     container_exists = container_visible = container_destroyed = fail_container = fail_container_position = 0;
     child_rect = (RECT){0,0,0,0};
     made_count = 0;
@@ -141,6 +141,8 @@ BOOL CreateProcessW(LPCWSTR exe, LPWSTR command, void *a, void *b, BOOL inherit,
                          wcsstr(command, L" --sa6i-theme-dark") ? 2 : 0;
     if (last_command_theme == 1) wcscat(expected, L" --sa6i-theme-light");
     else if (last_command_theme == 2) wcscat(expected, L" --sa6i-theme-dark");
+    last_command_software = wcsstr(command, L" --disable-gpu") != NULL;
+    if (last_command_software) wcscat(expected, L" --disable-gpu");
     assert(wcscmp(command, expected) == 0);
     ++launch_count;
     if (fail_launch) { last_error = 193; return FALSE; }
@@ -428,7 +430,9 @@ static void initial_theme_switches(void) {
     h = fresh(); h.initial_theme = 2;
     assert(embed_start(&h, L"C:\\test") && last_command_theme == 2);
     h = fresh(); h.initial_theme = 0;
-    assert(embed_start(&h, L"C:\\test") && last_command_theme == 0);
+    assert(embed_start(&h, L"C:\\test") && last_command_theme == 0 && !last_command_software);
+    h = fresh(); h.initial_theme = 2; h.software_rendering = TRUE;
+    assert(embed_start(&h, L"C:\\test") && last_command_theme == 2 && last_command_software);
 }
 int main(void) {
     initial_theme_switches(); normal(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();

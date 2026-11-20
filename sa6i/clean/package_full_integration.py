@@ -94,6 +94,8 @@ def package(desktop, cleaner, output, win7_shim):
 setlocal\r
 if not defined LOCALAPPDATA (echo LOCALAPPDATA is unavailable. & pause & exit /b 1)\r
 set "SA6I_CLEAN_WIN7_COMPAT=1"\r
+set "SA6I_CLEAN_WIN7_SOFTWARE=1"\r
+set "QT_QUICK_BACKEND=software"\r
 set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Test-{unique}"\r
 start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
 '''
@@ -109,6 +111,8 @@ start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-te
             'On Windows 7, VxKex may need to be enabled separately for both '
             'nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean Integration.exe; '
             'this is not configured automatically and compatibility is not guaranteed.\n'
+            'The test launcher requests Qt software rendering and passes --disable-gpu '
+            'to the cleaner as an experimental clipping workaround; performance may suffer.\n'
             'A separate application data path is used, but this is NOT a sandbox. '
             'The application and cleaner can still access normal user and OS paths.\n'
             'The included app-local cldapi.dll is the compatibility shim from the '

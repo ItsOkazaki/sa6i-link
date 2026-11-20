@@ -18,6 +18,8 @@ app.whenReady().then(() => {
   const theme = process.argv.includes('--sa6i-theme-dark') ? 'dark'
     : process.argv.includes('--sa6i-theme-light') ? 'light' : 'system'
   fs.writeFileSync(path.join(profile, 'synthetic-theme.txt'), theme)
+  fs.writeFileSync(path.join(profile, 'synthetic-disable-gpu.txt'),
+    process.argv.includes('--disable-gpu') ? 'yes' : 'no')
   // Approximate the packaged cleaner's window geometry and title-bar options;
   // this is still an inert app and not the cleaner or its renderer.
   const window = new BrowserWindow({
