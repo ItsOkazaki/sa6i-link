@@ -70,18 +70,23 @@ jobs:
           $resources = Join-Path $fixture 'resources'
           # Restore exactly the data used to pin this test-only backend.
           [System.IO.File]::WriteAllText((Join-Path $resources 'app.asar'), 'inert fixture; not a real ASAR')
+          $env:PATH = "$(Join-Path $env:SA6I_QT_ROOT 'bin');$env:PATH"
           $mocSource = Join-Path $work 'moc_adapter.cpp'
           & $env:SA6I_QT_MOC sa6i/clean/qt_embed_adapter.h -o $mocSource
-          if ($LASTEXITCODE -ne 0) { throw 'Qt moc failed' }
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Qt moc exited with $LASTEXITCODE"; throw 'Qt moc failed' }
           $native = Join-Path $work 'native_embed_real_test.c'
           $object = Join-Path $work 'native_embed_real_test.obj'
-          & cl.exe /nologo /std:c11 /MD /c /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" $native "/Fo:$object"
-          if ($LASTEXITCODE -ne 0) { throw 'Native backend compilation failed' }
+          $compile = & cl.exe /nologo /std:c11 /MD /c /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" $native "/Fo:$object" 2>&1
+          $code = $LASTEXITCODE
+          $compile | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) { $compile | Where-Object { $_ -match 'error|fatal' } | Select-Object -First 8 | ForEach-Object { Write-Host "::error::$_" }; throw 'Native backend compilation failed' }
           $inc = Join-Path $env:SA6I_QT_ROOT 'include'
           $lib = Join-Path $env:SA6I_QT_ROOT 'lib/Qt6Core.lib'
           $hostExe = Join-Path $work 'qt-adapter-test.exe'
-          & cl.exe /nologo /std:c++17 /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib
-          if ($LASTEXITCODE -ne 0) { throw 'Qt adapter test compile failed' }
+          $compile = & cl.exe /nologo /std:c++17 /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib 2>&1
+          $code = $LASTEXITCODE
+          $compile | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) { $compile | Where-Object { $_ -match 'error|fatal' } | Select-Object -First 8 | ForEach-Object { Write-Host "::error::$_" }; throw 'Qt adapter test compile failed' }
           $env:PATH = "$(Join-Path $env:SA6I_QT_ROOT 'bin');$env:PATH"
           & $hostExe $fixture 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
           if ($LASTEXITCODE -ne 0) { throw 'Qt adapter smoke test failed' }
