@@ -82,7 +82,7 @@ BOOL CreateDirectoryW(LPCWSTR path, void *security) {
 }
 HANDLE CreateFileW(LPCWSTR path, DWORD access, DWORD share, void *a, DWORD create, DWORD flags, HANDLE template) {
     (void)access; (void)share; (void)a; (void)create; (void)flags; (void)template;
-    if (wcsstr(path, L"Sa6i Clean Win7 Probe.exe")) { exe_reads = 0; return FILE_EXE; }
+    if (wcsstr(path, CLEAN_EXE_NAME + 1)) { exe_reads = 0; return FILE_EXE; }
     if (wcsstr(path, L"resources\\app.asar")) { asar_reads = 0; return FILE_ASAR; }
     last_error = 2; return INVALID_HANDLE_VALUE;
 }
@@ -104,7 +104,7 @@ BOOL CloseHandle(HANDLE h) { if (h == PROCESS) ++process_closed; return TRUE; }
 BOOL CreateProcessW(LPCWSTR exe, LPWSTR command, void *a, void *b, BOOL inherit, DWORD flags,
                     void *env, LPCWSTR dir, STARTUPINFOW *startup, PROCESS_INFORMATION *out) {
     (void)a; (void)b; (void)inherit; (void)flags; (void)env; (void)dir;
-    assert(wcsstr(exe, L"Sa6i Clean Win7 Probe.exe"));
+    assert(wcsstr(exe, CLEAN_EXE_NAME + 1));
     assert(startup->cb == sizeof(*startup) && made_count > 0);
     wchar_t expected[2 * MAX_PATH + 32];
     assert(swprintf(expected, sizeof(expected) / sizeof(expected[0]),

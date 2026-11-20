@@ -21,6 +21,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   SA6I_CLEAN_EXPERIMENT: "1"
+  # Separate full-cleaner experiment: never used by an ordinary release.
+  SA6I_CLEAN_FULL_FIXTURE: "1"
 
 jobs:
   windows:
@@ -59,6 +61,21 @@ jobs:
       - name: Build and stage separately
         shell: pwsh
         run: ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly
+      - name: Verify full-fixture linkage
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          data = Path('target/package/Nectarlink/nectarlink-desktop.exe').read_bytes()
+          checks = (
+              'Sa6i Clean Integration.exe'.encode('utf-16le'),
+              bytes.fromhex('04f2c19923f356fa83f7f5a5e7d074ca3df70020e755204ab63c023d5afd70e9'),
+              bytes.fromhex('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112'),
+          )
+          if not all(check in data for check in checks):
+              raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Full fixture linkage verification failed' }
       - name: Mark artifact limitations
         shell: pwsh
         run: |
@@ -68,10 +85,12 @@ jobs:
           This is an experimental source build using a third-party Qt 6.8.3
           Windows 7 backport, not the official Qt kit. It is not equivalent to
           the published Sa6i Link executable and has not been run on Windows 7.
-          The artifact does not include a cleaner runtime; the backend accepts
-          only a pinned restricted fixture. Do not install over an existing
-          copy or use it for real cleanup. Third-party Qt licensing and runtime
-          compatibility need review before distribution.
+          The artifact does not include the cleaner runtime. This build is
+          configured for the exact full cleaner fixture, whose cleanup and
+          management features can permanently delete files or change the OS.
+          Do not install over an existing copy or use it for real cleanup.
+          Third-party Qt licensing and runtime compatibility need review
+          before distribution.
           '@ | Set-Content -Encoding UTF8 target/package/Nectarlink/INTEGRATION-BUILD-ONLY.txt
       - uses: actions/upload-artifact@v7
         with:

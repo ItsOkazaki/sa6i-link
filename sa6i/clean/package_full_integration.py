@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Assemble a separate full-cleaner integration candidate, never an installer.
+
+Requires an already staged Windows build compiled with BOTH experimental flags
+and the exact full cleaner prepared by prepare_full_integration.py. This does
+not validate Windows compatibility, OS isolation, or cleanup safety.
+"""
+import argparse
+from pathlib import Path
+import secrets
+import shutil
+import tempfile
+
+from prepare_full_integration import ASAR_SHA, OUTPUT_NAME, OUTPUT_SHA, sha
+
+
+def reject_links(root):
+    if root.is_symlink():
+        raise ValueError(f'Symbolic link not allowed: {root}')
+    for path in root.rglob('*'):
+        if path.is_symlink():
+            raise ValueError(f'Symbolic link not allowed: {path}')
+
+
+def package(desktop, cleaner, output):
+    desktop, cleaner, output = (p.absolute() for p in (desktop, cleaner, output))
+    if not desktop.is_dir() or not cleaner.is_dir():
+        raise ValueError('Desktop and cleaner must be existing directories')
+    # Never make an output within an input or replace any existing output.
+    for source in (desktop, cleaner):
+        if output == source or source in output.parents or output in source.parents:
+            raise ValueError('Inputs and output must be separate directories')
+        reject_links(source)
+    if output.exists() or output.is_symlink():
+        raise FileExistsError(f'Refusing to overwrite {output}')
+    binary = desktop / 'nectarlink-desktop.exe'
+    if not binary.is_file() or not (desktop / 'Qt6Core.dll').is_file():
+        raise ValueError('Not a staged Windows desktop build')
+    # The filename and both immutable SHA-256 constants are linked into the
+    # native backend only in the opt-in full-fixture configuration.
+    exe_data = binary.read_bytes()
+    if (OUTPUT_NAME.encode('utf-16le') not in exe_data or
+            bytes.fromhex(OUTPUT_SHA) not in exe_data or
+            bytes.fromhex(ASAR_SHA) not in exe_data):
+        raise ValueError('Desktop build does not contain the pinned full-cleaner fixture')
+    if sha(cleaner / OUTPUT_NAME) != OUTPUT_SHA or sha(cleaner / 'resources' / 'app.asar') != ASAR_SHA:
+        raise ValueError('Cleaner fixture does not match the desktop build')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.sa6i-integrated-', dir=output.parent) as work:
+        staged = Path(work) / 'Sa6i Link Integrated'
+        shutil.copytree(desktop, staged)
+        # The prepared copy is identical to Sa6i Clean.exe apart from its PE
+        # header; avoid shipping two 243 MB executables.
+        shutil.copytree(cleaner, staged / 'Sa6i Clean',
+                        ignore=lambda path, names: {'Sa6i Clean.exe'} if Path(path) == cleaner else set())
+        unique = secrets.token_hex(12)
+        launch = f'''@echo off\r
+setlocal\r
+if not defined LOCALAPPDATA (echo LOCALAPPDATA is unavailable. & pause & exit /b 1)\r
+set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Test-{unique}"\r
+start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
+'''
+        (staged / 'Start Integrated Test.cmd').write_bytes(launch.encode('ascii'))
+        (staged / 'READ FIRST - EXPERIMENT.txt').write_text(
+            'EXPERIMENTAL INTEGRATION — NOT A FINAL PRODUCT\n\n'
+            'This is a separate source build, not the published Sa6i Link app. '
+            'Do not install it over an existing copy or use real accounts or important files.\n'
+            'This package contains the FULL cleaner: some operations permanently delete '
+            'files, empty the Recycle Bin, change startup entries, or run uninstallers. '
+            'Use only a disposable environment with verified backups.\n'
+            'A separate application data path is used, but this is NOT a sandbox. '
+            'The application and cleaner can still access normal user and OS paths.\n'
+            'Windows 7/VxKex behavior, focus, rendering, process shutdown, cleanup '
+            'safety and installed-app isolation are not validated. The executable header '
+            'change does not implement missing Windows APIs. Never modify an existing '
+            'VxKex configuration automatically.\n'
+            'The cleaner is an unsigned packaged modification of Cleanly 0.2.0 by '
+            '0xCodez, used with permission supplied by the user. Preserve its licenses.\n',
+            encoding='utf-8')
+        # Reserve a new destination atomically. Never replace an existing
+        # directory, even an empty one. A failed move leaves this new partial
+        # output for manual inspection instead of deleting unrelated files.
+        output.mkdir()
+        for entry in staged.iterdir():
+            entry.rename(output / entry.name)
+    return output
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('desktop_dir', type=Path)
+    parser.add_argument('cleaner_dir', type=Path)
+    parser.add_argument('output_dir', type=Path)
+    args = parser.parse_args()
+    print('Created', package(args.desktop_dir, args.cleaner_dir, args.output_dir))
