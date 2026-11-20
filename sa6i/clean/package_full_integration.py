@@ -13,6 +13,11 @@ import tempfile
 
 from prepare_full_integration import ASAR_SHA, OUTPUT_NAME, OUTPUT_SHA, sha
 
+# Exact app-local compatibility shim from the user's original Sa6i Link ZIP.
+# It disables Windows Explorer phone-storage integration on systems lacking
+# the Windows Cloud Files API; it is not a full cldapi implementation.
+WIN7_SHIM_SHA = 'e4bb7c947223b56284ff05548434a0bb178faa147ce5157a94c771e3b11b276b'
+
 
 def reject_links(root):
     if root.is_symlink():
@@ -22,8 +27,10 @@ def reject_links(root):
             raise ValueError(f'Symbolic link not allowed: {path}')
 
 
-def package(desktop, cleaner, output):
-    desktop, cleaner, output = (p.absolute() for p in (desktop, cleaner, output))
+def package(desktop, cleaner, output, win7_shim):
+    desktop, cleaner, output, win7_shim = (p.absolute() for p in (desktop, cleaner, output, win7_shim))
+    if win7_shim.is_symlink() or not win7_shim.is_file() or sha(win7_shim) != WIN7_SHIM_SHA:
+        raise ValueError('Windows 7 compatibility shim does not match the supplied original')
     if not desktop.is_dir() or not cleaner.is_dir():
         raise ValueError('Desktop and cleaner must be existing directories')
     # Never make an output within an input or replace any existing output.
@@ -49,6 +56,15 @@ def package(desktop, cleaner, output):
     with tempfile.TemporaryDirectory(prefix='.sa6i-integrated-', dir=output.parent) as work:
         staged = Path(work) / 'Sa6i Link Integrated'
         shutil.copytree(desktop, staged)
+        # Never replace an unexpected DLL silently. The known app-local shim is
+        # required for the user's Windows 7 machine and stays beside the app.
+        staged_shim = staged / 'cldapi.dll'
+        if staged_shim.exists() and (not staged_shim.is_file() or sha(staged_shim) != WIN7_SHIM_SHA):
+            raise ValueError('Desktop contains an unexpected cldapi.dll')
+        if not staged_shim.exists():
+            shutil.copyfile(win7_shim, staged_shim)
+        if sha(staged_shim) != WIN7_SHIM_SHA:
+            raise ValueError('Copied compatibility shim checksum mismatch')
         # The prepared copy is identical to Sa6i Clean.exe apart from its PE
         # header; avoid shipping two 243 MB executables.
         shutil.copytree(cleaner, staged / 'Sa6i Clean',
@@ -93,6 +109,9 @@ start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-te
             'this is not configured automatically and compatibility is not guaranteed.\n'
             'A separate application data path is used, but this is NOT a sandbox. '
             'The application and cleaner can still access normal user and OS paths.\n'
+            'The included app-local cldapi.dll is the compatibility shim from the '
+            'original Sa6i Link package. It disables phone-storage integration '
+            'in Windows Explorer; it is not a full Cloud Files implementation.\n'
             'Windows 7/VxKex behavior, focus, rendering, process shutdown, cleanup '
             'safety and installed-app isolation are not validated. The executable header '
             'change does not implement missing Windows APIs. Never modify an existing '
@@ -114,5 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('desktop_dir', type=Path)
     parser.add_argument('cleaner_dir', type=Path)
     parser.add_argument('output_dir', type=Path)
+    parser.add_argument('--win7-shim', type=Path, required=True,
+                        help='the exact cldapi.dll from the supplied original Sa6i Link package')
     args = parser.parse_args()
-    print('Created', package(args.desktop_dir, args.cleaner_dir, args.output_dir))
+    print('Created', package(args.desktop_dir, args.cleaner_dir, args.output_dir, args.win7_shim))

@@ -14,8 +14,7 @@ app.whenReady().then(() => {
   // this is still an inert app and not the cleaner or its renderer.
   const window = new BrowserWindow({
     width: 1320, height: 840, minWidth: 1120, minHeight: 740,
-    show: false, backgroundColor: '#101720', titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#00000000', symbolColor: '#ffffff', height: 44 },
+    show: false, backgroundColor: '#101720', frame: false,
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false }
   })
   window.once('ready-to-show', () => window.show())
