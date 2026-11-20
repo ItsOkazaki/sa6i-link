@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Basic Windows startup check of the already-built integration binary.
+# It does not start the cleaner and does not establish Windows 7 compatibility.
+name: Sa6i Clean Windows startup check
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths: ['.github/workflows/sa6i-clean-windows-startup.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  startup:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: app
+          run-id: 44749974030
+          github-token: ${{ github.token }}
+      - name: Open and close the experimental app in an isolated directory
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path 'app/nectarlink-desktop.exe').Path
+          $data = Join-Path $env:RUNNER_TEMP 'sa6i-ui-check'
+          $cleaner = Join-Path $env:RUNNER_TEMP 'nonexistent-cleaner'
+          New-Item -ItemType Directory -Path $data | Out-Null
+          $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-ui-check-stderr.txt'
+          $env:NECTARLINK_NO_ADB = '1'
+          $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
+          $null = $app.Handle
+          if (-not $app.WaitForExit(120000)) {
+            $app.Kill()
+            throw 'Application failed to close within 2 minutes'
+          }
+          $log = Get-Content $stderr -Raw
+          if ($log) { Write-Host $log }
+          if ($app.ExitCode -ne 0) {
+            foreach ($line in ($log -split "`r?`n" | Select-Object -Last 25)) {
+              if ($line) { Write-Host "::error::$line" }
+            }
+            throw "Startup check failed (exit code $($app.ExitCode))"
+          }

@@ -53,6 +53,24 @@ def package(desktop, cleaner, output):
         # header; avoid shipping two 243 MB executables.
         shutil.copytree(cleaner, staged / 'Sa6i Clean',
                         ignore=lambda path, names: {'Sa6i Clean.exe'} if Path(path) == cleaner else set())
+        # The original build-only note says the cleaner is absent, which is no
+        # longer true after assembly; replace it only in this staging folder.
+        (staged / 'INTEGRATION-BUILD-ONLY.txt').write_text(
+            'Experimental integration build; the full cleaner is now included. '
+            'Read READ FIRST - EXPERIMENT.txt before use.\n', encoding='utf-8')
+        source_root = Path(__file__).resolve().parents[2]
+        shutil.copytree(source_root / 'LICENSES', staged / 'LICENSES')
+        shutil.copyfile(source_root / 'sa6i' / 'NOTICE.md', staged / 'SA6I-NOTICE.md')
+        (staged / 'QT-BACKPORT-SOURCES.txt').write_text(
+            'This candidate uses the separately distributed third-party Qt 6.8.3 '
+            'Windows 7 backport from xanasoft, based on crystalidea/qt6windows7.\n'
+            'Build archive SHA-256: f1efe461b28d7758e1e68ba189d0a45c8168ac181be1ffe7013d0bbfb6ff145d\n'
+            'Build and corresponding source archive: https://github.com/xanasoft/qt-builds/releases/tag/v6.8.3-ssl-lgpl\n'
+            'Source archive SHA-256: 3e8499a9e977f06c74f57a1a98af67c528013e5973a47dbb5ee0c02f6fe1063d\n'
+            'Backport project: https://github.com/crystalidea/qt6windows7\n'
+            'Qt license text and additional notices are in THIRD-PARTY-NOTICES.txt. '
+            'This notice does not replace a review of distribution obligations.\n',
+            encoding='utf-8')
         unique = secrets.token_hex(12)
         launch = f'''@echo off\r
 setlocal\r
@@ -68,6 +86,10 @@ start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-te
             'This package contains the FULL cleaner: some operations permanently delete '
             'files, empty the Recycle Bin, change startup entries, or run uninstallers. '
             'Use only a disposable environment with verified backups.\n'
+            'To launch this experiment, use Start Integrated Test.cmd from this folder. '
+            'On Windows 7, VxKex may need to be enabled separately for both '
+            'nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean Integration.exe; '
+            'this is not configured automatically and compatibility is not guaranteed.\n'
             'A separate application data path is used, but this is NOT a sandbox. '
             'The application and cleaner can still access normal user and OS paths.\n'
             'Windows 7/VxKex behavior, focus, rendering, process shutdown, cleanup '
