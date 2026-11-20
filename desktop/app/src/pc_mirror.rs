@@ -42,10 +42,14 @@ mod imp {
             MFT_ENUM_FLAG_HARDWARE, MFT_ENUM_FLAG_LOCALMFT, MFT_ENUM_FLAG_SORTANDFILTER,
             MFT_ENUM_FLAG_SYNCMFT, MFT_MESSAGE_COMMAND_FLUSH, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING,
             MFT_MESSAGE_NOTIFY_END_STREAMING, MFT_MESSAGE_NOTIFY_START_OF_STREAM, MFT_OUTPUT_DATA_BUFFER,
-            MFT_OUTPUT_STREAM_PROVIDES_SAMPLES, MFT_REGISTER_TYPE_INFO, MFTEnum2, MFVideoFormat_H264,
+            MFT_OUTPUT_STREAM_PROVIDES_SAMPLES, MFT_REGISTER_TYPE_INFO, MFTEnumEx, MFVideoFormat_H264,
             MFVideoFormat_HEVC, MFVideoFormat_NV12, MFVideoInterlace_Progressive,
         },
-        System::{Com::CoTaskMemFree, Variant::VARIANT},
+        System::{
+            Com::CoTaskMemFree,
+            LibraryLoader::{GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW},
+            Variant::VARIANT,
+        },
         UI::WindowsAndMessaging::{
             CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetSystemMetrics, SM_CXSCREEN,
             SM_CYSCREEN,
@@ -363,6 +367,39 @@ mod imp {
         }
     }
 
+    // MFTEnum2 was added after Windows 7. A static import prevents the whole
+    // executable from loading there, even if screen sharing is never used.
+    // Keep adapter-specific enumeration where available; otherwise skip that
+    // optional pass and use the existing generic MFTEnumEx pass below.
+    #[cfg(windows)]
+    fn mft_enum2() -> Option<unsafe extern "system" fn(
+        windows::core::GUID,
+        u32,
+        *const MFT_REGISTER_TYPE_INFO,
+        *const MFT_REGISTER_TYPE_INFO,
+        *mut std::ffi::c_void,
+        *mut *mut Option<IMFActivate>,
+        *mut u32,
+    ) -> windows::core::HRESULT> {
+        use std::sync::OnceLock;
+        type Enum2 = unsafe extern "system" fn(
+            windows::core::GUID,
+            u32,
+            *const MFT_REGISTER_TYPE_INFO,
+            *const MFT_REGISTER_TYPE_INFO,
+            *mut std::ffi::c_void,
+            *mut *mut Option<IMFActivate>,
+            *mut u32,
+        ) -> windows::core::HRESULT;
+        static FOUND: OnceLock<Option<Enum2>> = OnceLock::new();
+        *FOUND.get_or_init(|| unsafe {
+            let module = LoadLibraryExW(windows::core::w!("mfplat.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
+            let function = GetProcAddress(module, windows::core::s!("MFTEnum2"))?;
+            // SAFETY: the signature matches the documented Media Foundation export.
+            Some(std::mem::transmute::<unsafe extern "system" fn() -> isize, Enum2>(function))
+        })
+    }
+
     #[cfg(windows)]
     fn video_encoder_activations(
         output_subtype: windows::core::GUID,
@@ -392,15 +429,28 @@ mod imp {
                     .ok_or_else(|| windows::core::Error::from(E_INVALIDARG))?
                     .SetBlob(&MFT_ENUM_ADAPTER_LUID, &adapter.to_le_bytes())?;
             }
-            MFTEnum2(
-                MFT_CATEGORY_VIDEO_ENCODER,
-                flags,
-                Some(&input_info),
-                Some(&output_info),
-                attributes.as_ref(),
-                &mut activates,
-                &mut count,
-            )?;
+            if adapter.is_some() {
+                use windows::core::Interface;
+                let enumerate = mft_enum2().ok_or_else(|| windows::core::Error::from(E_NOTIMPL))?;
+                enumerate(
+                    MFT_CATEGORY_VIDEO_ENCODER,
+                    flags.0 as u32,
+                    &input_info,
+                    &output_info,
+                    attributes.as_ref().map_or(std::ptr::null_mut(), |value| value.as_raw()),
+                    &mut activates,
+                    &mut count,
+                ).ok()?;
+            } else {
+                MFTEnumEx(
+                    MFT_CATEGORY_VIDEO_ENCODER,
+                    flags,
+                    Some(&input_info),
+                    Some(&output_info),
+                    &mut activates,
+                    &mut count,
+                )?;
+            }
             let mut candidates = Vec::new();
             if !activates.is_null() {
                 let entries = std::slice::from_raw_parts_mut(activates, count as usize);
