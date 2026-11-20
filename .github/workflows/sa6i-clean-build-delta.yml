@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Recover only the difference between two public CI artifacts. No cleaner data.
+name: Sa6i Clean build delta investigation
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths: ['.github/workflows/sa6i-clean-build-delta.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  delta:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: before
+          run-id: 44757980827
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: after
+          run-id: 44795256070
+          github-token: ${{ github.token }}
+      - name: Create verified artifact delta
+        shell: pwsh
+        run: |
+          python -m pip install bsdiff4==1.2.6
+          if ($LASTEXITCODE -ne 0) { throw 'Could not install bsdiff4' }
+          @'
+          from pathlib import Path
+          from hashlib import sha256
+          import bsdiff4, json, zipfile
+          before, after = Path('before'), Path('after')
+          def files(root):
+              return {p.relative_to(root).as_posix(): p for p in root.rglob('*') if p.is_file()}
+          a, b = files(before), files(after)
+          def sha(p): return sha256(p.read_bytes()).hexdigest()
+          if sha(a['nectarlink-desktop.exe']) != '3539aa09472b9d0f65c8b4ce546969cbd34c90c4359399880beb84486b5cb1bb':
+              raise SystemExit('Unexpected baseline executable')
+          metadata = {'before': {k: sha(p) for k, p in a.items()}, 'after': {k: sha(p) for k, p in b.items()}, 'changes': {}}
+          with zipfile.ZipFile('delta.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as out:
+              for i, key in enumerate(sorted(a.keys() | b.keys())):
+                  if key not in b:
+                      metadata['changes'][key] = {'action': 'delete'}
+                  elif key not in a:
+                      item = f'files/{i}'
+                      out.writestr(item, b[key].read_bytes())
+                      metadata['changes'][key] = {'action': 'new', 'item': item}
+                  elif metadata['before'][key] != metadata['after'][key]:
+                      old, new = a[key].read_bytes(), b[key].read_bytes()
+                      delta = bsdiff4.diff(old, new)
+                      mode, data = ('patch', delta) if len(delta) < len(new) else ('new', new)
+                      item = f'files/{i}'
+                      out.writestr(item, data)
+                      metadata['changes'][key] = {'action': mode, 'item': item}
+              out.writestr('manifest.json', json.dumps(metadata, sort_keys=True))
+          data = Path('delta.zip').read_bytes()
+          print(f'::notice::SA6I-DELTA-SHA256:{sha256(data).hexdigest()}')
+          print(f'::notice::SA6I-NEW-DESKTOP-SHA256:{metadata["after"]["nectarlink-desktop.exe"]}')
+          print(f'::notice::SA6I-DELTA-SIZE:{len(data)}')
+          if len(data) * 4 // 3 > 480 * 3900 - 8: raise SystemExit('Delta exceeds annotation transfer capacity')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Artifact delta failed' }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sa6i-build-delta
+          path: delta.zip
+          retention-days: 1
+  transfer:
+    needs: delta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-build-delta
+      - name: Emit delta segments
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          python - <<'PY'
+          import base64, os
+          from pathlib import Path
+          text = base64.b64encode(Path('delta.zip').read_bytes()).decode('ascii')
+          pieces = [text[i:i+3900] for i in range(0, len(text), 3900)]
+          if len(pieces) > 480: raise SystemExit('Too many pieces')
+          first = int(os.environ['GROUP']) * 40
+          for i in range(first, min(first + 40, len(pieces))):
+              print(f'::notice::SA6I-DELTA-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          PY
