@@ -38,6 +38,7 @@ jobs:
           & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE sa6i/clean/tests/real_windows_fixture.c "/Fe:$fixtureExe" /link /SUBSYSTEM:WINDOWS user32.lib
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
+          Write-Host "::notice::Desktop SHA256 $((Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant())"
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture
