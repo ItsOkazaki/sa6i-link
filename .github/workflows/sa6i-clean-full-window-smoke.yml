@@ -41,7 +41,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
           Write-Host "::notice::Desktop SHA256 $((Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant())"
-          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          $desktopSha = '9f6ed53b2b62bb07a930e4216222400668ba2fe862e95430950dfef8aee2d30b'
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --current-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer
@@ -72,7 +72,7 @@ jobs:
           New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force | Out-Null
           npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
-          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          $desktopSha = '9f6ed53b2b62bb07a930e4216222400668ba2fe862e95430950dfef8aee2d30b'
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --current-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -VerifyElectronProfile -IntegratedHeader -ClippingContainer
