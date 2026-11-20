@@ -47,11 +47,14 @@ typedef struct { HANDLE hProcess; HANDLE hThread; DWORD dwProcessId, dwThreadId;
 #define SWP_NOMOVE 2u
 #define SWP_FRAMECHANGED 32u
 #define SWP_ASYNCWINDOWPOS 0x4000u
+#define SWP_SHOWWINDOW 0x0040u
+#define SWP_HIDEWINDOW 0x0080u
 #define GWL_STYLE (-16)
 #define WS_POPUP 0x80000000L
 #define WS_CAPTION 0x00c00000L
 #define WS_THICKFRAME 0x00040000L
 #define WS_CHILD 0x40000000L
+#define WS_CLIPCHILDREN 0x02000000L
 #define GW_OWNER 4
 #define WM_CLOSE 16
 
@@ -62,6 +65,8 @@ HWND GetParent(HWND);
 DWORD GetWindowThreadProcessId(HWND, DWORD *);
 DWORD WaitForSingleObject(HANDLE, DWORD);
 BOOL GetClientRect(HWND, RECT *);
+HWND CreateWindowExW(DWORD, LPCWSTR, LPCWSTR, DWORD, int, int, int, int, HWND, HANDLE, HANDLE, void *);
+BOOL DestroyWindow(HWND);
 BOOL SetWindowPos(HWND, HWND, int, int, int, int, unsigned int);
 BOOL ShowWindowAsync(HWND, int);
 DWORD GetTempPathW(DWORD, LPWSTR);

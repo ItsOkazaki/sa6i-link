@@ -4,7 +4,8 @@
 param([Parameter(Mandatory=$true)][string]$AppDir,
       [Parameter(Mandatory=$true)][string]$FixtureDir,
       [switch]$VerifyElectronProfile,
-      [switch]$IntegratedHeader)
+      [switch]$IntegratedHeader,
+      [switch]$ClippingContainer)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
@@ -12,9 +13,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 public static class Sa6iSmokeWin32 {
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int left, top, right, bottom; }
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int x, y; }
     public delegate bool EnumProc(IntPtr hwnd, IntPtr value);
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+    [DllImport("user32.dll")] public static extern IntPtr ChildWindowFromPointEx(IntPtr h, POINT p, uint flags);
     [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint message, IntPtr wp, IntPtr lp);
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EnumProc cb, IntPtr v);
@@ -107,6 +112,27 @@ try {
     if (!$childProc) { throw 'The synthetic child did not start after clicking Sa6i Clean' }
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not become a visible child of the app window' }
+    if ($IntegratedHeader) {
+        # Clicks posted directly to the host can pass even when a native child
+        # visually covers the button. Check real HWND bounds and hit testing.
+        $clip = [Sa6iSmokeWin32]::GetParent($child)
+        if ($ClippingContainer -and ($clip -eq $window -or [Sa6iSmokeWin32]::GetParent($clip) -ne $window)) {
+            throw 'Expected a host-owned clipping container between Qt and the fixture'
+        }
+        $bounds = New-Object Sa6iSmokeWin32+RECT
+        $origin = New-Object Sa6iSmokeWin32+POINT
+        if (![Sa6iSmokeWin32]::ClientToScreen($window, [ref]$origin) -or
+            ![Sa6iSmokeWin32]::GetWindowRect($clip, [ref]$bounds)) { throw 'Could not inspect header geometry' }
+        if ($ClippingContainer -and [Math]::Abs($bounds.top - ($origin.y + 52)) -gt 2) {
+            throw "Clipping viewport covers or is detached from header: top=$($bounds.top) origin=$($origin.y)"
+        }
+        $headerPoint = New-Object Sa6iSmokeWin32+POINT
+        $headerPoint.x = 50; $headerPoint.y = 26
+        if ([Sa6iSmokeWin32]::ChildWindowFromPointEx($window, $headerPoint, 1) -ne $window) {
+            throw 'A native child is covering the Back button area'
+        }
+        Write-Host '::notice::PASS: native viewport does not cover the Back header'
+    }
     $firstProfile = $null
     if ($VerifyElectronProfile) {
         $firstProfile = Confirm-SyntheticProfile $childProc.Id

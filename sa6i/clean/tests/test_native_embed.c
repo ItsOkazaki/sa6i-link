@@ -12,6 +12,7 @@ static atomic_int hold_reads, read_waiting;
 
 #define PARENT ((HWND)(uintptr_t)1)
 #define CHILD ((HWND)(uintptr_t)2)
+#define CONTAINER ((HWND)(uintptr_t)7)
 #define FILE_EXE ((HANDLE)(uintptr_t)3)
 #define FILE_ASAR ((HANDLE)(uintptr_t)4)
 #define PROCESS ((HANDLE)(uintptr_t)5)
@@ -22,6 +23,8 @@ static int exe_reads, asar_reads, process_alive, child_exists, window_available;
 static int fail_hash, fail_launch, fail_parent, fail_post, fail_wait, fail_show, launch_count, close_messages;
 static int fail_temp, invalid_temp, fail_mkdir, force_collision, process_closed, layout_count, last_show, child_parented;
 static int show_requests;
+static int container_exists, container_visible, container_destroyed, fail_container, fail_container_position;
+static RECT child_rect;
 static int made_count;
 static wchar_t made_profiles[16][MAX_PATH];
 static LONG_PTR style = WS_POPUP | WS_CAPTION | WS_THICKFRAME;
@@ -32,14 +35,19 @@ static void reset_mock(void) {
     fail_hash = fail_launch = fail_parent = fail_post = fail_wait = fail_show = launch_count = close_messages = 0;
     fail_temp = invalid_temp = fail_mkdir = force_collision = process_closed = layout_count = last_show = child_parented = 0;
     show_requests = 0;
+    container_exists = container_visible = container_destroyed = fail_container = fail_container_position = 0;
+    child_rect = (RECT){0,0,0,0};
     made_count = 0;
     style = WS_POPUP | WS_CAPTION | WS_THICKFRAME;
 }
 
-BOOL IsWindow(HWND w) { return w == PARENT || (w == CHILD && child_exists); }
+BOOL IsWindow(HWND w) { return w == PARENT || (w == CHILD && child_exists) || (w == CONTAINER && container_exists); }
 BOOL IsWindowVisible(HWND w) { return w == CHILD && window_available; }
 HWND GetWindow(HWND w, unsigned int cmd) { (void)w; (void)cmd; return NULL; }
-HWND GetParent(HWND w) { return w == CHILD && child_parented ? PARENT : NULL; }
+HWND GetParent(HWND w) {
+    if (w == CONTAINER && container_exists) return PARENT;
+    return w == CHILD && child_parented ? CONTAINER : NULL;
+}
 DWORD GetWindowThreadProcessId(HWND w, DWORD *pid) { *pid = w == CHILD && child_exists ? 42 : 0; return 1; }
 DWORD WaitForSingleObject(HANDLE h, DWORD t) {
     (void)t; assert(h == PROCESS);
@@ -47,9 +55,29 @@ DWORD WaitForSingleObject(HANDLE h, DWORD t) {
     return process_alive ? WAIT_TIMEOUT : WAIT_OBJECT_0;
 }
 BOOL GetClientRect(HWND w, RECT *r) { assert(w == PARENT); *r = (RECT){0,0,1000,800}; return TRUE; }
+HWND CreateWindowExW(DWORD ex, LPCWSTR cls, LPCWSTR title, DWORD s, int x, int y, int w, int h,
+                     HWND parent, HANDLE menu, HANDLE instance, void *param) {
+    (void)ex; (void)title; (void)x; (void)y; (void)w; (void)h; (void)menu; (void)instance; (void)param;
+    assert(!wcscmp(cls, L"STATIC") && parent == PARENT && (s & WS_CHILD) && (s & WS_CLIPCHILDREN));
+    if (fail_container) { last_error = ERROR_ACCESS_DENIED; return NULL; }
+    assert(!container_exists); container_exists = 1; return CONTAINER;
+}
+BOOL DestroyWindow(HWND w) {
+    assert(w == CONTAINER && container_exists);
+    assert(!child_parented || !process_alive); // never destroy a live foreign child
+    container_exists = container_visible = 0; ++container_destroyed; return TRUE;
+}
 BOOL SetWindowPos(HWND w, HWND after, int x, int y, int width, int height, unsigned int flags) {
-    (void)after; assert(w == CHILD);
-    if (!(flags & SWP_NOMOVE)) { last_rect = (RECT){x,y,x+width,y+height}; ++layout_count; }
+    (void)after; assert(w == CHILD || (w == CONTAINER && container_exists));
+    if (w == CONTAINER) {
+        if (fail_container_position && !(flags & SWP_HIDEWINDOW)) {
+            last_error = ERROR_ACCESS_DENIED;
+            return FALSE;
+        }
+        if (!(flags & SWP_NOMOVE)) { last_rect = (RECT){x,y,x+width,y+height}; ++layout_count; }
+        if (flags & SWP_SHOWWINDOW) container_visible = 1;
+        if (flags & SWP_HIDEWINDOW) container_visible = 0;
+    } else if (!(flags & SWP_NOMOVE)) child_rect = (RECT){x,y,x+width,y+height};
     return TRUE;
 }
 BOOL ShowWindowAsync(HWND w, int show) {
@@ -127,7 +155,7 @@ LONG_PTR SetWindowLongPtrW(HWND w, int field, LONG_PTR value) {
     assert(w == CHILD && field == GWL_STYLE); LONG_PTR old = style; style = value; return old;
 }
 HWND SetParent(HWND child, HWND parent) {
-    assert(child == CHILD && parent == PARENT);
+    assert(child == CHILD && parent == CONTAINER && container_exists);
     if (fail_parent) { last_error = 5; return NULL; }
     child_parented = 1; return NULL; // Success may return NULL for a former top-level window.
 }
@@ -170,9 +198,11 @@ static void normal(void) {
     child_exists = window_available = 1; embed_poll(&h);
     assert(h.status == EMBED_ATTACHED && child_parented && layout_count == 1);
     assert(last_rect.left == 10 && last_rect.top == 20 && last_rect.right == 800 && last_rect.bottom == 600);
+    assert(h.container == CONTAINER && container_visible);
+    assert(child_rect.left == 0 && child_rect.top == 0 && child_rect.right == 790 && child_rect.bottom == 580);
     assert(last_show == SW_SHOWNA && (style & WS_CHILD));
-    assert(embed_select(&h, FALSE) && last_show == SW_HIDE);
-    assert(embed_select(&h, TRUE) && last_show == SW_SHOWNA);
+    assert(embed_select(&h, FALSE) && last_show == SW_HIDE && !container_visible);
+    assert(embed_select(&h, TRUE) && last_show == SW_SHOWNA && container_visible);
     RECT bad = {0,0,1001,800}; assert(!embed_set_rect(&h, &bad));
     assert(last_show == SW_HIDE && embed_select(&h, TRUE) && last_show == SW_HIDE);
     RECT restored = {10,20,800,600}; assert(embed_set_rect(&h, &restored) && last_show == SW_SHOWNA);
@@ -187,6 +217,7 @@ static void normal(void) {
     assert(!embed_set_rect(&h, &restored) && h.status == EMBED_CLOSING && h.child == NULL);
     assert(embed_request_close(&h));
     assert(h.status == EMBED_CLOSED && process_closed == 1);
+    assert(!h.container && !container_exists && container_destroyed == 1);
     assert(!embed_start(&h, L"C:\\test"));
 }
 static void isolated_profile_creation(void) {
@@ -340,7 +371,8 @@ static void visibility_failure_is_reported_and_tracking_is_retained(void) {
     fail_show = 1;
     assert(!embed_select(&h, FALSE) && h.error == ERROR_ACCESS_DENIED);
     assert(!h.selected && h.process == PROCESS && h.status == EMBED_ATTACHED);
-    assert(last_show == SW_SHOWNA); // A failed hide cannot be assumed complete.
+    assert(!container_visible); // The same-process clipping parent is hidden synchronously.
+    assert(last_show == SW_SHOWNA); // A failed foreign hide cannot be assumed complete.
     fail_show = 2;
     assert(!embed_select(&h, FALSE) && h.error == ERROR_GEN_FAILURE);
     fail_show = 0;
@@ -351,6 +383,30 @@ static void visibility_failure_is_reported_and_tracking_is_retained(void) {
     fail_show = 0;
     assert(!embed_request_close(&h) && close_messages == 1);
     process_alive = 0; assert(embed_request_close(&h));
+}
+static void container_position_failure_hides_and_keeps_tracking(void) {
+    EmbedHost h = fresh();
+    assert(embed_select(&h, TRUE) && embed_start(&h, L"C:\\test"));
+    child_exists = window_available = 1; embed_poll(&h);
+    assert(h.status == EMBED_ATTACHED && container_visible);
+    fail_container_position = 1;
+    assert(!embed_select(&h, TRUE) && h.error == ERROR_ACCESS_DENIED);
+    assert(!container_visible && h.process == PROCESS && h.status == EMBED_ATTACHED);
+    fail_container_position = 0;
+    assert(!embed_request_close(&h));
+    process_alive = 0;
+    assert(embed_request_close(&h) && !container_exists);
+}
+static void container_creation_failure_keeps_tracking(void) {
+    EmbedHost h = fresh();
+    assert(embed_select(&h, TRUE) && embed_start(&h, L"C:\\test"));
+    child_exists = window_available = fail_container = 1;
+    embed_poll(&h);
+    assert(h.status == EMBED_UNATTACHED && h.error == ERROR_ACCESS_DENIED);
+    assert(!h.container && !container_exists && h.process == PROCESS && !child_parented);
+    assert(!embed_request_close(&h));
+    process_alive = 0;
+    assert(embed_request_close(&h) && h.status == EMBED_CLOSED);
 }
 static void post_failure_can_cancel_and_retry(void) {
     EmbedHost h = fresh(); assert(embed_start(&h, L"C:\\test"));
@@ -367,6 +423,7 @@ int main(void) {
     cancel_preserves_discovery_timeout_and_exit_tracking(); close_while_discovering();
     close_at_discovery_does_not_queue_show(); closing_discovery_failure_retains_process();
     visibility_failure_is_reported_and_tracking_is_retained();
+    container_creation_failure_keeps_tracking(); container_position_failure_hides_and_keeps_tracking();
     post_failure_can_cancel_and_retry();
     puts("native backend simulation passed"); return 0;
 }

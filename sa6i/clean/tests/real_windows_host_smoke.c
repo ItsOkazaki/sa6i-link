@@ -90,10 +90,24 @@ int wmain(int argc, wchar_t **argv)
     CHECK(host.process && host.status == EMBED_DISCOVERING, "track process");
     CHECK(!embed_start(&host, argv[1]), "reject duplicate launch");
     CHECK(wait_attached(&host), "attach child window");
-    CHECK(host.child && GetParent(host.child) == parent, "verify child parent");
+    CHECK(host.container && GetParent(host.container) == parent &&
+          host.child && GetParent(host.child) == host.container, "verify clipping parent chain");
     CHECK((GetWindowLongPtrW(host.child, GWL_STYLE) & WS_CHILD) != 0, "verify child style");
     CHECK(wait_visible(&host, TRUE), "initial display");
     CHECK(wait_rect(&host, rect), "initial geometry");
+    // Emulate a foreign window moving upwards beyond its viewport. Its
+    // same-process container must remain below the header and win32 hit
+    // testing must not expose the child outside that container.
+    RECT escaped = {rect.left, rect.top - 15, rect.right, rect.bottom - 15};
+    CHECK(SetWindowPos(host.child, NULL, 0, -15, rect.right - rect.left,
+                       rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS),
+          "move foreign window beyond viewport");
+    CHECK(wait_rect(&host, escaped), "confirm foreign window moved beyond viewport");
+    POINT above = {rect.left + 20, rect.top - 5};
+    CHECK(ChildWindowFromPointEx(parent, above, CWP_SKIPINVISIBLE) == parent,
+          "foreign child must be clipped out of header");
+    CHECK(embed_set_rect(&host, &rect) && wait_rect(&host, rect), "restore child geometry");
+    puts("PASS: host viewport clips a mispositioned foreign child");
     CHECK(embed_select(&host, FALSE), "queue hide");
     CHECK(wait_visible(&host, FALSE), "hide child");
     CHECK(embed_select(&host, TRUE), "queue show");

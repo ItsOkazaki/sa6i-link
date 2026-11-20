@@ -19,6 +19,9 @@ typedef enum {
 
 typedef struct {
     HWND parent;
+    // A host-owned child HWND clips the foreign window to the viewport even
+    // when cross-process DPI or window-manager behavior misplaces it.
+    HWND container;
     HWND child;
     HANDLE process;
     DWORD process_id;
@@ -34,7 +37,8 @@ typedef struct {
 } EmbedHost;
 
 // parent is the Qt top-level native HWND; rect is in parent CLIENT physical
-// pixels. The Qt caller must map/clip its viewport and update it on DPI,
+// pixels. A same-process child HWND bounds and clips the embedded process.
+// The Qt caller must map/clip its viewport and update it on DPI,
 // geometry and visibility changes. All operations on a given EmbedHost must
 // be serialized. Window operations belong on the UI thread; an isolated copy
 // with no process may be passed to embed_start on a worker and handed back

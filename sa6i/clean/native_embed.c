@@ -65,11 +65,19 @@ static BOOL owned_child(const EmbedHost *host) {
     if (!host->child || !IsWindow(host->child) || !host->process ||
         WaitForSingleObject(host->process, 0) != WAIT_TIMEOUT) return FALSE;
     GetWindowThreadProcessId(host->child, &pid);
-    return pid == host->process_id && GetParent(host->child) == host->parent;
+    return pid == host->process_id && host->container && IsWindow(host->container) &&
+           GetParent(host->container) == host->parent && GetParent(host->child) == host->container;
+}
+
+static void hide_container(EmbedHost *host) {
+    if (host->container && IsWindow(host->container))
+        SetWindowPos(host->container, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
 }
 
 static BOOL place_child(EmbedHost *host) {
     if (!owned_child(host)) {
+        hide_container(host);
         host->error = ERROR_INVALID_WINDOW_HANDLE;
         if (host->status != EMBED_CLOSING) host->status = EMBED_UNATTACHED;
         host->child = NULL;
@@ -77,20 +85,35 @@ static BOOL place_child(EmbedHost *host) {
     }
     int width = host->rect.right - host->rect.left;
     int height = host->rect.bottom - host->rect.top;
-    if (!SetWindowPos(host->child, NULL, host->rect.left, host->rect.top,
-                      width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS)) {
+    BOOL show = host->selected && width && height;
+    // Position a same-process clipping parent, not the foreign HWND itself, in
+    // the Qt viewport. Windows clips a child to its parent's client area even
+    // if the Electron process changes its own size or origin. Hide this parent
+    // synchronously before asking the foreign process to hide asynchronously.
+    if (!SetWindowPos(host->container, NULL, host->rect.left, host->rect.top,
+                      width, height, SWP_NOZORDER | SWP_NOACTIVATE |
+                      (show ? SWP_SHOWWINDOW : SWP_HIDEWINDOW))) {
         host->error = GetLastError();
+        hide_container(host);
+        ShowWindowAsync(host->child, SW_HIDE);
+        return FALSE;
+    }
+    if (!SetWindowPos(host->child, NULL, 0, 0, width, height,
+                      SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS)) {
+        host->error = GetLastError();
+        hide_container(host);
         ShowWindowAsync(host->child, SW_HIDE);
         return FALSE;
     }
     SetLastError(0);
-    if (!ShowWindowAsync(host->child, host->selected && width && height ? SW_SHOWNA : SW_HIDE)) {
+    if (!ShowWindowAsync(host->child, show ? SW_SHOWNA : SW_HIDE)) {
         DWORD error = GetLastError();
+        hide_container(host);
         // ShowWindowAsync may not provide an extended error on failure.
         host->error = error ? error : ERROR_GEN_FAILURE;
         return FALSE;
     }
-    // Success only means the visibility request was queued, not completed.
+    // The container is synchronous; foreign-window requests are still async.
     return TRUE;
 }
 
@@ -111,6 +134,7 @@ BOOL embed_set_rect(EmbedHost *host, const RECT *rect) {
             host->error = ERROR_INVALID_PARAMETER;
             // Forget stale coordinates so a later selection cannot show them.
             ZeroMemory(&host->rect, sizeof(host->rect));
+            hide_container(host);
             if ((host->status == EMBED_ATTACHED || host->status == EMBED_CLOSING) && owned_child(host))
                 ShowWindowAsync(host->child, SW_HIDE);
         }
@@ -245,6 +269,11 @@ static void try_attach(EmbedHost *host) {
         host->error = ERROR_INVALID_WINDOW_HANDLE;
         return;
     }
+    // This host-owned viewport supplies a hard Win32 clipping boundary. It
+    // is created hidden on the GUI thread and retained until process exit.
+    host->container = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_CLIPCHILDREN,
+                                      0, 0, 0, 0, host->parent, NULL, NULL, NULL);
+    if (!host->container) goto failed;
     SetLastError(0);
     old_style = GetWindowLongPtrW(host->child, GWL_STYLE);
     if (!old_style && GetLastError()) goto failed;
@@ -252,7 +281,7 @@ static void try_attach(EmbedHost *host) {
     if (!SetWindowLongPtrW(host->child, GWL_STYLE,
                            (old_style & ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME)) | WS_CHILD) && GetLastError()) goto failed;
     SetLastError(0);
-    previous = SetParent(host->child, host->parent);
+    previous = SetParent(host->child, host->container);
     if (!previous && GetLastError()) {
         DWORD error = GetLastError();
         // Best effort rollback, only while the handle still belongs to our process.
@@ -273,6 +302,13 @@ static void try_attach(EmbedHost *host) {
     return;
  failed:
     host->error = GetLastError();
+    hide_container(host);
+    // Do not destroy a window that might still parent a live foreign child.
+    // A retained hidden container is destroyed after the tracked process exits.
+    if (host->container && GetParent(host->child) != host->container) {
+        DestroyWindow(host->container);
+        host->container = NULL;
+    }
     host->child = NULL;
     host->status = EMBED_UNATTACHED;
 }
@@ -288,6 +324,10 @@ void embed_poll(EmbedHost *host) {
     if (!host || !host->process) return;
     DWORD wait = WaitForSingleObject(host->process, 0);
     if (wait == WAIT_OBJECT_0) {
+        // The foreign process is gone; it is now safe to destroy our host
+        // viewport without destroying a live foreign child window.
+        if (host->container && IsWindow(host->container)) DestroyWindow(host->container);
+        host->container = NULL;
         CloseHandle(host->process);
         host->process = NULL;
         host->process_id = 0;
@@ -318,6 +358,7 @@ void embed_poll(EmbedHost *host) {
         }
     }
     else if (host->status == EMBED_ATTACHED && !owned_child(host)) {
+        hide_container(host);
         host->child = NULL;
         host->status = EMBED_UNATTACHED;
         host->error = ERROR_INVALID_WINDOW_HANDLE;
