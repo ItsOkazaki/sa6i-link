@@ -53,7 +53,11 @@ function Confirm-SyntheticProfile([int]$ProcessId) {
         [System.IO.Path]::GetFileName($profile) -notmatch '^Sa6i-Clean-HostTest-\d+-\d+$') { throw 'Unexpected synthetic profile location' }
     $marker = Join-Path $profile 'synthetic-profile-path.txt'
     if (!(Wait-Until { if (Test-Path $marker) { $true } } 10)) { throw 'Synthetic Electron did not create its profile marker' }
-    if (![string]::Equals((Get-Content $marker -Raw), $profile, [StringComparison]::OrdinalIgnoreCase)) { throw 'Electron did not use its passed profile directory' }
+    $observed = [string](Get-Content $marker -Raw)
+    if (![string]::Equals($observed, $profile, [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Host "::error::Synthetic profile argument=[$profile] observed=[$observed]"
+        throw 'Electron did not use its passed profile directory'
+    }
     return $profile
 }
 $exe = (Resolve-Path (Join-Path $AppDir 'synthetic-test-desktop.exe')).Path
