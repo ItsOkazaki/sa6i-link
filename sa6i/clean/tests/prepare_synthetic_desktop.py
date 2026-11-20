@@ -6,7 +6,7 @@ real Sa6i Clean executable, ASAR and production source are not modified.
 """
 from hashlib import sha256
 from pathlib import Path
-import sys
+import argparse
 
 DESKTOP_SHA = 'bbe4bb2d4b2f898ac38f7ac0947ecf61483705e0d238ec0e813552545bc6bcbe'
 PINS = (
@@ -14,14 +14,19 @@ PINS = (
     ('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112', 'resources/app.asar'),
 )
 
+CURRENT_PINS = (
+    ('435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e', 'Sa6i Clean Integration.exe'),
+    ('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a', 'resources/app.asar'),
+)
 
-def main(desktop: Path, fixture: Path):
+
+def main(desktop: Path, fixture: Path, desktop_sha=DESKTOP_SHA, pins=PINS):
     data = desktop.read_bytes()
-    if sha256(data).hexdigest() != DESKTOP_SHA:
-        raise SystemExit('Desktop binary does not match the known CI artifact')
+    if sha256(data).hexdigest() != desktop_sha:
+        raise SystemExit('Desktop binary does not match the expected CI artifact')
     if 'Sa6i Clean Integration.exe'.encode('utf-16le') not in data:
         raise SystemExit('Expected fixture name is missing')
-    for original, name in PINS:
+    for original, name in pins:
         needle = bytes.fromhex(original)
         if data.count(needle) != 1:
             raise SystemExit(f'Expected exactly one pin for {name}')
@@ -35,6 +40,12 @@ def main(desktop: Path, fixture: Path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        raise SystemExit('usage: prepare_synthetic_desktop.py DESKTOP_EXE FIXTURE_DIR')
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('desktop', type=Path)
+    parser.add_argument('fixture', type=Path)
+    parser.add_argument('--desktop-sha', default=DESKTOP_SHA,
+                        help='SHA-256 of the trusted CI artifact being tested')
+    parser.add_argument('--current-pins', action='store_true',
+                        help='use the current full-cleaner pins instead of the historical artifact pins')
+    args = parser.parse_args()
+    main(args.desktop, args.fixture, args.desktop_sha, CURRENT_PINS if args.current_pins else PINS)

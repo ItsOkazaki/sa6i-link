@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Real Qt app and real Win32 API with a synthetic, non-destructive window.
-# Binary pin replacement is ephemeral and must never be distributed.
+# Binary pin replacement is ephemeral and must never be distributed. The
+# trusted build artifact is pinned to a specific successful workflow run;
+# its hash is logged and checked while making the test-only binary.
 name: Sa6i Clean full window synthetic smoke
 on:
   push:
@@ -25,7 +27,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44786731046
+          run-id: 44795256070
           github-token: ${{ github.token }}
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build inert fixture, patch test copy and exercise app
@@ -39,9 +41,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
           Write-Host "::notice::Desktop SHA256 $((Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant())"
-          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --current-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
-          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader
   electron-ui:
     runs-on: windows-latest
     timeout-minutes: 12
@@ -51,7 +54,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44786731046
+          run-id: 44795256070
           github-token: ${{ github.token }}
       - name: Build inert Electron fixture and exercise app
         shell: pwsh
@@ -69,9 +72,10 @@ jobs:
           New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force | Out-Null
           npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
-          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --current-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
-          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -VerifyElectronProfile
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -VerifyElectronProfile -IntegratedHeader
           } catch {
             Write-Host "::error::Electron job failed: $_"
             throw

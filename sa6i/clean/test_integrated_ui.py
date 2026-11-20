@@ -44,6 +44,9 @@ class IntegratedUiTests(unittest.TestCase):
         workflow = (ROOT / '.github/workflows/sa6i-clean-win7-build.yml').read_text(encoding='utf-8')
         self.assertIn(full.OUTPUT_SHA, workflow)
         self.assertIn(full.ASAR_SHA, workflow)
+        smoke_helper = (ROOT / 'sa6i/clean/tests/prepare_synthetic_desktop.py').read_text(encoding='utf-8')
+        self.assertIn(full.OUTPUT_SHA, smoke_helper)
+        self.assertIn(full.ASAR_SHA, smoke_helper)
 
 
 if __name__ == '__main__':
