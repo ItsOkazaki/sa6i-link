@@ -5,6 +5,13 @@ name: Sa6i Clean Windows integration build
 on:
   push:
     branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - 'desktop/**'
+      - 'core/**'
+      - 'sa6i/clean/**'
+      - 'scripts/package.ps1'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   workflow_dispatch:
 
 permissions:

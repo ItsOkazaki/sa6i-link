@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Build against a third-party Qt Windows 7 backport. No release is published.
+name: Sa6i Clean Windows 7 build investigation
+
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-win7-build.yml'
+      - 'desktop/**'
+      - 'core/**'
+      - 'sa6i/clean/**'
+      - 'scripts/package.ps1'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  SA6I_CLEAN_EXPERIMENT: "1"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Download pinned Qt 6.8.3 Windows 7 backport
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'qt-win7.7z'
+          $url = 'https://github.com/xanasoft/qt-builds/releases/download/v6.8.3-ssl-lgpl/qt-everywhere-6.8.3-Windows_7-MSVC2022-x86_64.7z'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $expected = 'f1efe461b28d7758e1e68ba189d0a45c8168ac181be1ffe7013d0bbfb6ff145d'
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne $expected) {
+            throw 'Third-party Qt archive checksum mismatch'
+          }
+          $qtDir = Join-Path $env:RUNNER_TEMP 'qt-win7'
+          & 7z x $archive "-o$qtDir" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Qt archive extraction failed' }
+          $qmake = @(Get-ChildItem $qtDir -Recurse -File -Filter qmake.exe)
+          if ($qmake.Count -ne 1) { throw "Expected one qmake.exe; found $($qmake.Count)" }
+          $bin = $qmake[0].DirectoryName
+          $qtRoot = Split-Path -Parent $bin
+          if (-not (Test-Path (Join-Path $bin 'windeployqt.exe'))) { throw 'No windeployqt in Qt kit' }
+          # Make the unpacked kit independent of the original build directory.
+          Set-Content -Path (Join-Path $bin 'qt.conf') -Value "[Paths]`nPrefix=.." -Encoding ASCII
+          "QMAKE=$($qmake[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "QT_ROOT_DIR=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $qmake[0].FullName -query
+          if ($LASTEXITCODE -ne 0) { throw 'qmake query failed' }
+      - name: Build and stage separately
+        shell: pwsh
+        run: ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly
+      - name: Mark artifact limitations
+        shell: pwsh
+        run: |
+          @'
+          SA6I CLEAN WIN7 INTEGRATION INVESTIGATION — NOT A RELEASE
+
+          This is an experimental source build using a third-party Qt 6.8.3
+          Windows 7 backport, not the official Qt kit. It is not equivalent to
+          the published Sa6i Link executable and has not been run on Windows 7.
+          The artifact does not include a cleaner runtime; the backend accepts
+          only a pinned restricted fixture. Do not install over an existing
+          copy or use it for real cleanup. Third-party Qt licensing and runtime
+          compatibility need review before distribution.
+          '@ | Set-Content -Encoding UTF8 target/package/Nectarlink/INTEGRATION-BUILD-ONLY.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: target/package/Nectarlink/
+          if-no-files-found: error
+          retention-days: 7
