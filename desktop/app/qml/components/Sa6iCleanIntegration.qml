@@ -20,6 +20,10 @@ Item {
     property bool externalOverlayOpen: false
     property string initializationError: ""
     property bool viewportReady: false
+    // An opt-in buffer for the Win7/VxKex experiment where Electron pixels
+    // were observed above their correct HWND bounds. This is a conservative
+    // layout workaround, not a guarantee that the compositor respects it.
+    property real headerClearance: Qt.application.arguments.indexOf("--sa6i-clean-header-clearance") >= 0 ? 40 : 0
     // A failed async visibility request means we cannot assume the native
     // child is hidden, even though the QML layout is no longer visible.
     property bool hideRequestFailed: false
@@ -196,10 +200,23 @@ Item {
         }
     }
 
+    // Keep a neutral strip between the header and the native child when the
+    // experimental clearance is requested. Never cover the header itself.
+    Rectangle {
+        objectName: "cleanHeaderClearance"
+        anchors.top: parent.top
+        anchors.topMargin: root.titleBarHeight
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: Math.max(0, Math.min(root.headerClearance, parent.height - root.titleBarHeight))
+        visible: root.cleanOpen && !root.externalOverlayOpen && height > 0
+        color: root.headerColor
+    }
+
     CleanView {
         id: cleanView
         anchors.top: parent.top
-        anchors.topMargin: root.titleBarHeight
+        anchors.topMargin: root.titleBarHeight + Math.max(0, Math.min(root.headerClearance, parent.height - root.titleBarHeight))
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

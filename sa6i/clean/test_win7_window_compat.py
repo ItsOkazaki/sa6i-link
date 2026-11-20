@@ -20,7 +20,8 @@ class Win7WindowCompatibilityTests(unittest.TestCase):
         self.assertIn('set "SA6I_CLEAN_WIN7_SOFTWARE=1"', source)
         self.assertIn('set "QT_QUICK_BACKEND=software"', source)
         self.assertLess(source.index('set "SA6I_CLEAN_WIN7_COMPAT=1"'), source.index('start ""'))
-        self.assertLess(source.index('set "SA6I_CLEAN_WIN7_SOFTWARE=1"'), source.index('start ""'))
+        self.assertIn('set "SA6I_CLEAN_WIN7_SOFTWARE="', source)
+        self.assertIn('--sa6i-clean-header-clearance', source)
 
 
 if __name__ == '__main__':

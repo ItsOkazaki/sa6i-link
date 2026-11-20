@@ -94,20 +94,19 @@ def package(desktop, cleaner, output, win7_shim):
 setlocal\r
 if not defined LOCALAPPDATA (echo LOCALAPPDATA is unavailable. & pause & exit /b 1)\r
 set "SA6I_CLEAN_WIN7_COMPAT=1"\r
-set "SA6I_CLEAN_WIN7_SOFTWARE=1"\r
-set "QT_QUICK_BACKEND=software"\r
-set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Test-{unique}"\r
-start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
+set "SA6I_CLEAN_WIN7_SOFTWARE="\r
+set "QT_QUICK_BACKEND="\r
+set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Standard-{unique}"\r
+start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" --sa6i-clean-header-clearance "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
 '''
         (staged / 'Start Integrated Test.cmd').write_bytes(launch.encode('ascii'))
-        # Allow a comparison with the earlier rendering path when the software
-        # compositor produces a blank viewport. Explicitly clear inherited
-        # overrides; these launchers are experiments, not a proven fix.
-        standard_launch = launch.replace(
-            'set "SA6I_CLEAN_WIN7_SOFTWARE=1"', 'set "SA6I_CLEAN_WIN7_SOFTWARE="').replace(
-            'set "QT_QUICK_BACKEND=software"', 'set "QT_QUICK_BACKEND="').replace(
-            f'Sa6i-Link-Integrated-Test-{unique}', f'Sa6i-Link-Integrated-Standard-{unique}')
-        (staged / 'Start Integrated Standard Rendering.cmd').write_bytes(standard_launch.encode('ascii'))
+        # A separate comparison launcher retains the software rendering path;
+        # on the user's system it showed a blank viewport and is not a fix.
+        software_launch = launch.replace(
+            'set "SA6I_CLEAN_WIN7_SOFTWARE="', 'set "SA6I_CLEAN_WIN7_SOFTWARE=1"').replace(
+            'set "QT_QUICK_BACKEND="', 'set "QT_QUICK_BACKEND=software"').replace(
+            f'Sa6i-Link-Integrated-Standard-{unique}', f'Sa6i-Link-Integrated-Software-{unique}')
+        (staged / 'Start Integrated Software Rendering.cmd').write_bytes(software_launch.encode('ascii'))
         (staged / 'READ FIRST - EXPERIMENT.txt').write_text(
             'EXPERIMENTAL INTEGRATION — NOT A FINAL PRODUCT\n\n'
             'This is a separate source build, not the published Sa6i Link app. '
@@ -119,10 +118,12 @@ start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-te
             'On Windows 7, VxKex may need to be enabled separately for both '
             'nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean Integration.exe; '
             'this is not configured automatically and compatibility is not guaranteed.\n'
-            'The test launcher requests Qt software rendering and passes --disable-gpu '
-            'to the cleaner as an experimental clipping workaround; performance may suffer. '
-            'The alternate Standard Rendering launcher clears both overrides and uses a '
-            'separate test profile; neither path is verified on Windows 7.\n'
+            'The default launcher uses normal rendering and reserves extra space below '
+            'the header as an experimental overlap workaround. It has not been verified '
+            'on Windows 7 and may leave a visible gap or fail to prevent overlap. '
+            'The alternate Software Rendering launcher uses an isolated test profile and '
+            'requests Qt software rendering and --disable-gpu, but showed a blank cleaner '
+            'on the user\'s Windows 7 system.\n'
             'A separate application data path is used, but this is NOT a sandbox. '
             'The application and cleaner can still access normal user and OS paths.\n'
             'The included app-local cldapi.dll is the compatibility shim from the '

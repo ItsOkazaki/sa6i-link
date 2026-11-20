@@ -9,6 +9,7 @@ param([Parameter(Mandatory=$true)][string]$AppDir,
       [switch]$ExpectHostTheme,
       [switch]$ExpectSoftwareFlag,
       [switch]$PixelCheck,
+      [switch]$HeaderClearance,
       [double]$Scale = 1.0)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
@@ -122,7 +123,9 @@ if ($Scale -lt 1 -or $Scale -gt 2) { throw 'Unsupported smoke-test scale' }
 $env:QT_SCALE_FACTOR = $Scale.ToString([System.Globalization.CultureInfo]::InvariantCulture)
 $app = $null
 try {
-    $app = Start-Process $exe -ArgumentList '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$fixture`"" -RedirectStandardError $stderr -PassThru
+    $launchArgs = @('--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$fixture`"")
+    if ($HeaderClearance) { $launchArgs += '--sa6i-clean-header-clearance' }
+    $app = Start-Process $exe -ArgumentList $launchArgs -RedirectStandardError $stderr -PassThru
     $null = $app.Handle
     $window = Wait-Until { $app.Refresh(); if (!$app.HasExited -and $app.MainWindowHandle -ne [IntPtr]::Zero) { $app.MainWindowHandle } } 40
     if (!$window) { throw 'Main window did not appear' }
@@ -163,7 +166,8 @@ try {
         $origin = New-Object Sa6iSmokeWin32+POINT
         if (![Sa6iSmokeWin32]::ClientToScreen($window, [ref]$origin) -or
             ![Sa6iSmokeWin32]::GetWindowRect($clip, [ref]$bounds)) { throw 'Could not inspect header geometry' }
-        if ($ClippingContainer -and [Math]::Abs($bounds.top - ($origin.y + [int](52 * $Scale))) -gt 2) {
+        $viewportTop = 52 + $(if ($HeaderClearance) { 40 } else { 0 })
+        if ($ClippingContainer -and [Math]::Abs($bounds.top - ($origin.y + [int]($viewportTop * $Scale))) -gt 2) {
             throw "Clipping viewport covers or is detached from header: top=$($bounds.top) origin=$($origin.y)"
         }
         $headerPoint = New-Object Sa6iSmokeWin32+POINT
@@ -208,7 +212,7 @@ try {
             ![Sa6iSmokeWin32]::GetWindowRect([Sa6iSmokeWin32]::GetParent($child), [ref]$maxClip)) {
             throw 'Could not inspect maximized viewport'
         }
-        if ([Math]::Abs($maxClip.top - ($maxOrigin.y + [int](52 * $Scale))) -gt 2) {
+        if ([Math]::Abs($maxClip.top - ($maxOrigin.y + [int]($viewportTop * $Scale))) -gt 2) {
             throw 'Maximized native viewport is not below the header in client coordinates'
         }
         [void][Sa6iSmokeWin32]::SetForegroundWindow($window)
