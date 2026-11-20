@@ -1,0 +1,7 @@
+{
+  "name": "sa6i-inert-integration-fixture",
+  "productName": "Sa6i Inert Integration Fixture",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js"
+}

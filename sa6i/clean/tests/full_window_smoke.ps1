@@ -60,7 +60,12 @@ try {
     $entryX = $rect.right - 216
     if ($entryX -lt 0) { throw 'Window too narrow for cleaner button' }
     [Sa6iSmokeWin32]::Click($window, $entryX, 26)
-    $childProc = Wait-Until { Get-Process -Name 'Sa6i Clean Integration' -ErrorAction SilentlyContinue | Select-Object -First 1 } 25
+    # Electron can have several same-name subprocesses; only use the one
+    # directly launched by this app as the tracked browser process.
+    $childProc = Wait-Until {
+        $match = Get-CimInstance Win32_Process -Filter "Name='Sa6i Clean Integration.exe' AND ParentProcessId=$($app.Id)" | Select-Object -First 1
+        if ($match) { Get-Process -Id $match.ProcessId -ErrorAction SilentlyContinue }
+    } 35
     if (!$childProc) { throw 'The synthetic child did not start after clicking Sa6i Clean' }
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not become a visible child of the app window' }

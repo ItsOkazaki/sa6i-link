@@ -10,6 +10,7 @@ on:
       - 'sa6i/clean/tests/full_window_smoke.ps1'
       - 'sa6i/clean/tests/prepare_synthetic_desktop.py'
       - 'sa6i/clean/tests/real_windows_fixture.c'
+      - 'sa6i/clean/tests/synthetic_electron/**'
   workflow_dispatch:
 permissions:
   actions: read
@@ -37,6 +38,35 @@ jobs:
           & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE sa6i/clean/tests/real_windows_fixture.c "/Fe:$fixtureExe" /link /SUBSYSTEM:WINDOWS user32.lib
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
+          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
+          if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture
+  electron-ui:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: app
+          run-id: 44757980827
+          github-token: ${{ github.token }}
+      - name: Build inert Electron fixture and exercise app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'electron-v45.1.0-win32-x64.zip'
+          $url = 'https://github.com/electron/electron/releases/download/v45.1.0/electron-v45.1.0-win32-x64.zip'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne '55eaba17abff7b5bba6c3bbc85068967379024fe742fe9c7fdba9118922ccbe2') { throw 'Electron archive checksum mismatch' }
+          $fixture = Join-Path $env:RUNNER_TEMP 'sa6i-synthetic-electron'
+          & 7z x $archive "-o$fixture" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Electron extraction failed' }
+          Move-Item (Join-Path $fixture 'electron.exe') (Join-Path $fixture 'Sa6i Clean Integration.exe')
+          New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force | Out-Null
+          npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
+          if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture
