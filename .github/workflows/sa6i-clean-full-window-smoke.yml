@@ -25,7 +25,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44757980827
+          run-id: 44786731046
           github-token: ${{ github.token }}
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build inert fixture, patch test copy and exercise app
@@ -50,7 +50,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44757980827
+          run-id: 44786731046
           github-token: ${{ github.token }}
       - name: Build inert Electron fixture and exercise app
         shell: pwsh

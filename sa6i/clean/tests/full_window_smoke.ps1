@@ -19,6 +19,7 @@ public static class Sa6iSmokeWin32 {
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EnumProc cb, IntPtr v);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll", EntryPoint="GetWindowLongW")] public static extern int GetWindowLong(IntPtr h, int index);
     [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
     private static extern uint GetLongPathName(string input, StringBuilder output, uint size);
     public static string LongPath(string input) {
@@ -77,6 +78,7 @@ New-Item -ItemType Directory -Path $data | Out-Null
 $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-stderr.txt'
 $env:NECTARLINK_NO_ADB = '1'
 $env:QT_QUICK_BACKEND = 'software'
+$env:SA6I_CLEAN_WIN7_COMPAT = '1'
 $env:QT_SCALE_FACTOR = '1'
 $app = $null
 try {
@@ -84,6 +86,10 @@ try {
     $null = $app.Handle
     $window = Wait-Until { $app.Refresh(); if (!$app.HasExited -and $app.MainWindowHandle -ne [IntPtr]::Zero) { $app.MainWindowHandle } } 40
     if (!$window) { throw 'Main window did not appear' }
+    if (([Sa6iSmokeWin32]::GetWindowLong($window, -20) -band 0x00200000) -ne 0) {
+        throw 'Win7 compatibility mode still uses WS_EX_NOREDIRECTIONBITMAP'
+    }
+    Write-Host '::notice::PASS: Win7 mode avoids the no-redirection window style'
     # Let the main QML window finish its initial rendering and layout.
     Start-Sleep -Seconds 4
     $rect = New-Object Sa6iSmokeWin32+RECT
