@@ -30,6 +30,8 @@ public static class Sa6iSmokeWin32 {
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
+    [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr h);
     [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr h, IntPtr dc);
     [DllImport("gdi32.dll")] public static extern uint GetPixel(IntPtr dc, int x, int y);
@@ -194,6 +196,39 @@ try {
         Write-Host '::notice::PASS: synthetic Electron uses the explicit temporary profile'
     }
     Write-Host '::notice::PASS: actual Qt app opened a synthetic child in the same window'
+    if ($PixelCheck) {
+        # The reported overlap also occurs when the host is maximized. Normal
+        # window bounds alone cannot cover the invisible maximized frame edges.
+        [void][Sa6iSmokeWin32]::ShowWindow($window, 3) # SW_MAXIMIZE
+        if (!(Wait-Until { if ([Sa6iSmokeWin32]::IsZoomed($window)) { $true } } 8)) { throw 'Host did not maximize' }
+        Start-Sleep -Seconds 2
+        $maxOrigin = New-Object Sa6iSmokeWin32+POINT
+        $maxClip = New-Object Sa6iSmokeWin32+RECT
+        if (![Sa6iSmokeWin32]::ClientToScreen($window, [ref]$maxOrigin) -or
+            ![Sa6iSmokeWin32]::GetWindowRect([Sa6iSmokeWin32]::GetParent($child), [ref]$maxClip)) {
+            throw 'Could not inspect maximized viewport'
+        }
+        if ([Math]::Abs($maxClip.top - ($maxOrigin.y + [int](52 * $Scale))) -gt 2) {
+            throw 'Maximized native viewport is not below the header in client coordinates'
+        }
+        [void][Sa6iSmokeWin32]::SetForegroundWindow($window)
+        $maxBodyX = [Math]::Max(0, $maxOrigin.x) + [int](40 * $Scale)
+        $maxBodyY = [Math]::Max(0, $maxOrigin.y) + [int](150 * $Scale)
+        if (!(Wait-Until { if ([Sa6iSmokeWin32]::ScreenPixel($maxBodyX, $maxBodyY) -eq $green) { $true } } 12)) {
+            throw 'Maximized synthetic Electron pixels not visible; check is inconclusive'
+        }
+        $maxHeaderX = [Math]::Max(0, $maxOrigin.x) + [int](400 * $Scale)
+        foreach ($headerY in @(26, 38, 48)) {
+            $maxHeaderY = [Math]::Max(0, $maxOrigin.y) + [int]($headerY * $Scale)
+            if ([Sa6iSmokeWin32]::ScreenPixel($maxHeaderX, $maxHeaderY) -eq $green) {
+                throw "Maximized Electron pixels visually cover the visible header at y=$headerY"
+            }
+        }
+        Write-Host '::notice::PASS: synthetic Electron header clipping when maximized'
+        [void][Sa6iSmokeWin32]::ShowWindow($window, 9) # SW_RESTORE
+        if (!(Wait-Until { if (![Sa6iSmokeWin32]::IsZoomed($window)) { $true } } 8)) { throw 'Host did not restore' }
+        Start-Sleep -Seconds 1
+    }
     $oldParent = New-Object Sa6iSmokeWin32+RECT
     $oldChild = New-Object Sa6iSmokeWin32+RECT
     if (![Sa6iSmokeWin32]::GetWindowRect($window, [ref]$oldParent) -or ![Sa6iSmokeWin32]::GetWindowRect($child, [ref]$oldChild)) { throw 'Could not read window geometry' }
