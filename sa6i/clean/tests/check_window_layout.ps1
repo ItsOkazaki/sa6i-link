@@ -1,5 +1,7 @@
-# Read-only Win32 geometry report. Does not read window titles, paths or files.
-param([string]$ProcessName = 'nectarlink-desktop')
+# Read-only Win32 geometry report. Never prints window titles or paths.
+# Reads only the running application executables to identify their versions.
+param([string]$ProcessName = 'nectarlink-desktop',
+      [string]$CleanerProcessName = 'Sa6i Clean Integration')
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
@@ -51,14 +53,37 @@ public static class Sa6iLayoutCheck {
     }
 }
 '@
+function Get-RunningHash($process) {
+    try {
+        # Read the loaded executable, not an arbitrary user-supplied file. Do
+        # not print paths or exception messages if access is unavailable.
+        $stream = [System.IO.File]::Open($process.MainModule.FileName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+        try {
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try { return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+            finally { $sha.Clear() }
+        } finally { $stream.Close() }
+    } catch { return 'UNAVAILABLE' }
+}
 Write-Host 'Sa6i read-only window layout report'
 Write-Host 'No window titles, file paths or personal files are collected.'
 Write-Host ('System DPI: ' + [Sa6iLayoutCheck]::SystemDpi())
 $processes = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)
 if ($processes.Count -eq 0) { Write-Host 'No Sa6i desktop process found.'; exit 1 }
 foreach ($process in $processes) {
+    Write-Host ('Desktop process ' + $process.Id + ' SHA256: ' + (Get-RunningHash $process))
     $report = [Sa6iLayoutCheck]::Report([uint32]$process.Id)
     if ($report) { Write-Output $report }
     else { Write-Host ('No visible top-level window for process ' + $process.Id) }
+}
+$cleaners = @(Get-Process -Name $CleanerProcessName -ErrorAction SilentlyContinue)
+if ($cleaners.Count -eq 0) { Write-Host 'No cleaner process found. Open the cleaner dashboard first.' }
+else {
+    Write-Host ('Cleaner processes found: ' + $cleaners.Count)
+    Write-Host ('Cleaner executable SHA256: ' + (Get-RunningHash $cleaners[0]))
+    foreach ($process in $cleaners) {
+        $report = [Sa6iLayoutCheck]::Report([uint32]$process.Id)
+        if ($report) { Write-Output ('CLEANER TOP-LEVEL ' + $report) }
+    }
 }
 Write-Host 'Please share a picture of this report.'
