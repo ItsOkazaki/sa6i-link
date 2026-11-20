@@ -163,12 +163,22 @@ bool QtEmbedAdapter::bindNativeParent(quintptr hwnd) {
 }
 
 bool QtEmbedAdapter::start(const QString &directory) {
+    return startImpl(directory, 0);
+}
+
+bool QtEmbedAdapter::startWithTheme(const QString &directory, bool dark) {
+    return startImpl(directory, dark ? 2 : 1);
+}
+
+bool QtEmbedAdapter::startImpl(const QString &directory, int initialTheme) {
     if (!onOwnerThread()) return false;
 #if SA6I_HAVE_EMBED
     if (!d->bound || processTracked() || d->host.status != EMBED_IDLE) return false;
     d->host.error = 0;
     d->closeDuringLaunch = false;
-    auto *worker = new LaunchWorker(d->host, directory.toStdWString(), this);
+    EmbedHost launchHost = d->host;
+    launchHost.initial_theme = initialTheme;
+    auto *worker = new LaunchWorker(launchHost, directory.toStdWString(), this);
     d->worker = worker;
     QObject::connect(worker, &QThread::finished, this, [this, worker] {
         // Only the UI thread accesses d->host. The worker has stopped and its
@@ -201,19 +211,7 @@ bool QtEmbedAdapter::start(const QString &directory) {
     updateAfterCall();
     return true;
 #else
-    Q_UNUSED(directory);
-    return false;
-#endif
-}
-
-bool QtEmbedAdapter::startWithTheme(const QString &directory, bool dark) {
-    if (!onOwnerThread()) return false;
-#if SA6I_HAVE_EMBED
-    if (!d->bound || processTracked() || d->host.status != EMBED_IDLE) return false;
-    d->host.initial_theme = dark ? 2 : 1;
-    return start(directory);
-#else
-    Q_UNUSED(directory); Q_UNUSED(dark);
+    Q_UNUSED(directory); Q_UNUSED(initialTheme);
     return false;
 #endif
 }

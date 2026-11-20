@@ -57,5 +57,6 @@ private:
     struct Impl;
     std::unique_ptr<Impl> d;
     bool onOwnerThread() const;
+    bool startImpl(const QString &directory, int initialTheme);
     void updateAfterCall();
 };
