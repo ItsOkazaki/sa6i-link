@@ -20,6 +20,10 @@ permissions:
 jobs:
   ui:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scale: [1, 1.25, 1.5]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -44,7 +48,7 @@ jobs:
           $desktopSha = '9f6ed53b2b62bb07a930e4216222400668ba2fe862e95430950dfef8aee2d30b'
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --current-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
-          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -Scale ${{ matrix.scale }}
   electron-ui:
     runs-on: windows-latest
     timeout-minutes: 12

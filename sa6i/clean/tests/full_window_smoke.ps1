@@ -5,7 +5,8 @@ param([Parameter(Mandatory=$true)][string]$AppDir,
       [Parameter(Mandatory=$true)][string]$FixtureDir,
       [switch]$VerifyElectronProfile,
       [switch]$IntegratedHeader,
-      [switch]$ClippingContainer)
+      [switch]$ClippingContainer,
+      [double]$Scale = 1.0)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
@@ -85,7 +86,8 @@ $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-stderr.txt'
 $env:NECTARLINK_NO_ADB = '1'
 $env:QT_QUICK_BACKEND = 'software'
 $env:SA6I_CLEAN_WIN7_COMPAT = '1'
-$env:QT_SCALE_FACTOR = '1'
+if ($Scale -lt 1 -or $Scale -gt 2) { throw 'Unsupported smoke-test scale' }
+$env:QT_SCALE_FACTOR = $Scale.ToString([System.Globalization.CultureInfo]::InvariantCulture)
 $app = $null
 try {
     $app = Start-Process $exe -ArgumentList '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$fixture`"" -RedirectStandardError $stderr -PassThru
@@ -100,9 +102,9 @@ try {
     Start-Sleep -Seconds 4
     $rect = New-Object Sa6iSmokeWin32+RECT
     if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get client bounds' }
-    $entryX = $rect.right - 216
+    $entryX = $rect.right - [int](216 * $Scale)
     if ($entryX -lt 0) { throw 'Window too narrow for cleaner button' }
-    [Sa6iSmokeWin32]::Click($window, $entryX, 26)
+    [Sa6iSmokeWin32]::Click($window, $entryX, [int](26 * $Scale))
     # Electron can have several same-name subprocesses; only use the one
     # directly launched by this app as the tracked browser process.
     $childProc = Wait-Until {
@@ -123,11 +125,11 @@ try {
         $origin = New-Object Sa6iSmokeWin32+POINT
         if (![Sa6iSmokeWin32]::ClientToScreen($window, [ref]$origin) -or
             ![Sa6iSmokeWin32]::GetWindowRect($clip, [ref]$bounds)) { throw 'Could not inspect header geometry' }
-        if ($ClippingContainer -and [Math]::Abs($bounds.top - ($origin.y + 52)) -gt 2) {
+        if ($ClippingContainer -and [Math]::Abs($bounds.top - ($origin.y + [int](52 * $Scale))) -gt 2) {
             throw "Clipping viewport covers or is detached from header: top=$($bounds.top) origin=$($origin.y)"
         }
         $headerPoint = New-Object Sa6iSmokeWin32+POINT
-        $headerPoint.x = 50; $headerPoint.y = 26
+        $headerPoint.x = [int](50 * $Scale); $headerPoint.y = [int](26 * $Scale)
         if ([Sa6iSmokeWin32]::ChildWindowFromPointEx($window, $headerPoint, 1) -ne $window) {
             throw 'A native child is covering the Back button area'
         }
@@ -166,14 +168,14 @@ try {
         throw 'Child did not resize with the app'
     }
     if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get resized client bounds' }
-    $entryX = $rect.right - 216
+    $entryX = $rect.right - [int](216 * $Scale)
     Write-Host '::notice::PASS: child resized with the app'
     # The pinned historical desktop uses a separate toolbar. Newer builds
     # with the integrated title header must opt in until their artifact is pinned.
-    $backY = if ($IntegratedHeader) { 26 } else { 80 }
-    [Sa6iSmokeWin32]::Click($window, 50, $backY)
+    $backY = if ($IntegratedHeader) { [int](26 * $Scale) } else { [int](80 * $Scale) }
+    [Sa6iSmokeWin32]::Click($window, [int](50 * $Scale), $backY)
     if (!(Wait-Until { if (![Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Back did not hide the synthetic child' }
-    [Sa6iSmokeWin32]::Click($window, $entryX, 26)
+    [Sa6iSmokeWin32]::Click($window, $entryX, [int](26 * $Scale))
     if (!(Wait-Until { if ([Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Reopening did not show the same synthetic child' }
     Write-Host '::notice::PASS: Back and re-open hide and show the same child'
     # Default Windows close-to-tray should reap the synthetic cleaner before
@@ -188,8 +190,8 @@ try {
     if (!$window) { throw 'App window did not reopen after tray close' }
     Start-Sleep -Seconds 2
     if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get reopened client bounds' }
-    $entryX = $rect.right - 216
-    [Sa6iSmokeWin32]::Click($window, $entryX, 26)
+    $entryX = $rect.right - [int](216 * $Scale)
+    [Sa6iSmokeWin32]::Click($window, $entryX, [int](26 * $Scale))
     $childProc = Wait-Until {
         $match = Get-CimInstance Win32_Process -Filter "Name='Sa6i Clean Integration.exe' AND ParentProcessId=$($app.Id)" | Select-Object -First 1
         if ($match) { Get-Process -Id $match.ProcessId -ErrorAction SilentlyContinue }
