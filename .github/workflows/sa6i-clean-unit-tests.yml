@@ -27,8 +27,15 @@ jobs:
           python-version: '3.11'
       - name: Install Qt for offscreen QML tests
         run: |
-          python -m pip install 'PySide6-Essentials==6.8.3' 'shiboken6==6.8.3'
-          python -c 'from PySide6 import QtCore, QtGui, QtQml, QtQuick, QtTest; print(QtCore.qVersion())'
+          if ! python -m pip install 'PySide6-Essentials==6.8.3' 'shiboken6==6.8.3' > /tmp/qt-install.log 2>&1; then
+            tail -15 /tmp/qt-install.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          if ! python -c 'from PySide6 import QtCore, QtGui, QtQml, QtQuick, QtTest; print(QtCore.qVersion())' > /tmp/qt-import.log 2>&1; then
+            while IFS= read -r line; do echo "::error::$line"; done < /tmp/qt-import.log
+            exit 1
+          fi
+          cat /tmp/qt-import.log
       - name: Run Python and QML tests
         run: python -m unittest discover -s sa6i/clean -p 'test_*.py' -v
       - name: Run mock bridge tests
