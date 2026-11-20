@@ -1,0 +1,76 @@
+/* Sa6i Clean experimental integration skin. Loaded only in the packaged
+   cleaner fixture; it does not change actions, IPC, or cleanup behavior.
+   Palette values follow the Sa6i Link Hive / honey design tokens. */
+@font-face {
+  font-family: "Sa6i Figtree";
+  src: url("./sa6i-figtree.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: "Sa6i Space Mono";
+  src: url("./sa6i-space-mono.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+}
+:root {
+  --ui: "Sa6i Figtree", sans-serif;
+  --display: "Sa6i Figtree", sans-serif;
+  --mono: "Sa6i Space Mono", monospace;
+  --ink: #211b16;
+  --ink-2: #51453a;
+  --ink-3: #706154;
+  --paper: #fff8f3;
+  --surface: #fff8f3;
+  --surface-2: #fcf2e9;
+  --raised: #f8ece1;
+  --raised-2: #f3e5d7;
+  --card: #fcf2e9;
+  --line: #ded0c2;
+  --line-soft: #e9ddd2;
+  --track: #e9ddd2;
+  --blue: #8a5100;
+  --link: #8a5100;
+  --link-hover: #643900;
+  --focus: #8a5100;
+  --eyebrow: #8a5100;
+  --radius: 18px;
+  --shadow: none;
+}
+:root[data-theme=dark] {
+  --ink: #f1e1d3;
+  --ink-2: #d5c5b6;
+  --ink-3: #bdac9c;
+  --paper: #121214;
+  --surface: #121214;
+  --surface-2: #151517;
+  --raised: #212124;
+  --raised-2: #29292d;
+  --card: #1a1a1d;
+  --line: #4c443e;
+  --line-soft: #332f2c;
+  --track: #332f2c;
+  --blue: #ffb95f;
+  --link: #ffb95f;
+  --link-hover: #ffdbad;
+  --focus: #ffb95f;
+  --eyebrow: #ffb95f;
+  --shadow: none;
+}
+/* Replace the unrelated animated pastel wallpaper with the host's calm
+   surface. Do not hide controls, alerts, scan progress, or navigation. */
+.app[data-bg] { background: var(--paper); }
+:root[data-theme=dark] .app[data-bg] { background: var(--paper); }
+.app > .bg-layer { display: none; }
+.nav-item { border-radius: 10px; }
+.nav-item.on { background: #f3e5d7; box-shadow: none; }
+.nav-item:hover { background: #f8ece1; }
+:root[data-theme=dark] .nav-item.on { background: #29292d; box-shadow: none; }
+:root[data-theme=dark] .nav-item.on .ic { color: #ffb95f; }
+.disk { background: var(--surface-2); box-shadow: none; border-radius: 16px; }
+:root[data-theme=dark] .disk { background: var(--surface-2); box-shadow: none; border-color: var(--line); }
+.card-w { box-shadow: none; }
+.home .hero-plume { opacity: .14; }
+.lc { border-radius: 18px; box-shadow: none; }
+.lc:hover { box-shadow: none; transform: none; }
+.lc .glow, .lc .ember { opacity: .18; }
