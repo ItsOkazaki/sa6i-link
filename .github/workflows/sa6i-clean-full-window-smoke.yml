@@ -32,7 +32,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44819139708
+          run-id: 44827105490
           github-token: ${{ github.token }}
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build inert fixture, patch test copy and exercise app
@@ -46,10 +46,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
           Write-Host "::notice::Desktop SHA256 $((Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant())"
-          $desktopSha = '4cc53c6eba4669a1186efcb5f40c9baaecd2a65cc15f6217968bf8940be4e0b8'
+          $desktopSha = 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b'
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
-          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -Scale ${{ matrix.scale }}
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -HeaderClearance -Scale ${{ matrix.scale }}
   electron-ui:
     runs-on: windows-latest
     strategy:
@@ -57,6 +57,7 @@ jobs:
       matrix:
         software: ['0', '1']
         qt_backend: ['software', 'default']
+        clearance: ['0', '1']
     timeout-minutes: 12
     env:
       SA6I_SYNTHETIC_SOFTWARE: ${{ matrix.software }}
@@ -67,7 +68,7 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44819139708
+          run-id: 44827105490
           github-token: ${{ github.token }}
       - name: Build inert Electron fixture and exercise app
         shell: pwsh
@@ -85,11 +86,12 @@ jobs:
           New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force | Out-Null
           npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
-          $desktopSha = '4cc53c6eba4669a1186efcb5f40c9baaecd2a65cc15f6217968bf8940be4e0b8'
+          $desktopSha = 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b'
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           $flags = @{}
           if ('${{ matrix.software }}' -eq '1') { $flags.ExpectSoftwareFlag = $true }
+          if ('${{ matrix.clearance }}' -eq '1') { $flags.HeaderClearance = $true }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -VerifyElectronProfile -IntegratedHeader -ClippingContainer -PixelCheck -ExpectHostTheme @flags
           } catch {
             Write-Host "::error::Electron job failed: $_"
