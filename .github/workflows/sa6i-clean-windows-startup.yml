@@ -31,6 +31,8 @@ jobs:
           New-Item -ItemType Directory -Path $data | Out-Null
           $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-ui-check-stderr.txt'
           $env:NECTARLINK_NO_ADB = '1'
+          # GitHub's non-interactive VM has no usable DXGI swapchain.
+          $env:QT_QUICK_BACKEND = 'software'
           $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
           $null = $app.Handle
           if (-not $app.WaitForExit(45000)) {
