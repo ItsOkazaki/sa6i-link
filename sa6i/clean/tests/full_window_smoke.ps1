@@ -6,6 +6,7 @@ param([Parameter(Mandatory=$true)][string]$AppDir,
       [switch]$VerifyElectronProfile,
       [switch]$IntegratedHeader,
       [switch]$ClippingContainer,
+      [switch]$ExpectHostTheme,
       [double]$Scale = 1.0)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
@@ -76,6 +77,11 @@ function Confirm-SyntheticProfile([int]$ProcessId) {
         Write-Host "::error::Synthetic profile argument=[$profile] observed=[$observed]"
         throw 'Electron did not use its passed profile directory'
     }
+    $themeMarker = Join-Path $profile 'synthetic-theme.txt'
+    if (!(Wait-Until { if (Test-Path $themeMarker) { $true } } 10)) { throw 'Synthetic Electron did not create its theme marker' }
+    $theme = [string](Get-Content $themeMarker -Raw)
+    if ($ExpectHostTheme -and $theme -notin @('light', 'dark')) { throw 'Electron did not receive the host theme switch' }
+    if (!$ExpectHostTheme -and $theme -ne 'system') { throw 'Old desktop unexpectedly passed a host theme switch' }
     return $profile
 }
 $exe = (Resolve-Path (Join-Path $AppDir 'synthetic-test-desktop.exe')).Path

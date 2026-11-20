@@ -15,6 +15,9 @@ app.whenReady().then(() => {
   // Record only the synthetic app's actual profile path, for this CI test.
   const profile = app.getPath('userData')
   fs.writeFileSync(path.join(profile, 'synthetic-profile-path.txt'), profile)
+  const theme = process.argv.includes('--sa6i-theme-dark') ? 'dark'
+    : process.argv.includes('--sa6i-theme-light') ? 'light' : 'system'
+  fs.writeFileSync(path.join(profile, 'synthetic-theme.txt'), theme)
   // Approximate the packaged cleaner's window geometry and title-bar options;
   // this is still an inert app and not the cleaner or its renderer.
   const window = new BrowserWindow({

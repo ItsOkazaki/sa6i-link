@@ -19,6 +19,7 @@ int simulation_read_waiting(void);
 void simulation_release_reads(void);
 void simulation_fail_launch(void);
 int simulation_starts(void);
+int simulation_last_theme(void);
 int simulation_close_messages(void);
 int simulation_show(void);
 int simulation_show_requests(void);
@@ -64,7 +65,7 @@ int main(int argc, char **argv) {
     // Deliberately block fake verification; the GUI event loop and adapter
     // must remain responsive, and close/cancel cannot lose launch ownership.
     simulation_block_reads();
-    assert(a.start("C:/test") && a.processTracked() && a.status() == "launching");
+    assert(a.startWithTheme("C:/test", true) && a.processTracked() && a.status() == "launching");
     assert(!a.start("C:/test") && !a.bindNativeParent(1));
     wait_for_read(); timer_wait(30);
     assert(a.status() == "launching" && a.processTracked());
@@ -75,7 +76,7 @@ int main(int argc, char **argv) {
     // Restoring the active view is the owner's job after cancellation.
     assert(a.setSelected(true));
     simulation_release_reads(); wait_for_handoff(a);
-    assert(a.status() == "discovering" && simulation_starts() == 1);
+    assert(a.status() == "discovering" && simulation_starts() == 1 && simulation_last_theme() == 2);
     assert(a.testProfile() == "C:\\Users\\Test User\\Temp\\Sa6i-Clean-HostTest-123-0");
     const QString firstProfile = a.testProfile();
     simulation_make_window(); timer_wait(240);
@@ -94,12 +95,12 @@ int main(int argc, char **argv) {
     // when a caller does not issue a separate hide first.
     assert(a.setSelected(true));
     const int showRequestsBeforeClose = simulation_show_requests();
-    simulation_block_reads(); assert(a.start("C:/test")); wait_for_read();
+    simulation_block_reads(); assert(a.startWithTheme("C:/test", false)); wait_for_read();
     assert(!a.requestClose() && a.status() == "closing" && a.processTracked());
     assert(!a.requestClose()); simulation_release_reads();
     // Close messages are counted on the GUI thread, only after handoff.
     for (int i = 0; i < 300 && simulation_close_messages() < 2; ++i) timer_wait(10);
-    assert(simulation_close_messages() == 2 && simulation_starts() == 2 &&
+    assert(simulation_close_messages() == 2 && simulation_starts() == 2 && simulation_last_theme() == 1 &&
            a.processTracked() && a.status() == "closing");
     assert(simulation_show_requests() == showRequestsBeforeClose && simulation_show() == SW_HIDE);
     assert(a.testProfile() != firstProfile && !a.testProfile().isEmpty());

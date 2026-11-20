@@ -2,8 +2,9 @@
 """Assemble a separate full-cleaner integration candidate, never an installer.
 
 Requires an already staged Windows build compiled with BOTH experimental flags
-and the exact full cleaner prepared by prepare_full_integration.py. This does
-not validate Windows compatibility, OS isolation, or cleanup safety.
+and the exact themed cleaner prepared by prepare_themed_fixture.py from the
+full fixture. This does not validate Windows compatibility, OS isolation, or
+cleanup safety.
 """
 import argparse
 from pathlib import Path
@@ -11,7 +12,8 @@ import secrets
 import shutil
 import tempfile
 
-from prepare_full_integration import ASAR_SHA, OUTPUT_NAME, OUTPUT_SHA, sha
+from prepare_full_integration import OUTPUT_NAME, sha
+from prepare_themed_fixture import THEMED_ASAR_SHA as ASAR_SHA, THEMED_EXE_SHA as OUTPUT_SHA
 
 # Exact app-local compatibility shim from the user's original Sa6i Link ZIP.
 # It disables Windows Explorer phone-storage integration on systems lacking

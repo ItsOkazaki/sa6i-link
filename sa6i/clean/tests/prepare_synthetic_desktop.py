@@ -14,9 +14,14 @@ PINS = (
     ('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112', 'resources/app.asar'),
 )
 
+# Pinned old artifact still exercised by the existing smoke workflow.
 CURRENT_PINS = (
     ('435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e', 'Sa6i Clean Integration.exe'),
     ('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a', 'resources/app.asar'),
+)
+THEMED_PINS = (
+    ('e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f', 'Sa6i Clean Integration.exe'),
+    ('b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f', 'resources/app.asar'),
 )
 
 
@@ -45,7 +50,11 @@ if __name__ == '__main__':
     parser.add_argument('fixture', type=Path)
     parser.add_argument('--desktop-sha', default=DESKTOP_SHA,
                         help='SHA-256 of the trusted CI artifact being tested')
-    parser.add_argument('--current-pins', action='store_true',
-                        help='use the current full-cleaner pins instead of the historical artifact pins')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--current-pins', action='store_true',
+                       help='use the prior full-cleaner artifact pins')
+    group.add_argument('--themed-pins', action='store_true',
+                       help='use the new experimental themed-fixture pins')
     args = parser.parse_args()
-    main(args.desktop, args.fixture, args.desktop_sha, CURRENT_PINS if args.current_pins else PINS)
+    pins = THEMED_PINS if args.themed_pins else CURRENT_PINS if args.current_pins else PINS
+    main(args.desktop, args.fixture, args.desktop_sha, pins)

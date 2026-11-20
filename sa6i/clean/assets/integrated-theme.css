@@ -71,6 +71,24 @@
 :root[data-theme=dark] .disk { background: var(--surface-2); box-shadow: none; border-color: var(--line); }
 .card-w { box-shadow: none; }
 .home .hero-plume { opacity: .14; }
-.lc { border-radius: 18px; box-shadow: none; }
-.lc:hover { box-shadow: none; transform: none; }
+.cta:before, :root[data-theme=dark] .cta:before {
+  background: conic-gradient(transparent 0deg, #ffb95f 70deg, #ffd9a5 110deg, transparent 160deg);
+}
+.cta-ico, :root[data-theme=dark] .cta-ico {
+  background: linear-gradient(135deg, #8a5100, #ba7418);
+  box-shadow: none;
+}
+.progress > i { background: linear-gradient(90deg, #8a5100, #ffb95f); }
+/* The home feature cards keep their labels and high-contrast controls while
+   sharing the same restrained honey-on-charcoal palette as the host. */
+.lc, :root[data-theme=dark] .lc {
+  --bg: linear-gradient(165deg, #4c3728, #2e2520);
+  --blob: radial-gradient(closest-side, #ffb95f50, transparent 70%);
+  --sh: transparent;
+  --tc: #ffdfba;
+  --sc: #e9cdb3;
+  border-radius: 18px;
+  box-shadow: none;
+}
+.lc:hover, :root[data-theme=dark] .lc:hover { box-shadow: none; transform: none; }
 .lc .glow, .lc .ember { opacity: .18; }

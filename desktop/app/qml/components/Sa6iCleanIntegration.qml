@@ -11,6 +11,8 @@ Item {
     property real captionButtonsWidth: 138
     property color headerColor: "#192430"
     property color headerTextColor: "white"
+    // Supplied by the host; used for the cleaner's initial color mode.
+    property bool darkTheme: false
     property bool cleanOpen: false
     property bool shuttingDown: false
     // Native child windows do not obey QML z-order. The owner must report
@@ -77,7 +79,7 @@ Item {
         cleanOpen = true
         syncViewport()
         if (!backend.processTracked && backend.status === "idle")
-            backend.start(testDirectory)
+            backend.startWithTheme(testDirectory, darkTheme)
     }
     // A later activation cancels a pending tray action, but never cancels an
     // explicit quit. A WM_CLOSE already posted to the child may still finish.

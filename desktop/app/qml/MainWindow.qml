@@ -39,6 +39,7 @@ NativeWindow {
             captionButtonsWidth: captionButtons.width
             headerColor: window.windowSurface
             headerTextColor: Theme.surfaceContent
+            darkTheme: Theme.dark
             // Sheet.visible includes its closing fade; keep the native child
             // hidden until the QML overlay is actually gone. This is still a
             // best-effort hide because cross-process Win32 calls are async.

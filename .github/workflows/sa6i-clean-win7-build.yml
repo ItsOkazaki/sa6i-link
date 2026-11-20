@@ -89,8 +89,8 @@ jobs:
           data = Path('target/package/Nectarlink/nectarlink-desktop.exe').read_bytes()
           checks = (
               'Sa6i Clean Integration.exe'.encode('utf-16le'),
-              bytes.fromhex('435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e'),
-              bytes.fromhex('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a'),
+              bytes.fromhex('e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f'),
+              bytes.fromhex('b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f'),
           )
           if not all(check in data for check in checks):
               raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')

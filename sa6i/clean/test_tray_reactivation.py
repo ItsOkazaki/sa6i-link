@@ -55,6 +55,7 @@ Window {
         property string status: "attached"
         property int error: 0
         property int starts: 0
+        property bool launchedDark: false
         property bool cancelFails: false
         function poll() {}
         function requestClose() {
@@ -65,7 +66,7 @@ Window {
             if (cancelFails || status !== "closing" || !processTracked) return false
             status = "attached"; return true
         }
-        function start(path) { starts++; processTracked = true; status = "launching"; return true }
+        function startWithTheme(path, dark) { starts++; launchedDark = dark; processTracked = true; status = "launching"; return true }
     }
     property QtObject cleanLoader: QtObject { id: sa6iCleanLoader; property var item: integration }
     function requestSa6iClose(action) { return integration.requestClose(action) }
@@ -156,8 +157,10 @@ Window {
     def test_reactivation_restores_entry_and_allows_fresh_launch(self):
         self.approve_and_reactivate()
         self.assertEqual(self.backend.property('status'), 'closed')
+        self.integration.setProperty('darkTheme', True)
         self.integration.openClean()
         self.assertEqual(self.backend.property('starts'), 1)
+        self.assertTrue(self.backend.property('launchedDark'))
         self.assertTrue(self.backend.property('processTracked'))
         self.assertTrue(self.integration.property('cleanOpen'))
 

@@ -7,6 +7,18 @@ import prepare_themed_fixture as themed
 
 
 class ThemedFixtureTests(unittest.TestCase):
+    def test_host_theme_only_changes_default_setting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = Path(tmp)
+            (app / 'dist-electron').mkdir()
+            main = app / 'dist-electron/main.js'
+            main.write_text('before;' + themed.OLD_DEFAULT + 'after;', encoding='utf-8')
+            themed.apply_host_theme(app)
+            self.assertEqual(main.read_text(encoding='utf-8'),
+                             'before;' + themed.NEW_DEFAULT + 'after;')
+            with self.assertRaises(ValueError):
+                themed.apply_host_theme(app)
+
     def test_unexpected_source_cannot_create_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             source, output = Path(tmp) / 'source', Path(tmp) / 'output'

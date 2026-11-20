@@ -206,6 +206,18 @@ bool QtEmbedAdapter::start(const QString &directory) {
 #endif
 }
 
+bool QtEmbedAdapter::startWithTheme(const QString &directory, bool dark) {
+    if (!onOwnerThread()) return false;
+#if SA6I_HAVE_EMBED
+    if (!d->bound || processTracked() || d->host.status != EMBED_IDLE) return false;
+    d->host.initial_theme = dark ? 2 : 1;
+    return start(directory);
+#else
+    Q_UNUSED(directory); Q_UNUSED(dark);
+    return false;
+#endif
+}
+
 bool QtEmbedAdapter::setRect(int left, int top, int right, int bottom) {
     if (!onOwnerThread()) return false;
 #if SA6I_HAVE_EMBED

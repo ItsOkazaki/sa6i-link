@@ -22,7 +22,7 @@ static DWORD last_error, hash_kind;
 static int exe_reads, asar_reads, process_alive, child_exists, window_available;
 static int fail_hash, fail_launch, fail_parent, fail_post, fail_wait, fail_show, launch_count, close_messages;
 static int fail_temp, invalid_temp, fail_mkdir, force_collision, process_closed, layout_count, last_show, child_parented;
-static int show_requests;
+static int show_requests, last_command_theme;
 static int container_exists, container_visible, container_destroyed, fail_container, fail_container_position;
 static RECT child_rect;
 static int made_count;
@@ -34,7 +34,7 @@ static void reset_mock(void) {
     exe_reads = asar_reads = process_alive = child_exists = window_available = 0;
     fail_hash = fail_launch = fail_parent = fail_post = fail_wait = fail_show = launch_count = close_messages = 0;
     fail_temp = invalid_temp = fail_mkdir = force_collision = process_closed = layout_count = last_show = child_parented = 0;
-    show_requests = 0;
+    show_requests = 0; last_command_theme = 0;
     container_exists = container_visible = container_destroyed = fail_container = fail_container_position = 0;
     child_rect = (RECT){0,0,0,0};
     made_count = 0;
@@ -134,9 +134,13 @@ BOOL CreateProcessW(LPCWSTR exe, LPWSTR command, void *a, void *b, BOOL inherit,
     (void)a; (void)b; (void)inherit; (void)flags; (void)env; (void)dir;
     assert(wcsstr(exe, CLEAN_EXE_NAME + 1));
     assert(startup->cb == sizeof(*startup) && made_count > 0);
-    wchar_t expected[2 * MAX_PATH + 32];
+    wchar_t expected[2 * MAX_PATH + 64];
     assert(swprintf(expected, sizeof(expected) / sizeof(expected[0]),
                     L"\"%ls\" \"--user-data-dir=%ls\"", exe, made_profiles[made_count - 1]) > 0);
+    last_command_theme = wcsstr(command, L" --sa6i-theme-light") ? 1 :
+                         wcsstr(command, L" --sa6i-theme-dark") ? 2 : 0;
+    if (last_command_theme == 1) wcscat(expected, L" --sa6i-theme-light");
+    else if (last_command_theme == 2) wcscat(expected, L" --sa6i-theme-dark");
     assert(wcscmp(command, expected) == 0);
     ++launch_count;
     if (fail_launch) { last_error = 193; return FALSE; }
@@ -418,8 +422,16 @@ static void post_failure_can_cancel_and_retry(void) {
     fail_post = 0; assert(!embed_request_close(&h) && close_messages == 2);
     process_alive = 0; assert(embed_request_close(&h));
 }
+static void initial_theme_switches(void) {
+    EmbedHost h = fresh(); h.initial_theme = 1;
+    assert(embed_start(&h, L"C:\\test") && last_command_theme == 1);
+    h = fresh(); h.initial_theme = 2;
+    assert(embed_start(&h, L"C:\\test") && last_command_theme == 2);
+    h = fresh(); h.initial_theme = 0;
+    assert(embed_start(&h, L"C:\\test") && last_command_theme == 0);
+}
 int main(void) {
-    normal(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();
+    initial_theme_switches(); normal(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();
     cancel_preserves_discovery_timeout_and_exit_tracking(); close_while_discovering();
     close_at_discovery_does_not_queue_show(); closing_discovery_failure_retains_process();
     visibility_failure_is_reported_and_tracking_is_retained();

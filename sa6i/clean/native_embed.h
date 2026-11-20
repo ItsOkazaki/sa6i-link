@@ -31,6 +31,9 @@ typedef struct {
     // non-empty after a failed launch if directory creation already succeeded.
     wchar_t profile[MAX_PATH];
     BOOL selected;
+    // 0 follows the cleaner default; 1 light and 2 dark are passed only as
+    // fixed switches to the separately prepared experimental fixture.
+    int initial_theme;
     EmbedStatus status;
     EmbedStatus before_close;
     DWORD error;

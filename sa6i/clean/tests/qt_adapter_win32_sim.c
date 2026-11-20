@@ -19,6 +19,7 @@ void simulation_release_reads(void) { atomic_store(&hold_reads, 0); }
 void simulation_make_window(void) { child_exists = window_available = 1; }
 void simulation_exit(void) { process_alive = 0; }
 int simulation_starts(void) { return launch_count; }
+int simulation_last_theme(void) { return last_command_theme; }
 int simulation_close_messages(void) { return close_messages; }
 int simulation_show(void) { return last_show; }
 int simulation_show_requests(void) { return show_requests; }

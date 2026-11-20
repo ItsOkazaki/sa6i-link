@@ -40,6 +40,9 @@ public:
     // true while launch is unresolved, before any process may exist.
     // All adapter methods must be called on its owning GUI thread.
     Q_INVOKABLE bool start(const QString &directory);
+    // Initial theme for the experimental full fixture; future changes in the
+    // host do not automatically propagate to an already-running child.
+    Q_INVOKABLE bool startWithTheme(const QString &directory, bool dark);
     // Physical client pixels, already mapped/clipped by the owner.
     Q_INVOKABLE bool setRect(int left, int top, int right, int bottom);
     Q_INVOKABLE bool setSelected(bool selected);
