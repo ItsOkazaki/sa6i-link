@@ -56,9 +56,11 @@ jobs:
       fail-fast: false
       matrix:
         software: ['0', '1']
+        qt_backend: ['software', 'default']
     timeout-minutes: 12
     env:
       SA6I_SYNTHETIC_SOFTWARE: ${{ matrix.software }}
+      SA6I_SYNTHETIC_QT_BACKEND: ${{ matrix.qt_backend }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
