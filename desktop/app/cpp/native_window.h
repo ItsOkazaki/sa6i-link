@@ -58,6 +58,10 @@ public:
     QObject *sa6iCleanBackend() const { return m_sa6iCleanBackend; }
     Q_INVOKABLE bool sa6iBindCleanParent();
     Q_INVOKABLE bool sa6iSyncCleanViewport(QQuickItem *viewport, bool selected);
+    // Request quit only after the cleaner coordinator has completed. On the
+    // GUI thread, temporarily allow Qt's own close event; fail closed if a
+    // cleaner launch or process is still tracked.
+    Q_INVOKABLE bool sa6iQuitAfterGate();
 
     // Interactive items inside the title strip (buttons, search fields):
     // clicks there go to the item instead of dragging the window.
@@ -100,6 +104,7 @@ private:
     void setMaximizeState(bool hovered, bool pressed);
 
     QObject *m_sa6iCleanBackend = nullptr;
+    bool m_sa6iQuitApproved = false;
     bool m_backdrop = true;
     bool m_acrylic = false;
     bool m_darkFrame = false;

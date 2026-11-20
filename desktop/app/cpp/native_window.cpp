@@ -7,6 +7,7 @@
 #include "viewport_geometry.h"
 #endif
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 #include <QtGui/QImage>
 #include <QtGui/QPlatformSurfaceEvent>
@@ -593,6 +594,26 @@ bool NativeWindow::sa6iSyncCleanViewport(QQuickItem *viewport, bool selected)
 #endif
 }
 
+bool NativeWindow::sa6iQuitAfterGate()
+{
+#if SA6I_CLEAN_EXPERIMENT && defined(_WIN32)
+    auto *backend = static_cast<QtEmbedAdapter *>(m_sa6iCleanBackend);
+    if (!backend || backend->processTracked()) {
+        qWarning("Refusing application quit while Sa6i Clean is tracked or unavailable");
+        return false;
+    }
+    // QGuiApplication handles Quit by synchronously closing every top-level
+    // window, and cancels Quit if any close event is ignored. Only permit our
+    // own close during this call. Reset even if another window cancels quit.
+    m_sa6iQuitApproved = true;
+    QCoreApplication::quit();
+    m_sa6iQuitApproved = false;
+    return true;
+#else
+    return false;
+#endif
+}
+
 bool NativeWindow::releaseAndTeardown()
 {
 #if SA6I_CLEAN_EXPERIMENT && defined(_WIN32)
@@ -632,6 +653,13 @@ bool NativeWindow::event(QEvent *event)
 #if SA6I_CLEAN_EXPERIMENT && defined(_WIN32)
         // The app's close coordinator decides when destruction is safe.
         if (m_sa6iCleanBackend) {
+            // The approved app-quit call synchronously triggers another close
+            // event. Do not emit closeRequested again or Qt cancels the quit.
+            auto *backend = static_cast<QtEmbedAdapter *>(m_sa6iCleanBackend);
+            if (m_sa6iQuitApproved && !backend->processTracked()) {
+                event->accept();
+                return true;
+            }
             event->ignore();
             emit closeRequested();
             return true;

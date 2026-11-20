@@ -45,6 +45,8 @@ QtObject {
         property string lastAction: ""
         property int saved: 0
         property int teardownCalls: 0
+        property int approvedQuitCalls: 0
+        property bool approveQuitResult: true
         property int activations: 0
         property int resumptions: 0
         property bool teardownResult: true
@@ -54,6 +56,12 @@ QtObject {
         function bringToFront() { activations++ }
         function saveWindowState() { saved++ }
         function releaseAndTeardown() { teardownCalls++; return teardownResult }
+        function sa6iQuitAfterGate() {
+            approvedQuitCalls++
+            if (!approveQuitResult || (sa6iCleanBackend && sa6iCleanBackend.processTracked)) return false
+            Qt.quit()
+            return true
+        }
     }
     property QtObject mainLoader: QtObject { property bool active: true; property var item: app.target }
     property Timer trayTrimTimer: Timer { interval: 100000 }
@@ -163,7 +171,10 @@ QtObject {
         self.assertEqual(self.target.property('saved'), 0)
         self.backend.setProperty('processTracked', False)
         self.root.finishMainClose('quit')  # Simulate close-approved signal.
+        self.assertEqual(spy.count(), 0)  # Wait until the original close event unwinds.
+        self.wait_deferred()
         self.assertEqual(spy.count(), 1)
+        self.assertEqual(self.target.property('approvedQuitCalls'), 1)
         self.assertEqual(self.target.property('saved'), 1)
 
     def test_controller_quit_fails_closed_when_request_declined_but_tracked(self):
@@ -190,9 +201,35 @@ QtObject {
         self.assertEqual(spy.count(), 0)
         self.backend.setProperty('processTracked', False)
         self.root.finishMainClose('quit')
+        self.assertEqual(spy.count(), 0)
+        self.wait_deferred()
         self.assertEqual(spy.count(), 1)
         self.assertEqual(self.target.property('saved'), 1)
         self.assertTrue(self.loader.property('active'))
+
+    def test_deferred_quit_rechecks_process_and_window(self):
+        spy = QSignalSpy(self.engine.quit)
+        self.target.setProperty('sa6iCleanBackend', self.backend)
+        self.root.finishMainClose('quit')
+        self.backend.setProperty('processTracked', True)
+        self.wait_deferred()
+        self.assertEqual(spy.count(), 0)
+        self.assertEqual(self.target.property('approvedQuitCalls'), 0)
+        self.backend.setProperty('processTracked', False)
+        self.root.finishMainClose('quit')
+        self.loader.setProperty('item', None)
+        self.wait_deferred()
+        self.assertEqual(spy.count(), 0)
+        self.assertEqual(self.target.property('approvedQuitCalls'), 0)
+
+    def test_native_refusal_prevents_quit(self):
+        spy = QSignalSpy(self.engine.quit)
+        self.target.setProperty('sa6iCleanBackend', self.backend)
+        self.target.setProperty('approveQuitResult', False)
+        self.root.finishMainClose('quit')
+        self.wait_deferred()
+        self.assertEqual(self.target.property('approvedQuitCalls'), 1)
+        self.assertEqual(spy.count(), 0)
 
     def test_unknown_action_does_nothing(self):
         self.root.finishMainClose('unknown')

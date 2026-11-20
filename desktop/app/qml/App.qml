@@ -159,7 +159,19 @@ QtObject {
         }
         if (mainLoader.active && target) target.saveWindowState()
         if (action === "quit") {
-            Qt.quit()
+            if (target && target.sa6iCleanBackend) {
+                // The first close event can still be on the native stack.
+                // Defer the approved quit and recheck ownership before Qt
+                // sends its own close event to this window.
+                Qt.callLater(() => {
+                    if (mainLoader.item !== target || !target.sa6iCleanBackend
+                            || target.sa6iCleanBackend.processTracked) return
+                    if (!target.sa6iQuitAfterGate())
+                        console.warn("Refusing application quit while Sa6i Clean is still tracked")
+                })
+            } else {
+                Qt.quit()
+            }
             return
         }
         // Unload after the close event has finished; recheck ownership and

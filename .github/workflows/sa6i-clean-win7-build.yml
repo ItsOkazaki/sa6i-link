@@ -76,6 +76,30 @@ jobs:
               raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Full fixture linkage verification failed' }
+      - name: Check startup and approved quit on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path 'target/package/Nectarlink/nectarlink-desktop.exe').Path
+          $data = Join-Path $env:RUNNER_TEMP 'sa6i-check-data'
+          $cleaner = Join-Path $env:RUNNER_TEMP 'no-cleaner-launched'
+          New-Item -ItemType Directory -Path $data | Out-Null
+          $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-check-stderr.txt'
+          $env:NECTARLINK_NO_ADB = '1'
+          $env:QT_QUICK_BACKEND = 'software'
+          $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
+          $null = $app.Handle
+          if (-not $app.WaitForExit(60000)) {
+            $app.Refresh()
+            Write-Host "::error::App did not quit. Responding=$($app.Responding); title=$($app.MainWindowTitle)"
+            Get-Content $stderr -Tail 20 -ErrorAction SilentlyContinue | ForEach-Object { if ($_) { Write-Host "::error::$_" } }
+            $app.Kill()
+            throw 'Startup/quit check timed out'
+          }
+          $log = Get-Content $stderr -Raw
+          if ($log) { Write-Host $log }
+          if ($app.ExitCode -ne 0) { throw "Startup/quit check failed: $($app.ExitCode)" }
+          if ($log -notmatch 'no QML warnings') { throw 'Expected successful UI check marker missing' }
       - name: Mark artifact limitations
         shell: pwsh
         run: |
