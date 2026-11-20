@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Offscreen and simulated tests only; never launch a real cleaner.
+name: Sa6i Clean simulated integration tests
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-unit-tests.yml'
+      - 'sa6i/clean/**'
+      - 'desktop/app/qml/**'
+      - 'desktop/app/src/**'
+      - 'desktop/app/build.rs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  simulated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install Qt for offscreen QML tests
+        run: |
+          python -m pip install 'PySide6-Essentials==6.8.3' 'shiboken6==6.8.3'
+          python -c 'from PySide6 import QtCore, QtGui, QtQml, QtQuick, QtTest; print(QtCore.qVersion())'
+      - name: Run Python and QML tests
+        run: python -m unittest discover -s sa6i/clean -p 'test_*.py' -v
+      - name: Run mock bridge tests
+        run: node --test sa6i/clean/test-renderer-bridge.mjs
+      - name: Run native simulations
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic sa6i/clean/host_lifecycle.c sa6i/clean/test_host_lifecycle.c -o /tmp/host-lifecycle-test
+          /tmp/host-lifecycle-test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic sa6i/clean/viewport_geometry.c sa6i/clean/tests/test_viewport_geometry.c -lm -o /tmp/viewport-geometry-test
+          /tmp/viewport-geometry-test
+          cc -std=c11 -Wall -Wextra -Werror -pedantic -I sa6i/clean/tests/win32 sa6i/clean/tests/test_native_embed.c -o /tmp/native-embed-test
+          /tmp/native-embed-test

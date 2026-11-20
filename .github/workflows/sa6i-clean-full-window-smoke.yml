@@ -1,14 +1,23 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Real Qt app and real Win32 API with a synthetic, non-destructive window.
 # Binary pin replacement is ephemeral and must never be distributed. The
-# trusted build artifact is pinned to a specific successful workflow run;
-# its hash is logged and checked while making the test-only binary.
+# desktop artifact is built from this same commit in the prerequisite job;
+# its hash is logged and checked while making each test-only binary.
 name: Sa6i Clean full window synthetic smoke
 on:
   push:
     branches: [arena/077ce3b0-sa6i-link]
     paths:
       - '.github/workflows/sa6i-clean-full-window-smoke.yml'
+      - '.github/workflows/sa6i-clean-win7-build.yml'
+      - 'desktop/**'
+      - 'core/**'
+      - 'sa6i/clean/native_embed.*'
+      - 'sa6i/clean/qt_embed_adapter.*'
+      - 'sa6i/clean/viewport_geometry.*'
+      - 'scripts/package.ps1'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - 'sa6i/clean/tests/full_window_smoke.ps1'
       - 'sa6i/clean/tests/check_window_layout.ps1'
       - 'sa6i/clean/tests/prepare_synthetic_desktop.py'
@@ -19,7 +28,12 @@ permissions:
   actions: read
   contents: read
 jobs:
+  build:
+    # Reuses the same guarded build and startup checks as the manual build.
+    # Never upload the patched test-only desktop made by the downstream jobs.
+    uses: ./.github/workflows/sa6i-clean-win7-build.yml
   ui:
+    needs: build
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -32,8 +46,6 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44827105490
-          github-token: ${{ github.token }}
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build inert fixture, patch test copy and exercise app
         shell: pwsh
@@ -45,12 +57,14 @@ jobs:
           & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE sa6i/clean/tests/real_windows_fixture.c "/Fe:$fixtureExe" /link /SUBSYSTEM:WINDOWS user32.lib
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
-          Write-Host "::notice::Desktop SHA256 $((Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant())"
-          $desktopSha = 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b'
+          # This artifact comes from the build prerequisite in this run.
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          Write-Host "::notice::Same-run desktop SHA256 $desktopSha"
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -HeaderClearance -Scale ${{ matrix.scale }}
   electron-ui:
+    needs: build
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -68,8 +82,6 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: app
-          run-id: 44827105490
-          github-token: ${{ github.token }}
       - name: Build inert Electron fixture and exercise app
         shell: pwsh
         run: |
@@ -86,7 +98,9 @@ jobs:
           New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force | Out-Null
           npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
-          $desktopSha = 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b'
+          # This artifact comes from the build prerequisite in this run.
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          Write-Host "::notice::Same-run desktop SHA256 $desktopSha"
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           $flags = @{}

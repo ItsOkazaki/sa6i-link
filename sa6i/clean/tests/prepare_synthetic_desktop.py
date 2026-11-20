@@ -14,7 +14,7 @@ PINS = (
     ('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112', 'resources/app.asar'),
 )
 
-# Pinned old artifact still exercised by the existing smoke workflow.
+# Prior unthemed artifact pins, retained for historical investigations.
 CURRENT_PINS = (
     ('435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e', 'Sa6i Clean Integration.exe'),
     ('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a', 'resources/app.asar'),
