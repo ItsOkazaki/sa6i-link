@@ -45,6 +45,37 @@ jobs:
                   print('::notice::' + name + ' old=' + a[name] + ' new=' + b[name])
           patch = bsdiff4.diff((old/'nectarlink-desktop.exe').read_bytes(), (new/'nectarlink-desktop.exe').read_bytes())
           Path('desktop.delta').write_bytes(patch)
+          vcam = bsdiff4.diff((old/'nectarlink_vcam.dll').read_bytes(), (new/'nectarlink_vcam.dll').read_bytes())
+          Path('vcam.delta').write_bytes(vcam)
           print('::notice::Desktop delta bytes=' + str(len(patch)) + ' sha256=' + hashlib.sha256(patch).hexdigest())
+          print('::notice::Vcam delta bytes=' + str(len(vcam)) + ' sha256=' + hashlib.sha256(vcam).hexdigest())
+          if set(changed) != {'nectarlink-desktop.exe', 'nectarlink_vcam.dll'}:
+              raise SystemExit('Unexpected differences; stop transfer')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Delta failed' }
+      - name: Transfer desktop delta in public check annotations
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 48000
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 10: raise SystemExit('Delta is too large for a check step')
+          for i, part in enumerate(pieces): print(f'::notice::SA6I-DESKTOP-{i:02d}-{len(pieces):02d}:{part}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer virtual camera delta in public check annotations
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('vcam.delta').read_bytes()).decode('ascii')
+          size = 48000
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 10: raise SystemExit('Delta is too large for a check step')
+          for i, part in enumerate(pieces): print(f'::notice::SA6I-VCAM-{i:02d}-{len(pieces):02d}:{part}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Camera transfer failed' }
