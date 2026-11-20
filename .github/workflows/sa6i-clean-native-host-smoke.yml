@@ -83,7 +83,7 @@ jobs:
           $inc = Join-Path $env:SA6I_QT_ROOT 'include'
           $lib = Join-Path $env:SA6I_QT_ROOT 'lib/Qt6Core.lib'
           $hostExe = Join-Path $work 'qt-adapter-test.exe'
-          $compile = & cl.exe /nologo /std:c++17 /Zc:__cplusplus /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib 2>&1
+          $compile = & cl.exe /nologo /std:c++17 /Zc:__cplusplus /permissive- /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib 2>&1
           $code = $LASTEXITCODE
           $compile | ForEach-Object { Write-Host $_ }
           if ($code -ne 0) { $compile | Where-Object { $_ -match 'error|fatal' } | Select-Object -First 8 | ForEach-Object { Write-Host "::error::$_" }; throw 'Qt adapter test compile failed' }
