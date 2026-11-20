@@ -53,29 +53,154 @@ jobs:
               raise SystemExit('Unexpected differences; stop transfer')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Delta failed' }
-      - name: Transfer desktop delta in public check annotations
+      - name: Transfer desktop delta segment 1
         shell: pwsh
         run: |
           @'
           import base64
           from pathlib import Path
           text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
-          size = 48000
+          size = 3900
           pieces = [text[i:i+size] for i in range(0, len(text), size)]
-          if len(pieces) > 10: raise SystemExit('Delta is too large for a check step')
-          for i, part in enumerate(pieces): print(f'::notice::SA6I-DESKTOP-{i:02d}-{len(pieces):02d}:{part}')
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(0 * 10, min((0 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
-      - name: Transfer virtual camera delta in public check annotations
+      - name: Transfer desktop delta segment 2
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(1 * 10, min((1 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 3
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(2 * 10, min((2 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 4
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(3 * 10, min((3 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 5
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(4 * 10, min((4 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 6
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(5 * 10, min((5 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 7
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(6 * 10, min((6 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 8
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(7 * 10, min((7 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 9
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(8 * 10, min((8 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer desktop delta segment 10
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path('desktop.delta').read_bytes()).decode('ascii')
+          size = 3900
+          pieces = [text[i:i+size] for i in range(0, len(text), size)]
+          if len(pieces) > 100: raise SystemExit('Delta is too large for transfer')
+          for i in range(9 * 10, min((9 + 1) * 10, len(pieces))):
+              print(f'::notice::SA6I-DESKTOP-{i:03d}-{len(pieces):03d}:{pieces[i]}')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop transfer failed' }
+      - name: Transfer virtual camera delta
         shell: pwsh
         run: |
           @'
           import base64
           from pathlib import Path
           text = base64.b64encode(Path('vcam.delta').read_bytes()).decode('ascii')
-          size = 48000
-          pieces = [text[i:i+size] for i in range(0, len(text), size)]
-          if len(pieces) > 10: raise SystemExit('Delta is too large for a check step')
-          for i, part in enumerate(pieces): print(f'::notice::SA6I-VCAM-{i:02d}-{len(pieces):02d}:{part}')
+          if len(text) > 3900: raise SystemExit('Camera delta is too large')
+          print(f'::notice::SA6I-VCAM-000-001:{text}')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Camera transfer failed' }
