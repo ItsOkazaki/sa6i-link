@@ -8,6 +8,7 @@ param([Parameter(Mandatory=$true)][string]$AppDir,
       [switch]$ClippingContainer,
       [switch]$ExpectHostTheme,
       [switch]$ExpectSoftwareFlag,
+      [switch]$PixelCheck,
       [double]$Scale = 1.0)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
@@ -28,6 +29,15 @@ public static class Sa6iSmokeWin32 {
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EnumProc cb, IntPtr v);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] public static extern uint GetPixel(IntPtr dc, int x, int y);
+    public static uint ScreenPixel(int x, int y) {
+        IntPtr dc = GetDC(IntPtr.Zero);
+        if (dc == IntPtr.Zero) return 0xffffffff;
+        try { return GetPixel(dc, x, y); } finally { ReleaseDC(IntPtr.Zero, dc); }
+    }
     [DllImport("user32.dll", EntryPoint="GetWindowLongW")] public static extern int GetWindowLong(IntPtr h, int index);
     [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
     private static extern uint GetLongPathName(string input, StringBuilder output, uint size);
@@ -154,6 +164,23 @@ try {
             throw 'A native child is covering the Back button area'
         }
         Write-Host '::notice::PASS: native viewport does not cover the Back header'
+        if ($PixelCheck) {
+            # Bounds and hit-testing alone don't prove GPU-rendered pixels are
+            # clipped. The inert Electron page paints an unmistakable green.
+            [void][Sa6iSmokeWin32]::SetForegroundWindow($window)
+            $green = [uint32]0x007ad418 # GetPixel returns 0x00bbggrr.
+            $bodyX = $origin.x + [int](40 * $Scale)
+            $bodyY = $origin.y + [int](150 * $Scale)
+            if (!(Wait-Until { if ([Sa6iSmokeWin32]::ScreenPixel($bodyX, $bodyY) -eq $green) { $true } } 12)) {
+                throw 'Cannot observe the inert Electron green on screen; pixel clipping check is inconclusive'
+            }
+            $headerX = $origin.x + [int](400 * $Scale)
+            $headerY = $origin.y + [int](26 * $Scale)
+            if ([Sa6iSmokeWin32]::ScreenPixel($headerX, $headerY) -eq $green) {
+                throw 'Electron pixels visually cover the host header'
+            }
+            Write-Host '::notice::PASS: synthetic Electron pixels do not cover the header'
+        }
     }
     $firstProfile = $null
     if ($VerifyElectronProfile) {

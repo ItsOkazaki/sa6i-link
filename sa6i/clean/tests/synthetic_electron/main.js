@@ -28,6 +28,6 @@ app.whenReady().then(() => {
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false }
   })
   window.once('ready-to-show', () => window.show())
-  window.loadURL('data:text/html,<title>Inert Electron Test</title><h1>Sa6i integration test fixture</h1>')
+  window.loadURL('data:text/html,<title>Inert Electron Test</title><body style="background:%2318d47a"><h1>Sa6i integration test fixture</h1></body>')
 })
 app.on('window-all-closed', () => app.quit())
