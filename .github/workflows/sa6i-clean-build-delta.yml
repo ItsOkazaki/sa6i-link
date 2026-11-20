@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Compare two already-published CI artifacts. No cleaner data is uploaded.
+name: Sa6i Clean build delta investigation
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths: ['.github/workflows/sa6i-clean-build-delta.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  compare:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: before
+          run-id: 44749974030
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: after
+          run-id: 44757980827
+          github-token: ${{ github.token }}
+      - name: Compute binary delta and check other staged files
+        shell: pwsh
+        run: |
+          python -m pip install bsdiff4==1.2.6
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to install bsdiff4' }
+          @'
+          from pathlib import Path
+          import bsdiff4, hashlib
+          old, new = Path('before'), Path('after')
+          def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          a = {str(p.relative_to(old)): sha(p) for p in old.rglob('*') if p.is_file()}
+          b = {str(p.relative_to(new)): sha(p) for p in new.rglob('*') if p.is_file()}
+          changed = sorted(k for k in a.keys() | b.keys() if a.get(k) != b.get(k))
+          print('::notice::Changed files: ' + ', '.join(changed))
+          for name in changed:
+              if name in a and name in b:
+                  print('::notice::' + name + ' old=' + a[name] + ' new=' + b[name])
+          patch = bsdiff4.diff((old/'nectarlink-desktop.exe').read_bytes(), (new/'nectarlink-desktop.exe').read_bytes())
+          Path('desktop.delta').write_bytes(patch)
+          print('::notice::Desktop delta bytes=' + str(len(patch)) + ' sha256=' + hashlib.sha256(patch).hexdigest())
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Delta failed' }
