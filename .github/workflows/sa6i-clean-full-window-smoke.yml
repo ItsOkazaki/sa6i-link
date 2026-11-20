@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/sa6i-clean-full-window-smoke.yml'
       - 'sa6i/clean/tests/full_window_smoke.ps1'
+      - 'sa6i/clean/tests/check_window_layout.ps1'
       - 'sa6i/clean/tests/prepare_synthetic_desktop.py'
       - 'sa6i/clean/tests/real_windows_fixture.c'
       - 'sa6i/clean/tests/synthetic_electron/**'

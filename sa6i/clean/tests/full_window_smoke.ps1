@@ -114,6 +114,12 @@ try {
     if (!$childProc) { throw 'The synthetic child did not start after clicking Sa6i Clean' }
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not become a visible child of the app window' }
+    # Exercise the same read-only geometry reporter intended for Windows 7.
+    # Assert it sees the disposable host and nested child; no titles or paths.
+    $layout = (& ./sa6i/clean/tests/check_window_layout.ps1 -ProcessName 'synthetic-test-desktop') -join "`n"
+    if ($layout -notmatch 'HOST handle=' -or $layout -notmatch 'CHILD handle=' -or $layout -notmatch 'clientOrigin=') {
+        throw 'Read-only layout reporter did not capture the synthetic host and child'
+    }
     if ($IntegratedHeader) {
         # Clicks posted directly to the host can pass even when a native child
         # visually covers the button. Check real HWND bounds and hit testing.
