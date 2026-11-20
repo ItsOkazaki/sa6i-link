@@ -43,7 +43,7 @@ Window {
     function sa6iSyncCleanViewport(item, selected) {
         if (!sa6iCleanBackend.initialized) return false
         if (!selected || !item) return sa6iCleanBackend.setSelected(false)
-        return sa6iCleanBackend.setRect(0, 104, 800, 600) && sa6iCleanBackend.setSelected(true)
+        return sa6iCleanBackend.setRect(0, 48, 800, 600) && sa6iCleanBackend.setSelected(true)
     }
     Sa6iCleanIntegration {
         id: integration

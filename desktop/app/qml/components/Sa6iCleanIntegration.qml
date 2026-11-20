@@ -8,6 +8,9 @@ Item {
     id: root
     required property var hostWindow
     property real titleBarHeight: 48
+    property real captionButtonsWidth: 138
+    property color headerColor: "#192430"
+    property color headerTextColor: "white"
     property bool cleanOpen: false
     property bool shuttingDown: false
     // Native child windows do not obey QML z-order. The owner must report
@@ -135,6 +138,62 @@ Item {
         Component.onDestruction: root.hostWindow.removeCaptionHole(entry)
     }
 
+    // Replace the app's existing title content while retaining its native
+    // caption buttons at the right. The cleaner does not own another window
+    // toolbar in the Qt layout.
+    Rectangle {
+        id: cleanHeader
+        objectName: "cleanIntegratedHeader"
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: Math.max(0, parent.width - root.captionButtonsWidth)
+        height: root.titleBarHeight
+        visible: root.cleanOpen && !root.externalOverlayOpen
+        color: root.headerColor
+
+        Rectangle {
+            id: backButton
+            objectName: "cleanBackButton"
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            width: backText.implicitWidth + 24
+            height: Math.min(36, parent.height)
+            radius: 8
+            color: backMouse.pressed ? Qt.rgba(0.5, 0.5, 0.5, 0.24)
+                 : (backMouse.containsMouse ? Qt.rgba(0.5, 0.5, 0.5, 0.14) : "transparent")
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Back to Sa6i Link")
+            Keys.onReturnPressed: root.cleanOpen = false
+            Keys.onSpacePressed: root.cleanOpen = false
+            Component.onCompleted: root.hostWindow.addCaptionHole(backButton)
+            Component.onDestruction: root.hostWindow.removeCaptionHole(backButton)
+            Text {
+                id: backText
+                anchors.centerIn: parent
+                text: qsTr("Back to Sa6i Link")
+                color: root.headerTextColor
+                font.pixelSize: 14
+            }
+            MouseArea {
+                id: backMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: root.cleanOpen = false
+            }
+        }
+        Text {
+            anchors.left: backButton.right
+            anchors.leftMargin: 20
+            anchors.verticalCenter: parent.verticalCenter
+            text: qsTr("Sa6i Clean")
+            color: root.headerTextColor
+            font.pixelSize: 18
+            font.bold: true
+        }
+    }
+
     CleanView {
         id: cleanView
         anchors.top: parent.top
@@ -157,7 +216,6 @@ Item {
             default: return qsTr("Cleaner status: %1").arg(root.backend.status)
             }
         }
-        onBackRequested: root.cleanOpen = false
     }
 
     // The native child was requested hidden before this panel is shown.

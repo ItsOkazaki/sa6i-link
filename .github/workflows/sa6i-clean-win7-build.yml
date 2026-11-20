@@ -89,8 +89,8 @@ jobs:
           data = Path('target/package/Nectarlink/nectarlink-desktop.exe').read_bytes()
           checks = (
               'Sa6i Clean Integration.exe'.encode('utf-16le'),
-              bytes.fromhex('04f2c19923f356fa83f7f5a5e7d074ca3df70020e755204ab63c023d5afd70e9'),
-              bytes.fromhex('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112'),
+              bytes.fromhex('435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e'),
+              bytes.fromhex('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a'),
           )
           if not all(check in data for check in checks):
               raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')
@@ -162,7 +162,7 @@ jobs:
           setlocal
           set "SA6I_CLEAN_WIN7_COMPAT=1"
           if not exist "%~dp0Start Integrated Test.cmd" (
-            echo Copy Start Integrated Test.cmd and the Sa6i Clean folder from the previous preview first.
+            echo This build requires the matching newly prepared cleaner fixture and launcher.
             pause
             exit /b 1
           )

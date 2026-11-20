@@ -3,7 +3,8 @@
 # child, not the actual cleaner. Never run this against a real installation.
 param([Parameter(Mandatory=$true)][string]$AppDir,
       [Parameter(Mandatory=$true)][string]$FixtureDir,
-      [switch]$VerifyElectronProfile)
+      [switch]$VerifyElectronProfile,
+      [switch]$IntegratedHeader)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
@@ -141,7 +142,10 @@ try {
     if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get resized client bounds' }
     $entryX = $rect.right - 216
     Write-Host '::notice::PASS: child resized with the app'
-    [Sa6iSmokeWin32]::Click($window, 50, 80)
+    # The pinned historical desktop uses a separate toolbar. Newer builds
+    # with the integrated title header must opt in until their artifact is pinned.
+    $backY = if ($IntegratedHeader) { 26 } else { 80 }
+    [Sa6iSmokeWin32]::Click($window, 50, $backY)
     if (!(Wait-Until { if (![Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Back did not hide the synthetic child' }
     [Sa6iSmokeWin32]::Click($window, $entryX, 26)
     if (!(Wait-Until { if ([Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Reopening did not show the same synthetic child' }

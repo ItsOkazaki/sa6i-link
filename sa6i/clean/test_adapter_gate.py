@@ -271,7 +271,7 @@ Item {{
             self.assertTrue(integration.property('viewportReady'))
             self.assertEqual(self.lib.simulation_show(), 8)
             # Back hides the child without terminating the tracked process.
-            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(30, 76))
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(30, 24))
             self.assertFalse(integration.property('cleanOpen'))
             self.assertEqual(self.lib.simulation_show(), 0)  # SW_HIDE
             self.assertTrue(self.adapter.property('processTracked'))
