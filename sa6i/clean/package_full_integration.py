@@ -75,6 +75,7 @@ def package(desktop, cleaner, output):
         launch = f'''@echo off\r
 setlocal\r
 if not defined LOCALAPPDATA (echo LOCALAPPDATA is unavailable. & pause & exit /b 1)\r
+set "SA6I_CLEAN_WIN7_COMPAT=1"\r
 set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Test-{unique}"\r
 start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
 '''

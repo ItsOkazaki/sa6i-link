@@ -107,8 +107,29 @@ jobs:
           $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-check-stderr.txt'
           $env:NECTARLINK_NO_ADB = '1'
           $env:QT_QUICK_BACKEND = 'software'
+          $env:SA6I_CLEAN_WIN7_COMPAT = '1'
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class WindowStyleCheck {
+              [DllImport("user32.dll", EntryPoint="GetWindowLongW")]
+              public static extern int GetWindowLong(IntPtr hwnd, int index);
+          }
+          '@
           $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
           $null = $app.Handle
+          $deadline = [DateTime]::UtcNow.AddSeconds(55)
+          $window = [IntPtr]::Zero
+          while ([DateTime]::UtcNow -lt $deadline) {
+            $app.Refresh()
+            if ($app.HasExited) { break }
+            if ($app.MainWindowHandle -ne [IntPtr]::Zero) { $window = $app.MainWindowHandle; break }
+            Start-Sleep -Milliseconds 100
+          }
+          if ($window -eq [IntPtr]::Zero) { throw 'No main window to check' }
+          $exStyle = [WindowStyleCheck]::GetWindowLong($window, -20)
+          if (($exStyle -band 0x00200000) -ne 0) { throw 'Win7 mode must not use WS_EX_NOREDIRECTIONBITMAP' }
+          Write-Host 'Win7 mode: main window has no WS_EX_NOREDIRECTIONBITMAP'
           if (-not $app.WaitForExit(60000)) {
             $app.Refresh()
             Write-Host "::error::App did not quit. Responding=$($app.Responding); title=$($app.MainWindowTitle)"
@@ -136,6 +157,17 @@ jobs:
           Third-party Qt licensing and runtime compatibility need review
           before distribution.
           '@ | Set-Content -Encoding UTF8 target/package/Nectarlink/INTEGRATION-BUILD-ONLY.txt
+          @'
+          @echo off
+          setlocal
+          set "SA6I_CLEAN_WIN7_COMPAT=1"
+          if not exist "%~dp0Start Integrated Test.cmd" (
+            echo Copy Start Integrated Test.cmd and the Sa6i Clean folder from the previous preview first.
+            pause
+            exit /b 1
+          )
+          call "%~dp0Start Integrated Test.cmd"
+          '@ | Set-Content -Encoding ASCII 'target/package/Nectarlink/Start Win7 Compatibility Test.cmd'
       - uses: actions/upload-artifact@v7
         with:
           name: sa6i-clean-win7-integration-investigation
