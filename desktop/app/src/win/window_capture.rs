@@ -25,14 +25,41 @@ use windows::{
         },
         System::{
             Com::{COINIT_MULTITHREADED, CoInitializeEx},
+            LibraryLoader::{GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW},
             WinRT::{
-                Direct3D11::{CreateDirect3D11DeviceFromDXGIDevice, IDirect3DDxgiInterfaceAccess},
+                Direct3D11::IDirect3DDxgiInterfaceAccess,
                 Graphics::Capture::IGraphicsCaptureItemInterop,
             },
         },
     },
     core::{Interface, factory},
 };
+
+// This WinRT interop export is absent on Windows 7. Looking it up only when
+// capture is requested lets the app start and use its screen-capture fallback.
+fn create_winrt_device(dxgi: &IDXGIDevice) -> windows::core::Result<IDirect3DDevice> {
+    use std::{ffi::c_void, sync::OnceLock};
+    use windows::core::{HRESULT, IInspectable, s, w};
+    use windows::Win32::Foundation::{E_FAIL, E_NOTIMPL};
+
+    type CreateDevice = unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> HRESULT;
+    static FOUND: OnceLock<Option<CreateDevice>> = OnceLock::new();
+    let create = FOUND.get_or_init(|| unsafe {
+        let module = LoadLibraryExW(w!("d3d11.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
+        let function = GetProcAddress(module, s!("CreateDirect3D11DeviceFromDXGIDevice"))?;
+        // SAFETY: signature matches CreateDirect3D11DeviceFromDXGIDevice.
+        Some(std::mem::transmute::<unsafe extern "system" fn() -> isize, CreateDevice>(function))
+    }).ok_or_else(|| windows::core::Error::from(E_NOTIMPL))?;
+    let mut inspectable = std::ptr::null_mut();
+    // SAFETY: dxgi is live, and the output is a valid pointer to receive a COM interface.
+    unsafe {
+        create(dxgi.as_raw(), &mut inspectable).ok()?;
+        if inspectable.is_null() {
+            return Err(windows::core::Error::from(E_FAIL));
+        }
+        IInspectable::from_raw(inspectable).cast()
+    }
+}
 
 /// Frames the pool holds: one being read, one arriving.
 const BUFFERS: i32 = 2;
@@ -84,7 +111,7 @@ impl WindowCapture {
         // SAFETY: as above.
         let (winrt_device, item) = unsafe {
             let dxgi: IDXGIDevice = device.cast()?;
-            let winrt_device: IDirect3DDevice = CreateDirect3D11DeviceFromDXGIDevice(&dxgi)?.cast()?;
+            let winrt_device = create_winrt_device(&dxgi)?;
             let interop = factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
             let item: GraphicsCaptureItem = interop.CreateForWindow(hwnd)?;
             (winrt_device, item)

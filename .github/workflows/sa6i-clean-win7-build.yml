@@ -63,7 +63,7 @@ jobs:
       - name: Build and stage separately
         shell: pwsh
         run: ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly
-      - name: Reject a static MFTEnum2 import
+      - name: Reject unsupported static media imports
         shell: pwsh
         run: |
           python -m pip install pefile==2024.8.26
@@ -72,11 +72,13 @@ jobs:
           import pefile
           pe = pefile.PE('target/package/Nectarlink/nectarlink-desktop.exe')
           imports = {item.name for module in pe.DIRECTORY_ENTRY_IMPORT for item in module.imports}
-          if b'MFTEnum2' in imports:
-              raise SystemExit('MFTEnum2 must not be a static import on Windows 7')
+          incompatible = {b'MFTEnum2', b'CreateDirect3D11DeviceFromDXGIDevice'}
+          found = incompatible & imports
+          if found:
+              raise SystemExit(f'Unsupported static Windows 7 imports: {found}')
           if b'MFTEnumEx' not in imports:
               raise SystemExit('Expected the older MFTEnumEx fallback import')
-          print('No static MFTEnum2 import; MFTEnumEx fallback is present')
+          print('No known unsupported media imports; MFTEnumEx fallback is present')
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'Windows 7 import check failed' }
       - name: Verify full-fixture linkage
