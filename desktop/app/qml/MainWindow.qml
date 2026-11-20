@@ -9,6 +9,44 @@ import app.nectarlink
 NativeWindow {
     id: window
 
+    // Null in normal builds. The experimental backend fails closed if its
+    // coordinator cannot be loaded; it must never be unloaded while tracked.
+    signal sa6iCloseApproved(string action)
+    function requestSa6iClose(action) {
+        if (!sa6iCleanBackend) return false
+        if (!sa6iCleanLoader.item) {
+            console.warn("Sa6i Clean coordinator unavailable; keeping the window open")
+            return true
+        }
+        return sa6iCleanLoader.item.requestClose(action)
+    }
+    function resumeSa6iAfterTrayReactivation() {
+        if (sa6iCleanLoader.item)
+            sa6iCleanLoader.item.resumeAfterTrayReactivation()
+    }
+    function cancelSa6iTrayCloseForReactivation() {
+        if (sa6iCleanLoader.item)
+            sa6iCleanLoader.item.cancelTrayCloseForReactivation()
+    }
+    Loader {
+        id: sa6iCleanLoader
+        anchors.fill: parent
+        z: 1100
+        active: !!window.sa6iCleanBackend
+        sourceComponent: Sa6iCleanIntegration {
+            hostWindow: window
+            titleBarHeight: Theme.topBarHeight
+            // Sheet.visible includes its closing fade; keep the native child
+            // hidden until the QML overlay is actually gone. This is still a
+            // best-effort hide because cross-process Win32 calls are async.
+            externalOverlayOpen: pairingSheet.visible || ringingSheet.visible || remotePromptSheet.visible
+                || pcMirrorPromptSheet.visible || continuityPasteSheet.visible
+                || (doctorLoader.item && doctorLoader.item.visible) || commandPaletteLoader.active
+                || toast.visible
+            onCloseApproved: (action) => window.sa6iCloseApproved(action)
+        }
+    }
+
     readonly property bool showWalkthrough: AppController.status === "ready" && !Preferences.walkthroughCompleted
     readonly property bool welcome: AppController.status !== "ready" || showWalkthrough
     property string page: AppController.currentPage.length > 0 ? AppController.currentPage : "home"

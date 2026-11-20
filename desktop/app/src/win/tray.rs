@@ -414,6 +414,11 @@ pub fn parse_hotkey(spec: &str) -> Option<(u32, u32)> {
 
 /// Updates the Continuity Camera, Command Palette, and Shelf global hotkeys (`photo_spec`, `scan_spec`, `palette_spec`, and `shelf_spec`).
 pub fn update_hotkeys(photo_spec: &str, scan_spec: &str, palette_spec: &str, shelf_spec: &str) {
+    // Global hotkeys are shared across installations. A separately configured
+    // experiment must not claim shortcuts used by the user's working app.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     {
         let mut specs = HOTKEY_SPECS.lock().unwrap_or_else(|e| e.into_inner());
         *specs = (
@@ -433,6 +438,11 @@ pub fn update_hotkeys(photo_spec: &str, scan_spec: &str, palette_spec: &str, she
 }
 
 unsafe fn apply_hotkeys_on_window(hwnd: HWND) {
+    // Tray creation also calls this directly, independently of preference
+    // updates. Keep the guard at the OS registration boundary as well.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let (photo_spec, scan_spec, palette_spec, shelf_spec) =
         HOTKEY_SPECS.lock().unwrap_or_else(|e| e.into_inner()).clone();
     // SAFETY: Unregistering and registering hotkeys on the thread that owns `hwnd`.

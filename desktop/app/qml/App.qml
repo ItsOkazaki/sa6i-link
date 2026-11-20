@@ -16,6 +16,7 @@ QtObject {
         source: "qrc:/qt/qml/app/nectarlink/qml/MainWindow.qml"
         onLoaded: {
             item.closeRequested.connect(app.onMainClosed)
+            item.sa6iCloseApproved.connect(app.finishMainClose)
             item.restoreAndBringToFront()
         }
     }
@@ -118,27 +119,61 @@ QtObject {
         }
     }
 
+    // A pending close-to-tray callback must not undo a later activation.
+    property int mainActivationEpoch: 0
+    property var pendingTrayCloseTarget: null
     function showMain() {
+        mainActivationEpoch++
         trayTrimTimer.stop()
+        // A cleaner close may already have been approved, leaving its UI in
+        // shutdown state while tray teardown waits for Qt.callLater. Restore
+        // that UI before allowing another close or cleaner launch.
+        if (pendingTrayCloseTarget) {
+            const target = pendingTrayCloseTarget
+            pendingTrayCloseTarget = null
+            if (mainLoader.item === target) target.resumeSa6iAfterTrayReactivation()
+        }
         if (!mainLoader.active || !mainLoader.item) {
             mainLoader.active = false
             mainLoader.active = true
         } else {
+            // Reactivation is also an intent to keep the main window open if
+            // a prior close-to-tray is still waiting for cleaner shutdown.
+            mainLoader.item.cancelSa6iTrayCloseForReactivation()
             mainLoader.item.bringToFront()
         }
     }
 
     function onMainClosed() {
-        if (mainLoader.active && mainLoader.item)
-            mainLoader.item.saveWindowState()
-        if (Qt.platform.os === "osx" || !Preferences.closeToTray) {
+        const action = (Qt.platform.os === "osx" || !Preferences.closeToTray) ? "quit" : "tray"
+        if (mainLoader.item && mainLoader.item.requestSa6iClose(action)) return
+        finishMainClose(action)
+    }
+
+    function finishMainClose(action) {
+        if (action !== "quit" && action !== "tray") return
+        const target = mainLoader.item
+        if (target && target.sa6iCleanBackend && target.sa6iCleanBackend.processTracked) {
+            console.warn("Refusing to close while Sa6i Clean is still tracked")
+            return
+        }
+        if (mainLoader.active && target) target.saveWindowState()
+        if (action === "quit") {
             Qt.quit()
             return
         }
-        // Unload after the close event has finished.
+        // Unload after the close event has finished; recheck ownership and
+        // activation in case another callback ran while teardown was queued.
+        const activationEpoch = mainActivationEpoch
+        pendingTrayCloseTarget = target
         Qt.callLater(() => {
-            if (mainLoader.item)
-                mainLoader.item.releaseAndTeardown()
+            if (mainActivationEpoch !== activationEpoch || mainLoader.item !== target) return
+            if (target && target.sa6iCleanBackend && target.sa6iCleanBackend.processTracked) {
+                console.warn("Refusing deferred teardown while Sa6i Clean is tracked")
+                return
+            }
+            if (target && !target.releaseAndTeardown()) return
+            pendingTrayCloseTarget = null
             mainLoader.active = false
             trayTrimTimer.restart()
         })
@@ -169,9 +204,8 @@ QtObject {
         target: AppController
         function onActivateRequested() { app.showMain() }
         function onQuitRequested() {
-            if (mainLoader.active && mainLoader.item)
-                mainLoader.item.saveWindowState()
-            Qt.quit()
+            if (mainLoader.item && mainLoader.item.requestSa6iClose("quit")) return
+            app.finishMainClose("quit")
         }
         function onRingingFromChanged() {
             if (AppController.ringingFrom.length > 0) {

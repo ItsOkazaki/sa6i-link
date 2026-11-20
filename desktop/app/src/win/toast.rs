@@ -121,6 +121,9 @@ pub fn enabled() -> bool {
 
 /// Gives the process the app's ID. Call before any window is created.
 pub fn set_process_id() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     // SAFETY: the ID is a valid null-terminated string for the call.
     if let Err(e) = unsafe { SetCurrentProcessExplicitAppUserModelID(&HSTRING::from(AUMID)) } {
         tracing::warn!(error = %e, "can't set the app's ID");
@@ -131,6 +134,11 @@ pub fn set_process_id() {
 /// icon (written to `icon` as a PNG if missing); `on_event` gets what the
 /// user does with toasts.
 pub fn start(icon: PathBuf, on_event: impl Fn(ToastEvent) + Send + Sync + 'static) {
+    // Registration and toast history use a shared Windows app ID. Suppress
+    // both in the experiment even when the test data directory is separate.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let (commands, queue) = mpsc::channel();
     let handler: Handler = Box::new(on_event);
     let spawned = std::thread::Builder::new().name("toasts".into()).spawn(move || run(&icon, queue, handler));
@@ -172,6 +180,9 @@ fn registration_key() -> HSTRING {
 
 /// Removes the registration (when uninstalling), and the app's toasts.
 pub fn unregister() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     if let Ok(history) = ToastNotificationManager::History() {
         let _ = history.ClearWithId(&HSTRING::from(AUMID));
     }

@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Separate, opt-in integration build. Never publishes a release or installer.
+name: Sa6i Clean Windows integration build
+
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  SA6I_CLEAN_EXPERIMENT: "1"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.12.0"
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git
+      - name: Build and stage the separate integration build
+        shell: pwsh
+        run: ./scripts/package.ps1 -StageOnly
+      - name: Mark artifact limitations
+        shell: pwsh
+        run: |
+          @'
+          SA6I CLEAN INTEGRATION BUILD — NOT A RELEASE
+
+          This source build is experimental and is not equivalent to the
+          previously published Sa6i Link executable. It has not been verified
+          on Windows 7 or with VxKex. It does not include a cleaner runtime;
+          its backend only accepts the pinned restricted cleaner fixture.
+          Do not install over an existing copy or use for real cleanup.
+          See sa6i/clean/INTEGRATION.md and QT-HOST-PLAN.md in the source.
+          '@ | Set-Content -Encoding UTF8 target/package/Nectarlink/INTEGRATION-BUILD-ONLY.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sa6i-clean-windows-integration-build
+          path: target/package/Nectarlink/
+          if-no-files-found: error
+          retention-days: 7

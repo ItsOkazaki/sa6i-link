@@ -471,11 +471,32 @@ fn run_setup_window(mode: setup::Mode) -> ExitCode {
     ExitCode::from(u8::try_from(code).unwrap_or(1))
 }
 
+// A test build must not act as an installer, uninstaller, update service or
+// elevated helper. Requiring a data path avoids silently defaulting to the
+// user's normal data directory, but does not make that path or the OS isolated.
+fn validate_clean_experiment_options(options: &Options) -> Result<(), &'static str> {
+    if options.setup.is_some() || options.remove || options.uninstall || options.update_service || options.updated
+        || options.register_vcam || options.unregister_vcam || options.widget_provider
+    {
+        return Err("setup, removal, update and system helper modes are disabled in this experimental build");
+    }
+    if !options.data_dir.as_ref().is_some_and(|path| path.is_absolute()) {
+        return Err("the experimental build requires an explicit absolute --data-dir");
+    }
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let options = parse_options();
     if options.version {
         println!("nectarlink-desktop {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
+    }
+    if cfg!(sa6i_clean_experiment)
+        && let Err(error) = validate_clean_experiment_options(&options)
+    {
+        eprintln!("nectarlink: {error}");
+        return ExitCode::FAILURE;
     }
     if let Some(installer) = options.setup.clone().filter(|p| !p.as_os_str().is_empty()) {
         return run_setup_window(setup::Mode::Install { installer });
@@ -751,6 +772,22 @@ mod tests {
     use std::ffi::OsString;
 
     use super::*;
+
+    #[test]
+    fn clean_experiment_rejects_missing_relative_and_management_modes() {
+        let mut opts = Options::default();
+        assert!(validate_clean_experiment_options(&opts).is_err());
+        opts.data_dir = Some(PathBuf::from("relative"));
+        assert!(validate_clean_experiment_options(&opts).is_err());
+        opts.data_dir = Some(std::env::current_dir().expect("absolute working directory"));
+        assert!(validate_clean_experiment_options(&opts).is_ok());
+        for flag in ["--setup", "--remove", "--uninstall", "--update-service", "--updated",
+                     "--register-vcam", "--unregister-vcam", "--widget-provider"] {
+            let mut parsed = parse_options_from([flag].into_iter().map(OsString::from));
+            parsed.data_dir = opts.data_dir.clone();
+            assert!(validate_clean_experiment_options(&parsed).is_err(), "{flag}");
+        }
+    }
 
     #[test]
     fn parse_options_recognizes_share_flag() {

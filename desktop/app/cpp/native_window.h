@@ -35,6 +35,9 @@ class NativeWindow : public QQuickWindow
     // Whether Windows can draw Mica/Acrylic behind the window (Windows 11,
     // build 22000 and later). Elsewhere the window must stay opaque.
     Q_PROPERTY(bool systemBackdropSupported READ systemBackdropSupported CONSTANT)
+    // Null in ordinary builds. The guarded Sa6i Clean experiment supplies a
+    // QObject adapter only in explicitly opted-in Windows builds.
+    Q_PROPERTY(QObject *sa6iCleanBackend READ sa6iCleanBackend CONSTANT)
 
 public:
     explicit NativeWindow(QWindow *parent = nullptr);
@@ -52,6 +55,9 @@ public:
     bool maximizeHovered() const { return m_maximizeHovered; }
     bool maximizePressed() const { return m_maximizePressed; }
     static bool systemBackdropSupported();
+    QObject *sa6iCleanBackend() const { return m_sa6iCleanBackend; }
+    Q_INVOKABLE bool sa6iBindCleanParent();
+    Q_INVOKABLE bool sa6iSyncCleanViewport(QQuickItem *viewport, bool selected);
 
     // Interactive items inside the title strip (buttons, search fields):
     // clicks there go to the item instead of dragging the window.
@@ -66,7 +72,7 @@ public:
     Q_INVOKABLE void flash();
     // Releases scene-graph/D3D resources, destroys the native HWND, and
     // schedules deletion when closing to the tray.
-    Q_INVOKABLE void releaseAndTeardown();
+    Q_INVOKABLE bool releaseAndTeardown();
     // Captures the rendered window contents to an image file on disk.
     Q_INVOKABLE bool grabToFile(const QString &path);
 
@@ -93,6 +99,7 @@ private:
     bool itemContains(const QQuickItem *item, const QPointF &scenePoint) const;
     void setMaximizeState(bool hovered, bool pressed);
 
+    QObject *m_sa6iCleanBackend = nullptr;
     bool m_backdrop = true;
     bool m_acrylic = false;
     bool m_darkFrame = false;

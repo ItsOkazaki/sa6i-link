@@ -44,6 +44,11 @@ pub fn build_task_arguments(action: &str, custom_data_dir: Option<&Path>) -> Str
 
 /// Registers the 5 user tasks in the Windows Taskbar Jump List for [`crate::win::toast::AUMID`].
 pub fn register(custom_data_dir: Option<&Path>) {
+    // The Jump List is shared by app ID, not by --data-dir. Never replace a
+    // user's normal links with links to the experimental executable.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let Ok(exe) = std::env::current_exe() else { return };
     if let Err(e) = try_register(&exe, custom_data_dir) {
         tracing::debug!(error = %e, "couldn't update the taskbar Jump List");
@@ -89,6 +94,9 @@ fn try_register(exe: &Path, custom_data_dir: Option<&Path>) -> windows::core::Re
 
 /// Removes the app's Jump List when uninstalling.
 pub fn unregister() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     with_com(|| {
         // SAFETY: Standard Win32 Shell COM call on `ICustomDestinationList`.
         unsafe {

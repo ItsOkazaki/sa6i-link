@@ -116,6 +116,9 @@ fn found() -> MutexGuard<'static, Option<Update>> {
 
 /// The update found, if any.
 pub fn available() -> Option<Update> {
+    if cfg!(sa6i_clean_experiment) {
+        return None;
+    }
     found().clone()
 }
 
@@ -131,6 +134,10 @@ pub fn channel() -> Channel {
 /// Follows `channel` from now on, and checks it soon. On Windows the update
 /// task reads it too, from a file beside the downloads.
 pub fn set_channel(channel: Channel) {
+    // In particular, do not write the shared ProgramData update-channel file.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let changed = CHANNEL.lock().unwrap_or_else(|e| e.into_inner()).replace(channel) != Some(channel);
     write_service_channel(channel);
     if changed {
@@ -176,6 +183,9 @@ fn read_service_channel() -> Option<Channel> {
 
 /// Checks soon (at most every [`MIN_BETWEEN`]), not waiting for the next turn.
 pub fn check_soon() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let (soon, wake) = &SOON;
     *soon.lock().unwrap_or_else(|e| e.into_inner()) = true;
     wake.notify_all();
@@ -211,7 +221,7 @@ pub fn set_auto_install(on: bool) {
 /// Whether this copy updates itself (an installed one, not a build run
 /// from its folder).
 pub fn can_update() -> bool {
-    std::env::current_exe().is_ok_and(|exe| autostart::is_installed(&exe))
+    !cfg!(sa6i_clean_experiment) && std::env::current_exe().is_ok_and(|exe| autostart::is_installed(&exe))
 }
 
 /// Checks soon after startup, then on the channel's schedule ([`check_every`])
@@ -262,6 +272,9 @@ pub fn start() {
 /// Checks now (blocking). `told`: the user asked, so say "up to date" too.
 /// Returns what to tell the user.
 pub fn check_now(told: bool) -> Option<String> {
+    if cfg!(sa6i_clean_experiment) {
+        return told.then(|| "Updates are disabled in the Sa6i Clean experimental build.".to_owned());
+    }
     if CHECKING.swap(true, Ordering::AcqRel) {
         return None;
     }
@@ -611,6 +624,9 @@ fn task_registered() -> bool {
 /// Blocking. Returns what went wrong, in words for the user. On success the
 /// app is about to quit for the installer.
 pub fn install(progress: impl FnMut(u64, u64)) -> Result<(), String> {
+    if cfg!(sa6i_clean_experiment) {
+        return Err("Updates are disabled in the Sa6i Clean experimental build.".into());
+    }
     let update = available().ok_or("There's no update to install.")?;
     let staged = stage(&update, progress).map_err(|e| {
         tracing::warn!(error = %e, "update download failed");
@@ -630,6 +646,7 @@ pub fn install(progress: impl FnMut(u64, u64)) -> Result<(), String> {
 /// Why a download didn't produce a checked installer.
 #[derive(Debug)]
 pub enum StageError {
+    Disabled,
     Network(String),
     Damaged,
     Disk(String),
@@ -638,6 +655,7 @@ pub enum StageError {
 impl StageError {
     fn for_user(&self) -> String {
         match self {
+            StageError::Disabled => "Updates are disabled in the Sa6i Clean experimental build.".to_owned(),
             StageError::Network(_) => {
                 tr!(
                     "Updater",
@@ -657,6 +675,7 @@ impl StageError {
 impl std::fmt::Display for StageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            StageError::Disabled => f.write_str("updates disabled in experimental build"),
             StageError::Network(e) => write!(f, "network: {e}"),
             StageError::Damaged => f.write_str("checksum mismatch"),
             StageError::Disk(e) => write!(f, "disk: {e}"),
@@ -723,6 +742,9 @@ fn sha256_file(path: &Path) -> std::io::Result<String> {
 /// cut short before), checks it, and returns its path. Reuses one already
 /// downloaded and checked.
 pub fn stage(update: &Update, progress: impl FnMut(u64, u64)) -> Result<PathBuf, StageError> {
+    if cfg!(sa6i_clean_experiment) {
+        return Err(StageError::Disabled);
+    }
     let expected = expected_hash(update)?;
     let dir = staging_dir();
     #[cfg(target_os = "linux")]
@@ -775,6 +797,9 @@ pub fn stage(update: &Update, progress: impl FnMut(u64, u64)) -> Result<PathBuf,
 /// hidden relauncher opens the new version afterwards. `shown`: open its
 /// window again (the user asked for the update) rather than start in the tray.
 fn install_with_task(shown: bool) -> Result<(), String> {
+    if cfg!(sa6i_clean_experiment) {
+        return Err("Updates are disabled in the Sa6i Clean experimental build.".into());
+    }
     let update = available().ok_or("no update")?;
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     spawn_relauncher(&exe, &update.version, shown)?;
@@ -869,6 +894,10 @@ fn relauncher_script(exe: &str, version: &str, arguments: &str) -> String {
 /// release if it's newer than this copy. Writes what it did to `update.log`
 /// beside the program, where only administrators can write.
 pub fn run_service() -> ExitCode {
+    // Do not even open an update log, contact a feed, or touch staging.
+    if cfg!(sa6i_clean_experiment) {
+        return ExitCode::FAILURE;
+    }
     let log_path =
         std::env::current_exe().ok().and_then(|exe| exe.parent().map(|dir| dir.join("update.log")));
     let log = |message: &str| {
@@ -1051,6 +1080,9 @@ fn download_verified(update: &Update, dir: &Path) -> Result<PathBuf, String> {
 /// what runs is what was checked.
 #[cfg(windows)]
 fn install_with_prompt(update: &Update, staged: &Path) -> Result<(), String> {
+    if cfg!(sa6i_clean_experiment) {
+        return Err("Updates are disabled in the Sa6i Clean experimental build.".into());
+    }
     let failed = |e: String| {
         tracing::warn!(error = e, "update failed");
         tr!("Updater", "The update couldn't be started. Try again.")
@@ -1353,6 +1385,24 @@ impl Clone for Release {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(sa6i_clean_experiment)]
+    #[test]
+    fn experimental_build_disables_update_entry_points() {
+        let update = Update {
+            version: "99.0.0".into(), name: None, notes_url: String::new(),
+            installer_url: String::new(), installer_name: String::new(), sums_url: None, sha256: None,
+        };
+        assert!(!can_update());
+        assert!(available().is_none());
+        assert!(check_now(false).is_none());
+        assert!(check_now(true).expect("explanation").contains("disabled"));
+        assert!(matches!(stage(&update, |_, _| panic!("progress called")), Err(StageError::Disabled)));
+        assert!(install(|_, _| panic!("progress called")).is_err());
+        assert!(install_with_task(false).is_err());
+        assert!(install_with_prompt(&update, Path::new("unused")).is_err());
+        assert_eq!(run_service(), ExitCode::FAILURE);
+    }
 
     fn release(tag: &str) -> Release {
         Release {

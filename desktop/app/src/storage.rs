@@ -140,6 +140,11 @@ mod imp {
     /// unregister File Explorer sync roots.
     #[cfg(windows)]
     pub fn start() {
+        // Sync roots and placeholder cleanup live outside --data-dir and use
+        // shared Windows provider IDs. Do not touch them in this test build.
+        if cfg!(sa6i_clean_experiment) {
+            return;
+        }
         {
             let mut map = active_roots();
             if map.is_none() {
@@ -164,6 +169,9 @@ mod imp {
     /// Triggers a reconciliation of active sync roots (e.g. after a device toggle changes).
     #[cfg(windows)]
     pub fn sync() {
+        if cfg!(sa6i_clean_experiment) {
+            return;
+        }
         let host = core_host::host();
         let Some(node) = core_host::node() else { return };
         let ready = host.hub.read(|s| matches!(s.status, Some(CoreStatus::Ready { .. })));
@@ -209,6 +217,11 @@ mod imp {
     /// Handles core events (`StorageChanged`, `DeviceRemoved`, `LinkChanged`).
     #[cfg(windows)]
     pub fn on_event(event: &NodeEvent) {
+        // DeviceRemoved can otherwise unregister and delete placeholders even
+        // when start() was never called for this instance.
+        if cfg!(sa6i_clean_experiment) {
+            return;
+        }
         match event {
             NodeEvent::DeviceRemoved(device) => {
                 let device = *device;
@@ -261,6 +274,9 @@ mod imp {
     /// Unregisters all `NectarLink!*` sync roots from Windows (`--uninstall`).
     #[cfg(windows)]
     pub fn unregister_all() {
+        if cfg!(sa6i_clean_experiment) {
+            return;
+        }
         shutdown();
         win::with_com(|| {
             if let Ok(roots) = StorageProviderSyncRootManager::GetCurrentSyncRoots() {

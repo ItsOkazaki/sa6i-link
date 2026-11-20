@@ -28,6 +28,10 @@ const QML: &[&str] = &[
     "qml/components/CallCard.qml",
     "qml/components/CaptionButtons.qml",
     "qml/components/Card.qml",
+    "qml/components/CleanEntry.qml",
+    "qml/components/CleanView.qml",
+    "qml/components/CleanCloseGate.qml",
+    "qml/components/Sa6iCleanIntegration.qml",
     "qml/components/Chip.qml",
     "qml/components/CodeDigits.qml",
     "qml/components/CommandPalette.qml",
@@ -370,7 +374,31 @@ fn main() {
     let module = QmlModule::new("app.nectarlink")
         .qml_files(QML.iter().map(|f| QmlFile::from(*f)))
         .qml_files(QML_SINGLETONS.iter().map(|f| QmlFile::from(*f).singleton(true)));
-    let mut builder = CxxQtBuilder::new_qml_module(module).qt_module("Quick");
+    // Never enable the cleaner in ordinary builds. This is a separate,
+    // Windows-only experiment and still requires an explicit runtime argument.
+    println!("cargo:rerun-if-env-changed=SA6I_CLEAN_EXPERIMENT");
+    let clean_experiment = std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("SA6I_CLEAN_EXPERIMENT").as_deref() == Ok("1");
+    // Use the same build-time decision in Rust and C++: this must never depend
+    // on an environment variable supplied to an already-built executable.
+    println!("cargo::rustc-check-cfg=cfg(sa6i_clean_experiment)");
+    if clean_experiment {
+        println!("cargo::rustc-cfg=sa6i_clean_experiment");
+    }
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR"));
+    write_if_changed(&out_dir.join("sa6i_clean_config.h"),
+        format!("#define SA6I_CLEAN_EXPERIMENT {}\n", u8::from(clean_experiment)));
+    let mut builder = CxxQtBuilder::new_qml_module(module).qt_module("Quick").include_dir(&out_dir);
+    if clean_experiment {
+        builder = builder.include_dir("../../sa6i/clean").cpp_files([
+            "../../sa6i/clean/qt_embed_adapter.h",
+            "../../sa6i/clean/qt_embed_adapter.cpp",
+            "../../sa6i/clean/native_embed.c",
+            "../../sa6i/clean/viewport_geometry.c",
+        ]);
+        println!("cargo:rerun-if-changed=../../sa6i/clean/native_embed.h");
+        println!("cargo:rerun-if-changed=../../sa6i/clean/viewport_geometry.h");
+    }
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         builder = builder.qt_module("Widgets");
     }
@@ -413,6 +441,9 @@ fn main() {
         println!("cargo:rustc-link-lib=ole32");
         println!("cargo:rustc-link-lib=shell32");
         println!("cargo:rustc-link-lib=user32");
+        if clean_experiment {
+            println!("cargo:rustc-link-lib=advapi32");
+        }
     } else if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         println!("cargo:rustc-link-lib=Qt6Quick");
         println!("cargo:rustc-link-lib=Qt6Widgets");

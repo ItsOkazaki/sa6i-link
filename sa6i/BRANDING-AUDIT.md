@@ -28,6 +28,15 @@ Candidate SHA-256:
 Generator: `sa6i/tools/package_windows_assets.py` (checks the full input hash,
 assets, ZIP integrity and unchanged entries; refuses overwrite).
 
+The user subsequently supplied the published Windows ZIP, SHA-256
+`18e66fe82dc1fad747e192a2bb0aef3c8fdac8d2398f974a73f4853d16d89d12`.
+After stripping the different top-level folder, all 1,215 files in it have
+identical contents to their counterparts in the artwork candidate. The candidate
+also includes `START-HERE.txt` and `THIRD-PARTY-NOTICES.txt`, which are absent
+from the published ZIP. The published ZIP does retain `LICENSE`, `LICENSE.txt`,
+and the `LICENSES/` directory. Preserve and review third-party notices in any
+future package; no change was made to the current release.
+
 ## Android
 
 Inspected public release `Sa6i.Link.apk`, SHA-256
