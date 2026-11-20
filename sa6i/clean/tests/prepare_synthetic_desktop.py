@@ -8,7 +8,7 @@ from hashlib import sha256
 from pathlib import Path
 import sys
 
-DESKTOP_SHA = '3539aa09472b9d0f65c8b4ce546969cbd34c90c4359399880beb84486b5cb1bb'
+DESKTOP_SHA = 'bbe4bb2d4b2f898ac38f7ac0947ecf61483705e0d238ec0e813552545bc6bcbe'
 PINS = (
     ('04f2c19923f356fa83f7f5a5e7d074ca3df70020e755204ab63c023d5afd70e9', 'Sa6i Clean Integration.exe'),
     ('498f73db929e0c3564148ea93e59f28aeab0694642b639285bd4576b83f60112', 'resources/app.asar'),
