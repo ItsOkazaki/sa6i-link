@@ -82,7 +82,14 @@ try {
         if ([Sa6iSmokeWin32]::GetWindowRect($child, [ref]$newChild) -and
             ($newChild.right - $newChild.left) -ge ($oldChild.right - $oldChild.left + 90) -and
             ($newChild.bottom - $newChild.top) -ge ($oldChild.bottom - $oldChild.top + 50)) { $true }
-    } 8)) { throw 'Child did not resize with the app' }
+    } 8)) {
+        $newParent = New-Object Sa6iSmokeWin32+RECT
+        $newChild = New-Object Sa6iSmokeWin32+RECT
+        [void][Sa6iSmokeWin32]::GetWindowRect($window, [ref]$newParent)
+        [void][Sa6iSmokeWin32]::GetWindowRect($child, [ref]$newChild)
+        Write-Host "::error::Resize oldParent=$($oldParent.right-$oldParent.left)x$($oldParent.bottom-$oldParent.top) newParent=$($newParent.right-$newParent.left)x$($newParent.bottom-$newParent.top) oldChild=$($oldChild.right-$oldChild.left)x$($oldChild.bottom-$oldChild.top) newChild=$($newChild.right-$newChild.left)x$($newChild.bottom-$newChild.top)"
+        throw 'Child did not resize with the app'
+    }
     if (![Sa6iSmokeWin32]::GetClientRect($window, [ref]$rect)) { throw 'Could not get resized client bounds' }
     $entryX = $rect.right - 216
     Write-Host '::notice::PASS: child resized with the app'
