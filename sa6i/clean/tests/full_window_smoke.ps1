@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 public static class Sa6iSmokeWin32 {
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int left, top, right, bottom; }
     public delegate bool EnumProc(IntPtr hwnd, IntPtr value);
@@ -18,6 +19,14 @@ public static class Sa6iSmokeWin32 {
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EnumProc cb, IntPtr v);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    private static extern uint GetLongPathName(string input, StringBuilder output, uint size);
+    public static string LongPath(string input) {
+        var output = new StringBuilder(32768);
+        uint length = GetLongPathName(input, output, (uint)output.Capacity);
+        if (length == 0 || length >= output.Capacity) throw new System.ComponentModel.Win32Exception();
+        return output.ToString();
+    }
     public static IntPtr ChildForProcess(IntPtr parent, uint pid) {
         IntPtr found = IntPtr.Zero;
         EnumProc cb = (h, v) => { uint actual; GetWindowThreadProcessId(h, out actual);
@@ -54,7 +63,8 @@ function Confirm-SyntheticProfile([int]$ProcessId) {
     $marker = Join-Path $profile 'synthetic-profile-path.txt'
     if (!(Wait-Until { if (Test-Path $marker) { $true } } 10)) { throw 'Synthetic Electron did not create its profile marker' }
     $observed = [string](Get-Content $marker -Raw)
-    if (![string]::Equals($observed, $profile, [StringComparison]::OrdinalIgnoreCase)) {
+    # Windows may return an 8.3 alias such as RUNNER~1 from Electron.
+    if (![string]::Equals([Sa6iSmokeWin32]::LongPath($observed), [Sa6iSmokeWin32]::LongPath($profile), [StringComparison]::OrdinalIgnoreCase)) {
         Write-Host "::error::Synthetic profile argument=[$profile] observed=[$observed]"
         throw 'Electron did not use its passed profile directory'
     }
