@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Real Win32 process/window APIs with a locally built, inert synthetic window.
+# Does NOT use the cleaner, the Qt integration, or Windows 7.
+name: Sa6i Clean native host smoke
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-native-host-smoke.yml'
+      - 'sa6i/clean/native_embed.c'
+      - 'sa6i/clean/native_embed.h'
+      - 'sa6i/clean/tests/real_windows_*'
+      - 'sa6i/clean/tests/prepare_real_windows_host.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-host:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build and run inert native window fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'sa6i-native-smoke'
+          $fixture = Join-Path $work 'fixture'
+          $resources = Join-Path $fixture 'resources'
+          New-Item -ItemType Directory -Path $resources -Force | Out-Null
+          $fixtureExe = Join-Path $fixture 'Sa6i Test Window.exe'
+          & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE sa6i/clean/tests/real_windows_fixture.c "/Fe:$fixtureExe" /link /SUBSYSTEM:WINDOWS user32.lib
+          if ($LASTEXITCODE -ne 0) { throw 'Synthetic window compile failed' }
+          [System.IO.File]::WriteAllText((Join-Path $resources 'app.asar'), 'inert fixture; not a real ASAR')
+          python sa6i/clean/tests/prepare_real_windows_host.py $work
+          if ($LASTEXITCODE -ne 0) { throw 'Could not prepare pinned test backend' }
+          $hostExe = Join-Path $work 'native-host-test.exe'
+          $source = Join-Path $work 'native_embed_real_test.c'
+          & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" sa6i/clean/tests/real_windows_host_smoke.c $source "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE user32.lib advapi32.lib
+          if ($LASTEXITCODE -ne 0) { throw 'Native host test compile failed' }
+          & $hostExe $fixture 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Native host smoke test failed' }
+          Add-Content -Path (Join-Path $resources 'app.asar') -Value 'tampered'
+          & $hostExe $fixture --reject 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture integrity rejection failed' }
