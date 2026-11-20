@@ -83,17 +83,33 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: sa6i-build-delta
-      - name: Emit delta segments
+      - name: Emit segment 1
         env:
           GROUP: ${{ matrix.group }}
-        run: |
-          python - <<'PY'
+          SEGMENT: 0
+        run: &emit |
+          python - <<'PYTHON'
           import base64, os
           from pathlib import Path
           text = base64.b64encode(Path('delta.zip').read_bytes()).decode('ascii')
           pieces = [text[i:i+3900] for i in range(0, len(text), 3900)]
           if len(pieces) > 480: raise SystemExit('Too many pieces')
-          first = int(os.environ['GROUP']) * 40
-          for i in range(first, min(first + 40, len(pieces))):
+          first = int(os.environ['GROUP']) * 40 + int(os.environ['SEGMENT']) * 10
+          for i in range(first, min(first + 10, len(pieces))):
               print(f'::notice::SA6I-DELTA-{i:03d}-{len(pieces):03d}:{pieces[i]}')
-          PY
+          PYTHON
+      - name: Emit segment 2
+        env:
+          GROUP: ${{ matrix.group }}
+          SEGMENT: 1
+        run: *emit
+      - name: Emit segment 3
+        env:
+          GROUP: ${{ matrix.group }}
+          SEGMENT: 2
+        run: *emit
+      - name: Emit segment 4
+        env:
+          GROUP: ${{ matrix.group }}
+          SEGMENT: 3
+        run: *emit
