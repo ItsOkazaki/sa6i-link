@@ -44,3 +44,44 @@ jobs:
           Add-Content -Path (Join-Path $resources 'app.asar') -Value 'tampered'
           & $hostExe $fixture --reject 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
           if ($LASTEXITCODE -ne 0) { throw 'Fixture integrity rejection failed' }
+      - name: Install pinned Qt backport SDK for adapter test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'qt-native-smoke.7z'
+          $url = 'https://github.com/xanasoft/qt-builds/releases/download/v6.8.3-ssl-lgpl/qt-everywhere-6.8.3-Windows_7-MSVC2022-x86_64.7z'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'f1efe461b28d7758e1e68ba189d0a45c8168ac181be1ffe7013d0bbfb6ff145d') { throw 'Qt archive checksum mismatch' }
+          $qtDir = Join-Path $env:RUNNER_TEMP 'qt-native-smoke'
+          & 7z x $archive "-o$qtDir" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Qt extraction failed' }
+          $qmake = @(Get-ChildItem $qtDir -Recurse -File -Filter qmake.exe)
+          $moc = @(Get-ChildItem $qtDir -Recurse -File -Filter moc.exe)
+          if ($qmake.Count -ne 1 -or $moc.Count -ne 1) { throw 'Expected one qmake and one moc' }
+          $qtRoot = Split-Path -Parent $qmake[0].DirectoryName
+          "SA6I_QT_ROOT=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SA6I_QT_MOC=$($moc[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Run real Qt adapter against the inert fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'sa6i-native-smoke'
+          $fixture = Join-Path $work 'fixture'
+          $resources = Join-Path $fixture 'resources'
+          # Restore exactly the data used to pin this test-only backend.
+          [System.IO.File]::WriteAllText((Join-Path $resources 'app.asar'), 'inert fixture; not a real ASAR')
+          $mocSource = Join-Path $work 'moc_adapter.cpp'
+          & $env:SA6I_QT_MOC sa6i/clean/qt_embed_adapter.h -o $mocSource
+          if ($LASTEXITCODE -ne 0) { throw 'Qt moc failed' }
+          $native = Join-Path $work 'native_embed_real_test.c'
+          $object = Join-Path $work 'native_embed_real_test.obj'
+          & cl.exe /nologo /std:c11 /MD /c /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" $native "/Fo:$object"
+          if ($LASTEXITCODE -ne 0) { throw 'Native backend compilation failed' }
+          $inc = Join-Path $env:SA6I_QT_ROOT 'include'
+          $lib = Join-Path $env:SA6I_QT_ROOT 'lib/Qt6Core.lib'
+          $hostExe = Join-Path $work 'qt-adapter-test.exe'
+          & cl.exe /nologo /std:c++17 /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib
+          if ($LASTEXITCODE -ne 0) { throw 'Qt adapter test compile failed' }
+          $env:PATH = "$(Join-Path $env:SA6I_QT_ROOT 'bin');$env:PATH"
+          & $hostExe $fixture 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Qt adapter smoke test failed' }
