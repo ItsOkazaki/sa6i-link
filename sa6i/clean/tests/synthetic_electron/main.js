@@ -4,8 +4,13 @@ const { app, BrowserWindow } = require('electron')
 const fs = require('fs')
 const path = require('path')
 
-app.disableHardwareAcceleration()
-app.commandLine.appendSwitch('disable-gpu')
+// Exercise Chromium's default rendering path too. The real cleaner does not
+// disable GPU acceleration, so a software-only smoke test cannot represent it.
+// This flag is test-only and still does not make this the real cleaner.
+if (process.env.SA6I_SYNTHETIC_SOFTWARE === '1') {
+  app.disableHardwareAcceleration()
+  app.commandLine.appendSwitch('disable-gpu')
+}
 app.whenReady().then(() => {
   // Record only the synthetic app's actual profile path, for this CI test.
   const profile = app.getPath('userData')

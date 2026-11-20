@@ -51,7 +51,13 @@ jobs:
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -Scale ${{ matrix.scale }}
   electron-ui:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        software: ['0', '1']
     timeout-minutes: 12
+    env:
+      SA6I_SYNTHETIC_SOFTWARE: ${{ matrix.software }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
