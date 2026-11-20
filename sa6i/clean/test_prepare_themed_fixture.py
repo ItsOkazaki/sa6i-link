@@ -1,4 +1,7 @@
 """Guardrails for the experimental cleaner design fixture."""
+import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +21,19 @@ class ThemedFixtureTests(unittest.TestCase):
                              'before;' + themed.NEW_DEFAULT + 'after;')
             with self.assertRaises(ValueError):
                 themed.apply_host_theme(app)
+
+    @unittest.skipUnless(shutil.which('node'), 'Node is required for the JavaScript check')
+    def test_switches_select_only_initial_color_mode(self):
+        # Evaluate just the pinned settings-object expression, never cleaner code.
+        script = '''const vm = require('vm');
+const code = %s + 'largeFileMinMb:500}; Kx';
+const run = argv => vm.runInNewContext(code, {process: {argv}});
+console.log(JSON.stringify([run([]), run(['--sa6i-theme-light']), run(['--sa6i-theme-dark'])]));
+''' % json.dumps(themed.NEW_DEFAULT)
+        result = json.loads(subprocess.check_output(['node', '-e', script], text=True))
+        self.assertEqual([x['theme'] for x in result], ['system', 'light', 'dark'])
+        self.assertEqual([x['largeFileMinMb'] for x in result], [500, 500, 500])
+        self.assertEqual([x['background'] for x in result], ['mist', 'mist', 'mist'])
 
     def test_unexpected_source_cannot_create_output(self):
         with tempfile.TemporaryDirectory() as tmp:
