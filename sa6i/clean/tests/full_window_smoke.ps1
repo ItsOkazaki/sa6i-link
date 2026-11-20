@@ -2,7 +2,8 @@
 # A disposable hosted-Windows test of the real Qt app with an INERT synthetic
 # child, not the actual cleaner. Never run this against a real installation.
 param([Parameter(Mandatory=$true)][string]$AppDir,
-      [Parameter(Mandatory=$true)][string]$FixtureDir)
+      [Parameter(Mandatory=$true)][string]$FixtureDir,
+      [switch]$VerifyElectronProfile)
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
@@ -41,6 +42,20 @@ function Wait-Until([scriptblock]$Condition, [int]$Seconds) {
     }
     return $null
 }
+function Confirm-SyntheticProfile([int]$ProcessId) {
+    $info = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId"
+    if (!$info) { throw 'Synthetic Electron process not found' }
+    $pathMatch = [regex]::Match($info.CommandLine, '--user-data-dir=([^"\r\n]+)')
+    if (!$pathMatch.Success) { throw 'No explicit Electron profile argument' }
+    $profile = [System.IO.Path]::GetFullPath($pathMatch.Groups[1].Value)
+    $parent = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+    if (!$profile.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase) -or
+        [System.IO.Path]::GetFileName($profile) -notmatch '^Sa6i-Clean-HostTest-\d+-\d+$') { throw 'Unexpected synthetic profile location' }
+    $marker = Join-Path $profile 'synthetic-profile-path.txt'
+    if (!(Wait-Until { if (Test-Path $marker) { $true } } 10)) { throw 'Synthetic Electron did not create its profile marker' }
+    if (![string]::Equals((Get-Content $marker -Raw), $profile, [StringComparison]::OrdinalIgnoreCase)) { throw 'Electron did not use its passed profile directory' }
+    return $profile
+}
 $exe = (Resolve-Path (Join-Path $AppDir 'synthetic-test-desktop.exe')).Path
 $fixture = (Resolve-Path $FixtureDir).Path
 $data = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-data'
@@ -71,6 +86,11 @@ try {
     if (!$childProc) { throw 'The synthetic child did not start after clicking Sa6i Clean' }
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not become a visible child of the app window' }
+    $firstProfile = $null
+    if ($VerifyElectronProfile) {
+        $firstProfile = Confirm-SyntheticProfile $childProc.Id
+        Write-Host '::notice::PASS: synthetic Electron uses the explicit temporary profile'
+    }
     Write-Host '::notice::PASS: actual Qt app opened a synthetic child in the same window'
     $oldParent = New-Object Sa6iSmokeWin32+RECT
     $oldChild = New-Object Sa6iSmokeWin32+RECT
@@ -127,6 +147,11 @@ try {
     if (!$childProc) { throw 'No synthetic child after tray reactivation' }
     $child = Wait-Until { $h = [Sa6iSmokeWin32]::ChildForProcess($window, [uint32]$childProc.Id); if ($h -ne [IntPtr]::Zero -and [Sa6iSmokeWin32]::IsWindowVisible($h)) { $h } } 20
     if (!$child) { throw 'Synthetic child did not attach after tray reactivation' }
+    if ($VerifyElectronProfile) {
+        $secondProfile = Confirm-SyntheticProfile $childProc.Id
+        if ([string]::Equals($firstProfile, $secondProfile, [StringComparison]::OrdinalIgnoreCase)) { throw 'Electron profile was reused after relaunch' }
+        Write-Host '::notice::PASS: synthetic Electron relaunch used a fresh profile'
+    }
     Write-Host '::notice::PASS: tray close, reactivate and fresh child launch'
     $quit = Start-Process $exe -ArgumentList '--data-dir', "`"$data`"", '--quit' -PassThru
     $null = $quit.Handle

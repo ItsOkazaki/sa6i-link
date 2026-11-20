@@ -69,4 +69,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
           python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
-          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture
+          ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -VerifyElectronProfile
