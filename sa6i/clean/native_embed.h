@@ -50,6 +50,9 @@ typedef struct {
 // only after that worker has finished, as in the experimental Qt adapter.
 BOOL embed_init(EmbedHost *host, HWND parent);
 BOOL embed_set_rect(EmbedHost *host, const RECT *rect);
+// Validate and apply geometry and selection with one placement. Rejected
+// while closing; on failure the caller must request hiding as before.
+BOOL embed_set_viewport(EmbedHost *host, const RECT *rect, BOOL selected);
 BOOL embed_select(EmbedHost *host, BOOL selected);
 
 // Starts only the exact restricted probe binary, once at a time. directory is

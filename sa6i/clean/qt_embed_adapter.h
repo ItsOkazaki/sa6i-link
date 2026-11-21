@@ -45,6 +45,8 @@ public:
     Q_INVOKABLE bool startWithTheme(const QString &directory, bool dark);
     // Physical client pixels, already mapped/clipped by the owner.
     Q_INVOKABLE bool setRect(int left, int top, int right, int bottom);
+    // Validates geometry and applies it with selection in one native request.
+    bool setViewport(int left, int top, int right, int bottom, bool selected);
     Q_INVOKABLE bool setSelected(bool selected);
     Q_INVOKABLE void poll();
     Q_INVOKABLE bool requestClose();

@@ -125,8 +125,10 @@ BOOL embed_init(EmbedHost *host, HWND parent) {
     return TRUE;
 }
 
-BOOL embed_set_rect(EmbedHost *host, const RECT *rect) {
+static BOOL set_rect(EmbedHost *host, const RECT *rect, BOOL update_selection, BOOL selected) {
     RECT client;
+    if (update_selection && (!host || host->status == EMBED_CLOSING || host->status == EMBED_CLOSED))
+        return FALSE;
     if (!host || !rect || !IsWindow(host->parent) || !GetClientRect(host->parent, &client) ||
         rect->left < 0 || rect->top < 0 || rect->right < rect->left || rect->bottom < rect->top ||
         rect->right > client.right || rect->bottom > client.bottom) {
@@ -141,11 +143,22 @@ BOOL embed_set_rect(EmbedHost *host, const RECT *rect) {
         return FALSE;
     }
     host->rect = *rect;
+    if (update_selection) host->selected = !!selected;
     // Closing can be indefinite; continue keeping the child within its viewport
     // even while waiting. An unattached closing process has no child to place.
     if (host->status == EMBED_ATTACHED || (host->status == EMBED_CLOSING && host->child))
         return place_child(host);
     return TRUE;
+}
+
+BOOL embed_set_rect(EmbedHost *host, const RECT *rect) {
+    return set_rect(host, rect, FALSE, FALSE);
+}
+
+BOOL embed_set_viewport(EmbedHost *host, const RECT *rect, BOOL selected) {
+    // One validated placement avoids queuing a hide at the previous selection
+    // followed immediately by a show when returning from the Link view.
+    return set_rect(host, rect, TRUE, selected);
 }
 
 BOOL embed_select(EmbedHost *host, BOOL selected) {

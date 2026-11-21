@@ -582,11 +582,11 @@ bool NativeWindow::sa6iSyncCleanViewport(QQuickItem *viewport, bool selected)
             }
         }
     }
-    if (!backend->setRect(rect.left, rect.top, rect.right, rect.bottom)) {
+    if (!backend->setViewport(rect.left, rect.top, rect.right, rect.bottom, true)) {
         backend->setSelected(false);
         return false;
     }
-    return backend->setSelected(true);
+    return true;
 #else
     Q_UNUSED(viewport);
     Q_UNUSED(selected);

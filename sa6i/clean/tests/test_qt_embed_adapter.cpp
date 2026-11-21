@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     assert(!wrong_thread_close && !wrong_thread_start && !wrong_thread_bind);
     assert(a.status() == "idle");
     assert(!a.setRect(-1, 0, 5, 5) && a.error() == ERROR_INVALID_PARAMETER);
-    assert(a.setRect(10, 20, 300, 400) && a.setSelected(true));
+    assert(a.setViewport(10, 20, 300, 400, true));
 
     // Deliberately block fake verification; the GUI event loop and adapter
     // must remain responsive, and close/cancel cannot lose launch ownership.
@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
     assert(a.setRect(30, 40, 300, 500));
     assert(!a.requestClose() && a.status() == "closing");
     assert(!a.setSelected(false));
+    assert(!a.setViewport(10, 20, 300, 400, true));
     assert(a.cancelClose() && a.status() == "launching");
     // Restoring the active view is the owner's job after cancellation.
     assert(a.setSelected(true));
@@ -85,6 +86,11 @@ int main(int argc, char **argv) {
     simulation_make_window(); timer_wait(240);
     assert(a.status() == "attached" && simulation_show() == SW_SHOWNA);
     assert(simulation_rect_left() == 30 && simulation_rect_bottom() == 500);
+    assert(a.setSelected(false) && simulation_show() == SW_HIDE);
+    const int reopenShows = simulation_show_requests();
+    assert(a.setViewport(40, 50, 300, 450, true));
+    assert(simulation_show() == SW_SHOWNA && simulation_show_requests() == reopenShows + 1);
+    assert(simulation_rect_left() == 40 && simulation_rect_bottom() == 450);
     assert(!a.requestClose() && a.status() == "closing" && simulation_close_messages() == 1);
     assert(!a.requestClose() && simulation_close_messages() == 1);
     assert(!a.setSelected(false));

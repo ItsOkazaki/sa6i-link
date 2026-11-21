@@ -22,7 +22,7 @@ static DWORD last_error, hash_kind;
 static int exe_reads, asar_reads, process_alive, child_exists, window_available;
 static int fail_hash, fail_launch, fail_parent, fail_post, fail_wait, fail_show, launch_count, close_messages;
 static int fail_temp, invalid_temp, fail_mkdir, force_collision, process_closed, layout_count, last_show, child_parented;
-static int show_requests, last_command_theme, last_command_software;
+static int show_requests, hide_requests, last_command_theme, last_command_software;
 static int container_exists, container_visible, container_destroyed, fail_container, fail_container_position;
 static RECT child_rect;
 static int made_count;
@@ -34,7 +34,7 @@ static void reset_mock(void) {
     exe_reads = asar_reads = process_alive = child_exists = window_available = 0;
     fail_hash = fail_launch = fail_parent = fail_post = fail_wait = fail_show = launch_count = close_messages = 0;
     fail_temp = invalid_temp = fail_mkdir = force_collision = process_closed = layout_count = last_show = child_parented = 0;
-    show_requests = 0; last_command_theme = 0; last_command_software = 0;
+    show_requests = hide_requests = 0; last_command_theme = 0; last_command_software = 0;
     container_exists = container_visible = container_destroyed = fail_container = fail_container_position = 0;
     child_rect = (RECT){0,0,0,0};
     made_count = 0;
@@ -85,6 +85,7 @@ BOOL ShowWindowAsync(HWND w, int show) {
     if (fail_show) { if (fail_show == 1) last_error = ERROR_ACCESS_DENIED; return FALSE; }
     last_show = show;
     if (show == SW_SHOWNA) ++show_requests;
+    if (show == SW_HIDE) ++hide_requests;
     return TRUE;
 }
 DWORD GetTempPathW(DWORD size, LPWSTR out) {
@@ -225,6 +226,35 @@ static void normal(void) {
     assert(h.status == EMBED_CLOSED && process_closed == 1);
     assert(!h.container && !container_exists && container_destroyed == 1);
     assert(!embed_start(&h, L"C:\\test"));
+}
+static void atomic_viewport_reopen(void) {
+    EmbedHost h = fresh();
+    assert(embed_start(&h, L"C:\\test"));
+    child_exists = window_available = 1; embed_poll(&h);
+    assert(h.status == EMBED_ATTACHED && !h.selected && !container_visible);
+    RECT next = {30,40,700,500};
+    int before_layout = layout_count, before_hide = hide_requests, before_show = show_requests;
+    assert(embed_set_viewport(&h, &next, TRUE));
+    assert(layout_count == before_layout + 1 && show_requests == before_show + 1);
+    assert(hide_requests == before_hide && h.selected && container_visible);
+    assert(last_rect.left == 30 && last_rect.top == 40 && last_rect.bottom == 500);
+    before_layout = layout_count;
+    assert(embed_set_viewport(&h, &next, TRUE) && layout_count == before_layout + 1);
+    // Invalid geometry still hides synchronously and cannot show stale bounds.
+    RECT bad = {0,0,1001,800};
+    assert(!embed_set_viewport(&h, &bad, TRUE));
+    assert(!container_visible && last_show == SW_HIDE && h.rect.right == 0);
+    assert(embed_select(&h, FALSE));
+    assert(embed_set_viewport(&h, &next, TRUE) && container_visible);
+    // Failure still keeps process ownership and hides the clipping container.
+    fail_show = 1;
+    assert(!embed_set_viewport(&h, &next, TRUE) && !container_visible && h.process == PROCESS);
+    fail_show = 0;
+    assert(!embed_request_close(&h) && h.status == EMBED_CLOSING && !h.selected);
+    before_layout = layout_count;
+    assert(!embed_set_viewport(&h, &next, TRUE) && !h.selected && layout_count == before_layout);
+    process_alive = 0; assert(embed_request_close(&h));
+    assert(!embed_set_viewport(&h, &next, TRUE) && h.status == EMBED_CLOSED);
 }
 static void isolated_profile_creation(void) {
     EmbedHost h = fresh();
@@ -435,7 +465,7 @@ static void initial_theme_switches(void) {
     assert(embed_start(&h, L"C:\\test") && last_command_theme == 2 && last_command_software);
 }
 int main(void) {
-    initial_theme_switches(); normal(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();
+    initial_theme_switches(); normal(); atomic_viewport_reopen(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();
     cancel_preserves_discovery_timeout_and_exit_tracking(); close_while_discovering();
     close_at_discovery_does_not_queue_show(); closing_discovery_failure_retains_process();
     visibility_failure_is_reported_and_tracking_is_retained();

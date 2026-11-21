@@ -81,8 +81,7 @@ int main(int argc, char **argv)
     CHECK(waitAttached(adapter), "worker handoff and attach");
     CHECK(waitVisible(parent, true), "child visible");
     CHECK(adapter.setSelected(false) && waitVisible(parent, false), "hide child");
-    CHECK(adapter.setSelected(true) && waitVisible(parent, true), "show child");
-    CHECK(adapter.setRect(25, 30, 650, 475), "queue resize");
+    CHECK(adapter.setViewport(25, 30, 650, 475, true) && waitVisible(parent, true), "reopen and resize in one request");
     CHECK(!adapter.requestClose(), "close waits for process");
     CHECK(waitClosed(adapter), "quit child and reap");
     std::puts("PASS: real Qt adapter launch, handoff, attach, hide, show, close");

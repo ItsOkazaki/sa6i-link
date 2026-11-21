@@ -233,6 +233,20 @@ bool QtEmbedAdapter::setRect(int left, int top, int right, int bottom) {
 #endif
 }
 
+bool QtEmbedAdapter::setViewport(int left, int top, int right, int bottom, bool selected) {
+    if (!onOwnerThread()) return false;
+#if SA6I_HAVE_EMBED
+    if (!d->bound || (d->worker && d->closeDuringLaunch)) return false;
+    const RECT rect {left, top, right, bottom};
+    const bool ok = embed_set_viewport(&d->host, &rect, selected ? TRUE : FALSE);
+    updateAfterCall();
+    return ok;
+#else
+    Q_UNUSED(left); Q_UNUSED(top); Q_UNUSED(right); Q_UNUSED(bottom); Q_UNUSED(selected);
+    return false;
+#endif
+}
+
 bool QtEmbedAdapter::setSelected(bool selected) {
     if (!onOwnerThread()) return false;
 #if SA6I_HAVE_EMBED

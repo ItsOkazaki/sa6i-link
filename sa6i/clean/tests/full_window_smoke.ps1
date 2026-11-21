@@ -267,8 +267,35 @@ try {
     $backY = if ($IntegratedHeader) { [int](26 * $Scale) } else { [int](80 * $Scale) }
     [Sa6iSmokeWin32]::Click($window, [int](50 * $Scale), $backY)
     if (!(Wait-Until { if (![Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Back did not hide the synthetic child' }
+    # These timings are diagnostics, not a speed guarantee. IsWindowVisible
+    # reflects HWND state, not whether Chromium has painted or is interactive.
+    # The green pixel measurement is only possible with the inert Electron
+    # fixture, and is omitted if the hidden screen has not cleared first.
+    $canMeasurePaint = $false
+    if ($PixelCheck) {
+        [void][Sa6iSmokeWin32]::SetForegroundWindow($window)
+        $reopenOrigin = New-Object Sa6iSmokeWin32+POINT
+        if (![Sa6iSmokeWin32]::ClientToScreen($window, [ref]$reopenOrigin)) { throw 'Could not inspect reopen origin' }
+        $reopenX = $reopenOrigin.x + [int](40 * $Scale)
+        $reopenY = $reopenOrigin.y + [int](150 * $Scale)
+        $canMeasurePaint = [bool](Wait-Until { if ([Sa6iSmokeWin32]::ScreenPixel($reopenX, $reopenY) -ne $green) { $true } } 3)
+    }
+    $reopenClock = [System.Diagnostics.Stopwatch]::StartNew()
     [Sa6iSmokeWin32]::Click($window, $entryX, [int](26 * $Scale))
     if (!(Wait-Until { if ([Sa6iSmokeWin32]::IsWindowVisible($child)) { $true } } 8)) { throw 'Reopening did not show the same synthetic child' }
+    $visibleMs = $reopenClock.ElapsedMilliseconds
+    Write-Host "::notice::Synthetic reopen: HWND visible after $visibleMs ms (100 ms polling; not interactive latency)"
+    if ($PixelCheck -and $canMeasurePaint) {
+        if (Wait-Until { if ([Sa6iSmokeWin32]::ScreenPixel($reopenX, $reopenY) -eq $green) { $true } } 12) {
+            $paintMs = $reopenClock.ElapsedMilliseconds
+            Write-Host "::notice::Synthetic reopen: green test pixel observed after $paintMs ms (100 ms polling)"
+        } else {
+            Write-Host '::warning::Synthetic reopen: pixel timing unavailable; visual performance is inconclusive'
+        }
+    } elseif ($PixelCheck) {
+        Write-Host '::warning::Synthetic reopen: hidden pixel did not clear; visual timing is inconclusive'
+    }
+    $reopenClock.Stop()
     Write-Host '::notice::PASS: Back and re-open hide and show the same child'
     # Default Windows close-to-tray should reap the synthetic cleaner before
     # unloading the window, and reactivation must allow a fresh clean launch.
