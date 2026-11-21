@@ -18,13 +18,13 @@ jobs:
         with:
           name: sa6i-clean-win7-integration-investigation
           path: before
-          run-id: 44819139708
+          run-id: 44827105490
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v7
         with:
           name: sa6i-clean-win7-integration-investigation
           path: after
-          run-id: 44827105490
+          run-id: 44931201549
           github-token: ${{ github.token }}
       - name: Create verified artifact delta
         shell: pwsh
@@ -40,8 +40,10 @@ jobs:
               return {p.relative_to(root).as_posix(): p for p in root.rglob('*') if p.is_file()}
           a, b = files(before), files(after)
           def sha(p): return sha256(p.read_bytes()).hexdigest()
-          if sha(a['nectarlink-desktop.exe']) != '4cc53c6eba4669a1186efcb5f40c9baaecd2a65cc15f6217968bf8940be4e0b8':
+          if sha(a['nectarlink-desktop.exe']) != 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b':
               raise SystemExit('Unexpected baseline executable')
+          if sha(b['nectarlink-desktop.exe']) != '721d78f06554ca26c825de46f89ea1fc7294426d1a581e8312d2a49d635ef92f':
+              raise SystemExit('Unexpected tested desktop executable')
           metadata = {'before': {k: sha(p) for k, p in a.items()}, 'after': {k: sha(p) for k, p in b.items()}, 'changes': {}}
           with zipfile.ZipFile('delta.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as out:
               for i, key in enumerate(sorted(a.keys() | b.keys())):
