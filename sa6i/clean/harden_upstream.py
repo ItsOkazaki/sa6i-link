@@ -69,7 +69,8 @@ def patch_trash(path):
         raise ValueError('Unexpected upstream source layout')
     text = text.replace(ANCHOR, ANCHOR + '\n' + HELPER.strip('\n'), 1)
     text = text.replace(GUARD_ANCHOR, GUARD, 1)
-    path.write_text(text, encoding='utf-8')
+    # Force LF: Windows text mode would write CRLF and change the pinned hash.
+    path.write_text(text, encoding='utf-8', newline='\n')
 
 
 def harden(source, output):
