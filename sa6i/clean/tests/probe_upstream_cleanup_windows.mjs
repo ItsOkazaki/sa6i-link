@@ -100,11 +100,13 @@ try {
 
   // D. Lexical path guard on real Windows paths.
   const home = os.homedir();
-  results.guardBlocksWindowsSystem = isSafeUserPath('C:\\Windows\\System32\\drivers\\etc\\hosts');
-  results.guardBlocksDesktop = isSafeUserPath(path.join(home, 'Desktop'));
-  results.guardBlocksSshKey = isSafeUserPath(path.join(home, '.ssh', 'id_rsa'));
+  // isSafeUserPath returns true when deletion is ALLOWED, so protected paths
+  // must come back false.
+  results.guardAllowsWindowsSystem = isSafeUserPath('C:\\Windows\\System32\\drivers\\etc\\hosts');
+  results.guardAllowsDesktop = isSafeUserPath(path.join(home, 'Desktop'));
+  results.guardAllowsSshKey = isSafeUserPath(path.join(home, '.ssh', 'id_rsa'));
   results.guardAllowsOrdinaryUserFile = isSafeUserPath(path.join(home, 'sa6i-probe-fixture', 'notes.txt'));
-  results.guardRejectsRelativePath = isSafeUserPath('notes.txt');
+  results.guardAllowsRelativePath = isSafeUserPath('notes.txt');
 
   // One compact line is re-emitted as a GitHub annotation: job logs live in
   // storage some environments cannot reach, annotations are readable via API.
@@ -118,8 +120,8 @@ try {
   if (!results.plainCacheRemoved || !results.neighbourSurvived || !results.plainCacheRootEmptied) {
     throw new Error('Ordinary cache deletion behaved unexpectedly');
   }
-  if (!results.guardBlocksWindowsSystem || !results.guardBlocksDesktop || !results.guardBlocksSshKey
-      || !results.guardAllowsOrdinaryUserFile || !results.guardRejectsRelativePath) {
+  if (results.guardAllowsWindowsSystem || results.guardAllowsDesktop || results.guardAllowsSshKey
+      || !results.guardAllowsOrdinaryUserFile || results.guardAllowsRelativePath) {
     throw new Error('Lexical path guard behaved unexpectedly');
   }
 } finally {
