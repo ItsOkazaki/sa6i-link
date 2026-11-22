@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_candidate import replace_exact  # noqa: E402
 from prepare_integrated_ui import FRAMELESS_OPTIONS, THEME_OVERLAY, WINDOW_OPTIONS  # noqa: E402
 from prepare_theme import apply_to_extracted  # noqa: E402
+from harden_cleaner import FUNC, FUNC_BODY, GUARD, helper_snippet  # noqa: E402
 from prepare_themed_fixture import NEW_DEFAULT, OLD_DEFAULT  # noqa: E402
 
 SOURCE_COMMIT = 'b62bef4d4478cd8d570dcdc537eaddb61ae53eeb'
@@ -68,7 +69,17 @@ def build_source(source):
             raise SystemExit(f'Source build failed: {" ".join(command)}')
 
 
-def expected_tree(source, work):
+def apply_guard(main):
+    """Insert the same cache-root guard the hardened candidate ships."""
+    text = main.read_text(encoding='utf-8')
+    if text.count(FUNC) != 1 or text.count(FUNC_BODY) != 1:
+        raise ValueError('Unexpected bundle layout while adding the guard')
+    text = text.replace(FUNC, helper_snippet() + FUNC, 1)
+    text = text.replace(FUNC_BODY, 'try{' + GUARD + FUNC_BODY[len('try{'):], 1)
+    main.write_text(text, encoding='utf-8', newline='\n')
+
+
+def expected_tree(source, work, guard=False):
     """Apply only the documented Sa6i patches to the upstream build outputs."""
     shutil.copytree(source / 'dist', work / 'dist')
     shutil.copytree(source / 'dist-electron', work / 'dist-electron')
@@ -109,6 +120,8 @@ def expected_tree(source, work):
         replace_exact(ui, before, after, count)
     shutil.copyfile(Path(__file__).resolve().parent / 'assets/icon-128.png',
                     work / 'dist/assets/sa6i-clean.png')
+    if guard:
+        apply_guard(main)
 
 
 def check_metadata(actual_package, expected_package):
@@ -162,6 +175,8 @@ def main():
     parser.add_argument('--build', action='store_true', help='run the source builds before comparing')
     parser.add_argument('--source-sha', default=SOURCE_COMMIT,
                         help='expected source commit (printed for the provenance record)')
+    parser.add_argument('--guard', action='store_true',
+                        help='the packaged bundle includes the Sa6i cache-root guard')
     args = parser.parse_args()
     source, asar = args.source.resolve(), args.asar_dir.resolve()
     if not asar.is_dir():
@@ -174,7 +189,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='sa6i-equivalence-') as tmp:
         expected = Path(tmp) / 'app'
         expected.mkdir()
-        expected_tree(source, expected)
+        expected_tree(source, expected, guard=args.guard)
         problems = compare(expected, asar)
         rebuilt = {name: sha(expected / name) for name in
                    ('dist-electron/main.js', 'dist-electron/preload.cjs', RENDERER_BUNDLE)}
@@ -185,7 +200,8 @@ def main():
         for problem in problems:
             print(f'- {problem}')
         return 1
-    print('\nEvery packaged file matches the source build plus the documented Sa6i patches.')
+    print('\nEvery packaged file matches the source build plus the documented Sa6i patches'
+          + (' and the cache-root guard.' if args.guard else '.'))
     print('Accepted metadata deviations: pruned package.json fields and one blank line in dist/index.html.')
     print('This is build provenance only; it is not a safety, licensing or Windows compatibility verdict.')
     return 0

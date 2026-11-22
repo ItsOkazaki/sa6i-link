@@ -50,6 +50,26 @@ So on Windows the exposure is narrower than a naive reading suggests: a cache ro
 
 Mitigations available today: tell users not to clean on a machine that uses junctions to relocate these folders, or ship a guard. A guard would have to refuse or canonicalise redirected roots; that means changing upstream code and re-testing the whole cleaner, which this candidate does not do.
 
+## Hardened build (2026-11-22)
+
+The rebuilt candidate refuses a cache root whose own path, or any folder above it, is a junction or symlink. `isUnredirectedRoot` in the guarded `trash.ts` walks every path component with `lstat` once per root and caches the verdict; `deleteCacheEntry` then returns `refused` without deleting. Refusing only skips that category, so the failure mode is "nothing cleaned" rather than "deleted elsewhere".
+
+Why the guard inspects components instead of comparing canonical paths: the first attempt compared `realpath(root)` with the requested spelling and the Windows runner refused ordinary cleaning, because `os.tmpdir()` there is the 8.3 short path `C:\Users\RUNNER~1\...` while `realpath` returns `runneradmin`. Letter case and 8.3 spellings now pass; only real links are refused.
+
+Verified on the disposable Windows runner (`Sa6i Clean Windows cleanup probe`, run `45034853645`):
+
+```
+junctionTargetRefused          true   junctionTargetSentinelSurvived  true
+guardAcceptsPlainRoot          true   plainCacheRemoved               true
+guardAcceptsUpperCasedRoot     true   uppercasedRootCleaned           true
+guardRejectsRedirectedRoot     true   redirectedDeletionRefused       true
+redirectedSentinelSurvived     true   siblingOutsideCacheSurvived     true
+```
+
+The guarded source (SHA-256 `a768fff4…`) and the guarded packaged bundle come from the same text: `guard_snippet.js` is inserted verbatim by `harden_cleaner.py`, unit-tested by `tests/test_guard_snippet.mjs`, and `verify_upstream_equivalence.py --guard` reproduces the shipped ASAR byte for byte from the public source. The desktop executable's two compiled-in cleaner digests were replaced in place; it differs from the tested build in exactly those 64 bytes.
+
+Still not safety evidence: the guard has never run inside the real application, and no cleanup, Recycle Bin, uninstall or startup action has been executed anywhere.
+
 ## This candidate's changes
 
 Branding, window chrome, theme default and warning text only. The deletion implementation, categories, default selections and confirmation behaviour are unchanged. The confirmation option can still be switched off in settings, and the Smart Scan can clean from the dashboard, so the labels `safe` and the warnings are not guarantees.
@@ -57,6 +77,6 @@ Branding, window chrome, theme default and warning text only. The deletion imple
 ## Before any production release
 
 - Run cleanup on disposable Windows 7 + VxKex and Windows 10/11 systems with synthetic files and verified backups, covering locked files, junctions, long paths and a full Recycle Bin.
-- Decide the redirected-root question above and record the answer in the release notes.
+- Re-test the guard inside the real app (a redirected cache folder should be reported as blocked, an ordinary one should clean normally).
 - Confirm redistribution permission in writing and keep the Electron/Chromium notices and the bundled font licences.
 - Obtain code signing and an installer that preserves the user's existing installation.
