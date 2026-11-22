@@ -158,6 +158,37 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("$bytes[$slot.SizeField + $b] = $length[$b]", code)
         self.assertIn("$bytes[$entry + 8 + $b] = $length[$b]", code)
 
+    def test_resource_walk_refuses_implausible_counts(self):
+        # The counts come from the file; a wrong offset read as a count would
+        # otherwise mean millions of iterations, which is how this looked
+        # frozen on the user's machine.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("-gt 4096", code)
+        self.assertIn("left alone, its slot reports", code)
+        self.assertIn(": replacing ' + $best.Size", code)
+
+    def test_nothing_is_written_until_it_reads_back(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertLess(code.index("$check = @(Get-ResourceLeaves $raw $info.Sections $root 14)"),
+                        code.index("Say ('  writing '"))
+
+    def test_missing_executable_points_at_the_backup(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("rename the .bak back and run this again", code)
+
+    def test_every_step_can_be_skipped_to_get_past_it(self):
+        # The icon step is the riskiest one; being able to finish the pack
+        # without it is what keeps a stuck step from blocking the deliverable.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("[switch] $NoIcon", code)
+        self.assertIn("if ($NoIcon) {", code)
+        self.assertIn("[switch] $NoZip", code)
+
+    def test_icon_step_says_where_it_is(self):
+        code = ps1_code(RETARGET_NAME)
+        for marker in ("found ' + $groupsBefore.Count", "resource section at byte", "replacement image(s) available"):
+            self.assertIn(marker, code)
+
     def test_icon_replacement_puts_the_executable_back_when_it_fails(self):
         code = ps1_code(RETARGET_NAME)
         self.assertIn("[System.IO.File]::WriteAllBytes($launcherPath, $original)", code)

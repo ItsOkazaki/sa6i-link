@@ -22,7 +22,8 @@
 [CmdletBinding()]
 param(
     [string] $Desktop = '',
-    [switch] $NoZip
+    [switch] $NoZip,
+    [switch] $NoIcon
 )
 
 $ErrorActionPreference = 'Stop'
@@ -265,8 +266,13 @@ function Convert-RvaToOffset([byte[]] $bytes, $sections, [long] $rva) {
 }
 
 function Get-ResourceEntries([byte[]] $bytes, [int] $at) {
+    if ($at -lt 0 -or ($at + 16) -gt $bytes.Length) { throw 'a resource directory points outside the executable' }
     $named = Read-U16 $bytes ($at + 12)
     $ids = Read-U16 $bytes ($at + 14)
+    # A real directory holds a handful of entries. Anything larger means the
+    # offsets are being read from the wrong place, and walking it would take
+    # forever instead of failing.
+    if (($named + $ids) -gt 4096) { throw ('a resource directory claims ' + ($named + $ids) + ' entries, so the executable is not being read correctly') }
     $list = New-Object System.Collections.ArrayList
     for ($i = 0; $i -lt ($named + $ids); $i++) {
         $base = $at + 16 + $i * 8
@@ -326,6 +332,7 @@ function Set-LauncherIcon([byte[]] $bytes, $sections, [int] $root, [byte[]] $ico
     foreach ($image in (Get-ResourceLeaves $bytes $sections $root 3)) {
         $slots[[string]$image.Name] = $image
     }
+    Say ('  ' + $icons.Count + ' replacement image(s) available')
     $groups = @(Get-ResourceLeaves $bytes $sections $root 14)
     if ($groups.Count -eq 0) { throw 'the executable has no icon group' }
     $replaced = 0
@@ -351,6 +358,12 @@ function Set-LauncherIcon([byte[]] $bytes, $sections, [int] $root, [byte[]] $ico
                 $skipped = $skipped + 1
                 continue
             }
+            if ($slot.Size -gt 4194304) {
+                Say ('    ' + $pixels + 'x' + $pixels + ': left alone, its slot reports ' + $slot.Size + ' bytes')
+                $skipped = $skipped + 1
+                continue
+            }
+            Say ('    ' + $pixels + 'x' + $pixels + ': replacing ' + $best.Size + ' of ' + $slot.Size + ' bytes')
             for ($b = 0; $b -lt $best.Size; $b++) { $bytes[$slot.Data + $b] = $icoBytes[$best.Offset + $b] }
             for ($b = $best.Size; $b -lt $slot.Size; $b++) { $bytes[$slot.Data + $b] = 0 }
             # the length is recorded twice: on the resource, and on the entry
@@ -410,6 +423,12 @@ try {
         }
     }
     if ($search.Count -eq 0) {
+        $backups = @(Get-ChildItem -LiteralPath $here -Force | Where-Object { (-not $_.PSIsContainer) -and ($_.Name -like '*.bak') })
+        if ($backups.Count -gt 0) {
+            $names = ''
+            foreach ($backup in $backups) { $names = $names + '  ' + $backup.Name + ' (' + [Math]::Round($backup.Length / 1MB, 1) + ' MB)' + [Environment]::NewLine }
+            throw ('There is no executable in ' + $here + ', but these backups are here:' + [Environment]::NewLine + $names + 'If the executable was deleted, rename the .bak back and run this again.')
+        }
         throw ('No executable larger than 1 MB was found in ' + $here + '. Sa6i Link may live somewhere else; tell me the full path of its .exe and I will point this at it.')
     }
 
@@ -565,7 +584,10 @@ try {
 
     # --- the icon
     $iconPath = Join-Path $here 'Sa6i-Link-Icon.ico'
-    if (Test-Path -LiteralPath $iconPath) {
+    if ($NoIcon) {
+        Say ''
+        Say 'Icon replacement skipped (-NoIcon was given).'
+    } elseif (Test-Path -LiteralPath $iconPath) {
         Say ''
         Say 'Replacing the icon in the executable'
         $icoBytes = [System.IO.File]::ReadAllBytes($iconPath)
@@ -574,9 +596,21 @@ try {
         $failure = $null
         try {
             $info = Get-PeInfo $raw
+            Say ('  executable parses: ' + $info.Sections.Count + ' sections')
             $root = Convert-RvaToOffset $raw $info.Sections $info.ResourceRva
+            Say ('  resource section at byte ' + $root)
+            $groupsBefore = @(Get-ResourceLeaves $raw $info.Sections $root 14)
+            $imagesBefore = @(Get-ResourceLeaves $raw $info.Sections $root 3)
+            Say ('  found ' + $groupsBefore.Count + ' icon group(s) and ' + $imagesBefore.Count + ' image(s)')
             $result = Set-LauncherIcon $raw $info.Sections $root $icoBytes
+            # Nothing touches the disk until the rewritten bytes have been
+            # read back successfully, so a bad rewrite cannot be the thing on
+            # disk.
+            $check = @(Get-ResourceLeaves $raw $info.Sections $root 14)
+            if ($check.Count -lt 1) { throw 'the rewritten executable no longer has a readable icon group' }
+            Say ('  writing ' + [Math]::Round($raw.Length / 1MB, 1) + ' MB back to disk (antivirus may hold this up)')
             [System.IO.File]::WriteAllBytes($launcherPath, $raw)
+            Say '  written.'
             # prove it still parses before treating it as done
             $check = Get-PeInfo ([System.IO.File]::ReadAllBytes($launcherPath))
             if ($check.Sections.Count -lt 1) { throw 'the rewritten executable does not parse' }
