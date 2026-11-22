@@ -45,6 +45,12 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
    the Sa6i Link executable. Step 2 changed both files, so without this step
    the Sa6i Clean tab refuses to start it.
 
+   This step also settles the launcher's own branding: Sa6i Link is a
+   rebranded build of another product, and its executable still carries that
+   product's name in its file name and its Windows file properties. The script
+   renames it to "Sa6i Link.exe", rewrites those product strings, and updates
+   any .cmd beside it that starts the executable by its old name.
+
    You do not need to know what that executable is called: the script looks
    through the folder for the one carrying those digests and says which file
    it picked. If it finds none it lists every executable it saw instead of
@@ -55,6 +61,9 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
 
    beside the candidate folder, and prints that ZIP's SHA-256. Backups are
    left as .bak files, and .bak files and logs are kept out of the archive.
+
+Desktop or taskbar shortcuts made before this step still point at the old file
+name; delete them and pin "Sa6i Link.exe" again.
 
 If either step stops with an ERROR line, send me its log (patch-log.txt or
 retarget-log.txt): the line names the exact check that failed, and nothing is

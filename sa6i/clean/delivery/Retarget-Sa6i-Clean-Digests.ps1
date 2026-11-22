@@ -304,6 +304,71 @@ try {
         Say 'Done. Sa6i Link will now start the debranded cleaner from its Sa6i Clean tab.'
     }
 
+
+    # Sa6i Link itself is a rebranded build of another product, and its own
+    # executable still carries that product's name: the file name, and the
+    # strings Windows shows in Task Manager and in the file's Details tab.
+    # Those strings are UTF-16 in a fixed field, so a shorter name replaces one
+    # in place. Only the UTF-16 form is touched: the UTF-8 bytes in the same
+    # file include configuration the application parses, and a NUL-truncated
+    # config value would stop it from starting.
+    Say ''
+    Say 'Branding the Sa6i Link executable'
+    $launcherPath = $Desktop
+    $raw = [System.IO.File]::ReadAllBytes($launcherPath)
+    $wide = $script:latin.GetString($raw)
+    $oldName = [System.Text.Encoding]::Unicode.GetBytes('NectarLink')
+    $newName = [System.Text.Encoding]::Unicode.GetBytes('Sa6i Link')
+    $pattern = $script:latin.GetString($oldName)
+    $replacement = New-Object byte[] $oldName.Length
+    for ($i = 0; $i -lt $newName.Length; $i++) { $replacement[$i] = $newName[$i] }
+    $strings = 0
+    $from = 0
+    while ($true) {
+        $at = $wide.IndexOf($pattern, $from, [System.StringComparison]::Ordinal)
+        if ($at -lt 0) { break }
+        for ($i = 0; $i -lt $replacement.Length; $i++) { $raw[$at + $i] = $replacement[$i] }
+        $strings = $strings + 1
+        $from = $at + $oldName.Length
+    }
+    if ($strings -gt 0) {
+        [System.IO.File]::WriteAllBytes($launcherPath, $raw)
+        Say ('Renamed ' + $strings + ' product-name string(s) in the executable.')
+    } else {
+        Say 'No product-name strings left to rename in the executable.'
+    }
+    $raw = $null
+    $wide = $null
+
+    $oldFile = Split-Path -Leaf $launcherPath
+    $newFile = 'Sa6i Link.exe'
+    if ($oldFile -ne $newFile) {
+        $newPath = Join-Path (Split-Path -Parent $launcherPath) $newFile
+        if (Test-Path -LiteralPath $newPath) {
+            Say ('A file called ' + $newFile + ' already exists, so the executable keeps its name: ' + $oldFile)
+        } else {
+            Rename-Item -LiteralPath $launcherPath -NewName $newFile
+            Say ('Renamed the executable: ' + $oldFile + ' -> ' + $newFile)
+            $launcherPath = $newPath
+            $Desktop = $newPath
+            # Any batch file that starts it by name has to learn the new name.
+            $folders = @($here, (Split-Path -Parent $here))
+            foreach ($folder in $folders) {
+                foreach ($cmd in (Get-ChildItem -LiteralPath $folder -Force | Where-Object { (-not $_.PSIsContainer) -and ($_.Extension -eq '.cmd') })) {
+                    $cbytes = [System.IO.File]::ReadAllBytes($cmd.FullName)
+                    $ctext = $script:latin.GetString($cbytes)
+                    if ($ctext.IndexOf($oldFile, [System.StringComparison]::Ordinal) -ge 0) {
+                        $ctext = $ctext.Replace($oldFile, $newFile)
+                        [System.IO.File]::WriteAllBytes($cmd.FullName, $script:latin.GetBytes($ctext))
+                        Say ('Updated ' + $cmd.Name + ' to start ' + $newFile)
+                    }
+                }
+            }
+        }
+    } else {
+        Say 'The executable is already called ' + $newFile + '.'
+    }
+
     Say ''
     if ($NoZip) {
         Say 'Packing skipped (-NoZip was given).'

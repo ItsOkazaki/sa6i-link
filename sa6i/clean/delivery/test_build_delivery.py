@@ -99,6 +99,31 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("[byte[]] $newExe = Get-HashBytes", code)
         self.assertIn("[byte[]] $newAsar = Get-HashBytes", code)
 
+    def test_retarget_renames_the_launcher_and_its_product_strings(self):
+        code = ps1_code(RETARGET_NAME)
+        # The launcher's own name is part of the branding the user asked for.
+        self.assertIn("'NectarLink'", code)
+        self.assertIn("'Sa6i Link.exe'", code)
+        self.assertIn("Rename-Item -LiteralPath $launcherPath -NewName $newFile", code)
+
+    def test_retarget_leaves_utf8_alone_in_the_launcher(self):
+        # UTF-16 strings are file properties; the UTF-8 bytes in the same file
+        # include configuration the application parses, where a NUL-truncated
+        # value would stop it from starting.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("Unicode.GetBytes('NectarLink')", code)
+        self.assertNotIn("UTF8.GetBytes('NectarLink')", code)
+
+    def test_retarget_fixes_launchers_that_name_the_old_executable(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("$ctext.Replace($oldFile, $newFile)", code)
+        self.assertIn("($_.Extension -eq '.cmd')", code)
+
+    def test_branding_runs_before_the_folder_is_packed(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertLess(code.index("Branding the Sa6i Link executable"),
+                        code.index("New-CandidateZip $here"))
+
     def test_retarget_verifies_without_holding_the_file_twice(self):
         code = ps1_code(RETARGET_NAME)
         self.assertIn("Count-InFile $Desktop", code)
