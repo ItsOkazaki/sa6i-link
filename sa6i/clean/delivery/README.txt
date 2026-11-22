@@ -37,6 +37,7 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
 
      Retarget-Sa6i-Clean-Digests.ps1
      Retarget Sa6i Clean.cmd
+     Sa6i-Link-Icon.ico
 
    Then double-click "Retarget Sa6i Clean.cmd" and wait for "Done.".
 
@@ -44,6 +45,12 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
    cleaner's exe and bundle and compares them with two digests compiled into
    the Sa6i Link executable. Step 2 changed both files, so without this step
    the Sa6i Clean tab refuses to start it.
+
+   It also replaces the icon in the executable. The icon is not a name string
+   but a group of images stored in the executable's resources, so it is written
+   into the space the old ones already occupy, image by image; the .ico beside
+   the script supplies the replacements. If the executable cannot be rewritten
+   cleanly it is put back exactly as it was, and the log says so.
 
    This step also settles the launcher's own branding: Sa6i Link is a
    rebranded build of another product, and its executable still carries that
@@ -92,9 +99,10 @@ are untouched. That also means cleanup can still permanently delete files and
 empty the Recycle Bin; it has not been safety-validated. Use it on a
 disposable machine only.
 
-The file icon shown by Explorer and the taskbar still comes from the original
-executable's icon resource; replacing that means rebuilding the executable,
-which this patch deliberately does not attempt.
+The icon inside the executable is replaced only where the new image fits the
+space the old one occupied, and only at the pixel sizes that space was made
+for. Sizes listed as "left alone" in the log keep the old artwork; every size
+Windows normally asks for is supplied.
 
 HASHES
 

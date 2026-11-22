@@ -217,6 +217,155 @@ function Stop-Launcher([string] $path) {
     return $false
 }
 
+
+# --- icon replacement -------------------------------------------------------
+#
+# The icon is not a string: Windows reads it from the executable's resource
+# section, as a group of uncompressed or PNG images. Replacing it means
+# walking that section, and writing a new image into the space an old one
+# already occupies - so only images that are no larger than the slot they land
+# in can be used, and each has to carry the same pixel size as the slot.
+
+function Read-U16([byte[]] $bytes, [int] $at) { return [BitConverter]::ToUInt16($bytes, $at) }
+function Read-U32([byte[]] $bytes, [int] $at) { return [BitConverter]::ToUInt32($bytes, $at) }
+
+function Get-PeInfo([byte[]] $bytes) {
+    if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw 'not an executable: no MZ signature' }
+    $peAt = [int](Read-U32 $bytes 0x3C)
+    if ($bytes[$peAt] -ne 0x50 -or $bytes[$peAt + 1] -ne 0x45) { throw 'not an executable: no PE signature' }
+    $coff = $peAt + 4
+    $count = Read-U16 $bytes ($coff + 2)
+    $optionalSize = Read-U16 $bytes ($coff + 16)
+    $optional = $coff + 20
+    $directories = $optional + 96
+    if ((Read-U16 $bytes $optional) -eq 0x20B) { $directories = $optional + 112 }
+    $resourceRva = Read-U32 $bytes ($directories + 16)
+    $table = $optional + $optionalSize
+    $sections = New-Object System.Collections.ArrayList
+    for ($i = 0; $i -lt $count; $i++) {
+        $base = $table + $i * 40
+        [void]$sections.Add(@{
+            VirtualAddress = (Read-U32 $bytes ($base + 12))
+            VirtualSize    = (Read-U32 $bytes ($base + 8))
+            RawSize        = (Read-U32 $bytes ($base + 16))
+            RawPointer     = (Read-U32 $bytes ($base + 20))
+        })
+    }
+    return @{ Sections = $sections; ResourceRva = $resourceRva }
+}
+
+function Convert-RvaToOffset([byte[]] $bytes, $sections, [long] $rva) {
+    foreach ($section in $sections) {
+        $span = [Math]::Max([long]$section.VirtualSize, [long]$section.RawSize)
+        if ($rva -ge $section.VirtualAddress -and $rva -lt ($section.VirtualAddress + $span)) {
+            return [int]($section.RawPointer + ($rva - $section.VirtualAddress))
+        }
+    }
+    throw ('an address in the executable lies outside every section: 0x' + $rva.ToString('x'))
+}
+
+function Get-ResourceEntries([byte[]] $bytes, [int] $at) {
+    $named = Read-U16 $bytes ($at + 12)
+    $ids = Read-U16 $bytes ($at + 14)
+    $list = New-Object System.Collections.ArrayList
+    for ($i = 0; $i -lt ($named + $ids); $i++) {
+        $base = $at + 16 + $i * 8
+        [void]$list.Add(@{ Name = (Read-U32 $bytes $base); Target = (Read-U32 $bytes ($base + 4)) })
+    }
+    return $list
+}
+
+function Get-ResourceLeaves([byte[]] $bytes, $sections, [int] $root, [int] $typeId) {
+    $found = New-Object System.Collections.ArrayList
+    foreach ($typeEntry in (Get-ResourceEntries $bytes $root)) {
+        if ($typeEntry.Name -ne $typeId) { continue }
+        if (($typeEntry.Target -band 0x80000000L) -eq 0) { continue }
+        $level1 = $root + [int]($typeEntry.Target -band 0x7FFFFFFFL)
+        foreach ($nameEntry in (Get-ResourceEntries $bytes $level1)) {
+            if (($nameEntry.Target -band 0x80000000L) -eq 0) { continue }
+            $level2 = $root + [int]($nameEntry.Target -band 0x7FFFFFFFL)
+            foreach ($languageEntry in (Get-ResourceEntries $bytes $level2)) {
+                if (($languageEntry.Target -band 0x80000000L) -ne 0) { continue }
+                $leaf = $root + [int]$languageEntry.Target
+                $rva = Read-U32 $bytes $leaf
+                [void]$found.Add(@{
+                    Name      = $nameEntry.Name
+                    SizeField = $leaf + 4
+                    Data      = (Convert-RvaToOffset $bytes $sections $rva)
+                    Size      = (Read-U32 $bytes ($leaf + 4))
+                })
+            }
+        }
+    }
+    return $found
+}
+
+function Get-IconEntries([byte[]] $bytes) {
+    if ((Read-U16 $bytes 2) -ne 1) { throw 'the icon file is not an icon' }
+    $count = Read-U16 $bytes 4
+    $list = New-Object System.Collections.ArrayList
+    for ($i = 0; $i -lt $count; $i++) {
+        $at = 6 + $i * 16
+        $pixels = $bytes[$at]
+        if ($pixels -eq 0) { $pixels = 256 }
+        $size = [int](Read-U32 $bytes ($at + 8))
+        $offset = [int](Read-U32 $bytes ($at + 12))
+        [void]$list.Add(@{
+            Pixels = $pixels
+            Size   = $size
+            Offset = $offset
+            Png    = ($bytes[$offset] -eq 0x89 -and $bytes[$offset + 1] -eq 0x50)
+        })
+    }
+    return $list
+}
+
+function Set-LauncherIcon([byte[]] $bytes, $sections, [int] $root, [byte[]] $icoBytes) {
+    $icons = @(Get-IconEntries $icoBytes)
+    $slots = @{}
+    foreach ($image in (Get-ResourceLeaves $bytes $sections $root 3)) {
+        $slots[[string]$image.Name] = $image
+    }
+    $groups = @(Get-ResourceLeaves $bytes $sections $root 14)
+    if ($groups.Count -eq 0) { throw 'the executable has no icon group' }
+    $replaced = 0
+    $skipped = 0
+    foreach ($group in $groups) {
+        $base = [int]$group.Data
+        $count = Read-U16 $bytes ($base + 4)
+        for ($i = 0; $i -lt $count; $i++) {
+            $entry = $base + 6 + $i * 14
+            $pixels = $bytes[$entry]
+            if ($pixels -eq 0) { $pixels = 256 }
+            $iconId = Read-U16 $bytes ($entry + 12)
+            $slot = $slots[[string]$iconId]
+            if ($slot -eq $null) { $skipped = $skipped + 1; continue }
+            $best = $null
+            foreach ($icon in $icons) {
+                if ($icon.Pixels -ne $pixels) { continue }
+                if ($icon.Size -gt $slot.Size) { continue }
+                if ($best -eq $null -or $icon.Size -lt $best.Size) { $best = $icon }
+            }
+            if ($best -eq $null) {
+                Say ('    ' + $pixels + 'x' + $pixels + ': left alone, no replacement of that size fits')
+                $skipped = $skipped + 1
+                continue
+            }
+            for ($b = 0; $b -lt $best.Size; $b++) { $bytes[$slot.Data + $b] = $icoBytes[$best.Offset + $b] }
+            for ($b = $best.Size; $b -lt $slot.Size; $b++) { $bytes[$slot.Data + $b] = 0 }
+            # the length is recorded twice: on the resource, and on the entry
+            # in the group that points at it
+            $length = [BitConverter]::GetBytes([uint32]$best.Size)
+            for ($b = 0; $b -lt 4; $b++) {
+                $bytes[$slot.SizeField + $b] = $length[$b]
+                $bytes[$entry + 8 + $b] = $length[$b]
+            }
+            $replaced = $replaced + 1
+        }
+    }
+    return @{ Replaced = $replaced; Skipped = $skipped }
+}
+
 function Get-ExeFiles([string] $folder) {
     return (Get-ChildItem -LiteralPath $folder -Force | Where-Object {
         (-not $_.PSIsContainer) -and ($_.Extension -eq '.exe') -and ($_.Length -gt 1048576) -and ($_.Name -notlike '*.bak')
@@ -413,6 +562,42 @@ try {
     }
 
     Say ''
+
+    # --- the icon
+    $iconPath = Join-Path $here 'Sa6i-Link-Icon.ico'
+    if (Test-Path -LiteralPath $iconPath) {
+        Say ''
+        Say 'Replacing the icon in the executable'
+        $icoBytes = [System.IO.File]::ReadAllBytes($iconPath)
+        $raw = [System.IO.File]::ReadAllBytes($launcherPath)
+        $original = [byte[]]$raw.Clone()
+        $failure = $null
+        try {
+            $info = Get-PeInfo $raw
+            $root = Convert-RvaToOffset $raw $info.Sections $info.ResourceRva
+            $result = Set-LauncherIcon $raw $info.Sections $root $icoBytes
+            [System.IO.File]::WriteAllBytes($launcherPath, $raw)
+            # prove it still parses before treating it as done
+            $check = Get-PeInfo ([System.IO.File]::ReadAllBytes($launcherPath))
+            if ($check.Sections.Count -lt 1) { throw 'the rewritten executable does not parse' }
+            Say ('Replaced ' + $result.Replaced + ' icon image(s) with the Sa6i Link icon.')
+            if ($result.Skipped -gt 0) {
+                Say ('Left ' + $result.Skipped + ' image(s) alone: no replacement of that size fits in the space they occupy.')
+            }
+        } catch {
+            $failure = $_.Exception.Message
+            [System.IO.File]::WriteAllBytes($launcherPath, $original)
+            Say ('Could not replace the icon: ' + $failure)
+            Say 'The executable was put back exactly as it was before this step; everything else is done.'
+        }
+        $raw = $null
+        $original = $null
+        $icoBytes = $null
+    } else {
+        Say ''
+        Say 'No Sa6i-Link-Icon.ico beside this script, so the icon is left as it was.'
+    }
+
     if ($NoZip) {
         Say 'Packing skipped (-NoZip was given).'
     } else {

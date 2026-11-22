@@ -149,6 +149,24 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("[System.IO.Directory]::CreateDirectory($park)", code)
         self.assertIn("[System.IO.Directory]::Delete($park, $true)", code)
 
+    def test_icon_replacement_walks_the_resource_section(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("Get-PeInfo", code)
+        self.assertIn("Get-ResourceLeaves $bytes $sections $root 3", code)
+        self.assertIn("Get-ResourceLeaves $bytes $sections $root 14", code)
+        # Both records of an image's length have to move with the data.
+        self.assertIn("$bytes[$slot.SizeField + $b] = $length[$b]", code)
+        self.assertIn("$bytes[$entry + 8 + $b] = $length[$b]", code)
+
+    def test_icon_replacement_puts_the_executable_back_when_it_fails(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("[System.IO.File]::WriteAllBytes($launcherPath, $original)", code)
+
+    def test_icon_file_is_delivered_beside_the_retarget_script(self):
+        names = dict(build_delivery.PAYLOAD)
+        self.assertIn("Sa6i-Link-Icon.ico", names)
+        self.assertTrue(names["Sa6i-Link-Icon.ico"].startswith(build_delivery.CANDIDATE_FOLDER))
+
     def test_retarget_verifies_without_holding_the_file_twice(self):
         code = ps1_code(RETARGET_NAME)
         self.assertIn("Count-InFile $Desktop", code)
@@ -229,10 +247,14 @@ class BuildDeliveryTest(unittest.TestCase):
             with zipfile.ZipFile(out) as archive:
                 names = archive.namelist()
                 self.assertEqual(archive.read(build_delivery.ASAR_ENTRY), b"bundle")
-                for _, entry in build_delivery.PAYLOAD:
+                for source_name, entry in build_delivery.PAYLOAD:
                     data = archive.read(entry)
-                    self.assertNotIn(b"\n", data.replace(b"\r\n", b""), entry)
-                    self.assertIn(b"\r\n", data, entry)
+                    if source_name.endswith(build_delivery.TEXT_SUFFIXES):
+                        self.assertNotIn(b"\n", data.replace(b"\r\n", b""), entry)
+                        self.assertIn(b"\r\n", data, entry)
+                    else:
+                        # A rewritten binary would be silently corrupt.
+                        self.assertEqual(data, (HERE / source_name).read_bytes(), entry)
             expected = sorted([entry for _, entry in build_delivery.PAYLOAD]
                               + [build_delivery.ASAR_ENTRY])
             self.assertEqual(sorted(names), expected)

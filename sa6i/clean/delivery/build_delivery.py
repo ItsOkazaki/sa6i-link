@@ -35,12 +35,17 @@ PAYLOAD = (
     ("Install-Sa6i-Clean-Patch.ps1", f"{CLEAN_FOLDER}/Install-Sa6i-Clean-Patch.ps1"),
     ("Apply Sa6i Clean Patch.cmd", f"{CLEAN_FOLDER}/Apply Sa6i Clean Patch.cmd"),
     ("Retarget-Sa6i-Clean-Digests.ps1", f"{CANDIDATE_FOLDER}/Retarget-Sa6i-Clean-Digests.ps1"),
+    ("Sa6i-Link-Icon.ico", f"{CANDIDATE_FOLDER}/Sa6i-Link-Icon.ico"),
     ("Retarget Sa6i Clean.cmd", f"{CANDIDATE_FOLDER}/Retarget Sa6i Clean.cmd"),
     ("README.txt", "README.txt"),
 )
 
 #: The bundle travels with the cleaner files.
 ASAR_ENTRY = f"{CLEAN_FOLDER}/app.asar"
+
+#: Only these carry line endings worth normalising. Anything else - the bundle
+#: and the icon - is binary, and rewriting its bytes corrupts it.
+TEXT_SUFFIXES = ('.ps1', '.cmd', '.txt')
 
 #: Oldest timestamp a ZIP entry may carry without upsetting unzip tools.
 ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
@@ -79,7 +84,10 @@ def build(asar: pathlib.Path, out: pathlib.Path) -> None:
         source = HERE / source_name
         if not source.is_file():
             raise SystemExit(f"missing delivery file: {source}")
-        entries.append((entry_name, to_crlf(source.read_bytes())))
+        data = source.read_bytes()
+        if source_name.endswith(TEXT_SUFFIXES):
+            data = to_crlf(data)
+        entries.append((entry_name, data))
     entries.append((ASAR_ENTRY, asar.read_bytes()))
 
     out.parent.mkdir(parents=True, exist_ok=True)
