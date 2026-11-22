@@ -22,7 +22,13 @@ BRAND_FROM = 'Cleanly'
 BRAND_TO = 'Sa6i Clean'
 # The tip checkout and the feedback mailbox belong to the original author.
 OUTBOUND = (
-    ('https://beyond-media.ai/tips?creator=beyond-apps', 'about:blank'),
+    ('Payments are handled by Stripe via beyond-media.ai.', 'Payments are handled by Stripe.'),
+    ('https://beyond-media.ai/tips?creator=beyond-apps', 'https://invalid.sa6i/tips'),
+    ('https://beyond-media.ai/api/tips', 'https://invalid.sa6i/api/tips'),
+    ('contact@beyond-media.ai', 'nobody@invalid.sa6i'),
+    ('beyond-apps', 'sa6i'),
+    # Catch-all: the reserved .invalid-style name never resolves.
+    ('beyond-media.ai', 'invalid.sa6i'),
     ('Cleanly feedback: ', 'Sa6i Clean feedback: '),
 )
 NAV_MARKERS = ('className:`nav-item${e===`support`?` on`:``}`',
@@ -63,6 +69,16 @@ def remove_element(text, marker):
     return text[:start] + text[end:]
 
 
+def rewrite_only(text):
+    """Brand and outbound-address rewrite, without removing any entry."""
+    counts = {}
+    for before, after in OUTBOUND:
+        counts[before] = text.count(before)
+        text = text.replace(before, after)
+    counts[BRAND_FROM] = text.count(BRAND_FROM)
+    return text.replace(BRAND_FROM, BRAND_TO), counts
+
+
 def debrand_text(text):
     """Apply every edit to one bundle, returning (new_text, counts)."""
     counts = {}
@@ -98,12 +114,12 @@ def debrand(app, output):
     for bundle in bundles(output):
         text = bundle.read_text(encoding='utf-8')
         if NAV_MARKERS[0] not in text or NAV_MARKERS[1] not in text:
-            # Only the renderer carries the navigation; other bundles are
-            # renamed in place but never have entries removed.
-            new = text.replace(BRAND_FROM, BRAND_TO)
+            # Only the renderer carries the navigation; every other bundle is
+            # still rewritten, but no entry is removed from it.
+            new, counts = rewrite_only(text)
             if new != text:
                 bundle.write_text(new, encoding='utf-8', newline='\n')
-                total[str(bundle.relative_to(output))] = {BRAND_FROM: 1}
+                total[str(bundle.relative_to(output))] = counts
             continue
         new, counts = debrand_text(text)
         bundle.write_text(new, encoding='utf-8', newline='\n')
@@ -116,8 +132,8 @@ def leftovers(app):
     problems = []
     for bundle in bundles(app):
         text = bundle.read_text(encoding='utf-8')
-        for pattern in (r'Support Cleanly', r'Send feedback to the original',
-                        r'beyond-media\.ai', r'Keep Cleanly free'):
+        for pattern in (r'Cleanly', r'beyond-media', r'beyond-apps',
+                        r'Send feedback to the original'):
             if re.search(pattern, text):
                 problems.append(f'{bundle.name}: {pattern}')
     return problems
