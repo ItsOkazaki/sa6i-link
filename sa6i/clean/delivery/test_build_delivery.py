@@ -294,11 +294,15 @@ class DeliveryFilesTest(unittest.TestCase):
             self.assertIn(name, names)
             self.assertTrue(names[name].startswith(build_delivery.CANDIDATE_FOLDER))
 
-    def test_profile_reset_moves_the_profile_rather_than_deleting_it(self):
+    def test_profile_reset_points_at_a_new_profile_and_leaves_the_old_one(self):
+        # Moving the folder fails while the application runs - it holds its own
+        # profile open - so the path is changed instead.
         code = source("Reset-Sa6i-Link-Profile.ps1")
-        self.assertIn("[System.IO.Directory]::Move($dataDir, $moved)", code)
+        self.assertIn("$lines[$index] = $replacement", code)
+        self.assertNotIn("[System.IO.Directory]::Move", code)
         self.assertNotIn("Remove-Item", code)
-        self.assertIn("Nothing was deleted", code)
+        self.assertIn("The old profile is untouched", code)
+        self.assertIn("($batch.FullName + '.bak')", code)
 
     def test_profile_reset_reads_the_location_from_the_batch_file(self):
         code = source("Reset-Sa6i-Link-Profile.ps1")
