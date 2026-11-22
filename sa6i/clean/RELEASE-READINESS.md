@@ -15,14 +15,14 @@ The integration behaves as requested on the user's Windows 7 + VxKex system, and
 | Same-window integration, Back/reopen, resize/maximize, faster reopen, standalone candidate launches | User's own reports. This is the only source for these claims; no details of what was exercised were reported. |
 | Packaged cleaner JavaScript = public Cleanly v0.2.0 source + documented patches | `verify_upstream_equivalence.py` against commit `b62bef4`; every file matched, including `main.js`, `preload.cjs` and the React bundle. |
 | Candidate archive integrity | ZIP SHA-256 `9eff3b026f4c1392222282214b126281ef60e1731b5a26bbdc8bf0138649c935`; component hashes pinned in `package_standalone_candidate.py`; 1,235 entries checked, CRCs pass, classic ZIP (no ZIP64). |
-| Cleaner guard behaviour and its one limitation | `tests/probe_upstream_cleanup.mjs`, isolated Linux fixture with Electron stubbed; see `SAFETY-REVIEW.md`. |
+| Cleaner guard behaviour and its one limitation | Isolated Linux fixture (`tests/probe_upstream_cleanup.mjs`) plus a disposable Windows runner on real NTFS (`probe_upstream_cleanup_windows.mjs`, run `45033090483`): junction targets are refused, a junction above a cache root is followed. See `SAFETY-REVIEW.md`. |
 | Desktop host is built from this checkout | Windows workflow artifact, desktop SHA-256 `721d78f0…`; the cleaner is the separately packaged upstream app. |
 | Unit tests, native and QML simulations, Windows build | Local suites and hosted runs listed in `INTEGRATION.md`; all use synthetic fixtures. |
 
 ## What is not verified
 
 - **No cleanup, Recycle Bin emptying, uninstall or startup change has ever been run**, on Windows 7 or anywhere else. Every such action is permanent or system-wide, and the code review found one containment gap.
-- **No Windows 10/11 run at all**, and no run by us on Windows 7. Windows 7 also needs VxKex for the cleaner and the bundled `cldapi.dll` shim, which disables Explorer phone-storage integration.
+- **No Windows 10/11 desktop run and no Windows 7 run by us.** Deletion functions were exercised on a GitHub Windows Server runner with synthetic files, which is evidence about NTFS behaviour, not about the app's interface, Electron rendering, the Recycle Bin shell integration, or Windows 7. Windows 7 also needs VxKex for the cleaner and the bundled `cldapi.dll` shim, which disables Explorer phone-storage integration.
 - The 40-pixel header clearance is a visual workaround; the underlying compositor offset is still unexplained.
 - The app is unsigned. Windows will show SmartScreen/unknown-publisher warnings, and the Win7 shim and patched binaries make antivirus false positives plausible.
 - Redistribution rests on the user's statement that the rights holder gave permission. The upstream repository is marked `UNLICENSED`; no written grant is in this repo. Electron/Chromium notices and the OFL font licences are retained.

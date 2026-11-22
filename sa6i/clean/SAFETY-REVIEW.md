@@ -33,11 +33,20 @@ redirectedRootAcceptedAsRealDirectory: true
 deletedThroughRedirectedAncestor: true
 ```
 
-Scope and likelihood on Windows are limited:
+Measured on a disposable Windows runner (workflow `Sa6i Clean Windows cleanup probe`, run `45033090483`, Windows Server image, real NTFS, synthetic files only):
 
-- Node's `lstat` reports a junction itself as a link, so a cache root that **is** a junction is refused. Only a junction *above* the root defeats the check.
-- Relocating a browser profile or `%TEMP%` with a directory junction is a common disk-space workaround, so some users do have such redirects; the usual outcome is still deleting inside the intended cache, but if the redirect points at unrelated data with cache-like subfolder names, that data can be deleted.
-- Windows junction behaviour was **not** tested here. The Linux result establishes the class of gap, not a Windows exploit.
+```
+junctionReportedAsLinkByLstat          true    -> a junction target IS refused (sentinel survived)
+redirectedRootLooksLikeDirectory       true
+deletedThroughRedirectedRoot           true    -> a junction ABOVE the root is followed
+siblingOutsideCacheSurvived            true    -> deletion stays inside the redirected subtree
+plainCacheRemoved / rootEmptied        true
+guardAllowsWindowsSystem/Desktop/.ssh  false   -> protected paths blocked
+guardAllowsOrdinaryUserFile            true
+guardAllowsRelativePath                false
+```
+
+So on Windows the exposure is narrower than a naive reading suggests: a cache root that *is* a junction is refused, and only a junction above it defeats the check. Relocating a profile or `%TEMP%` with a junction is a common disk-space workaround, so such configurations exist; the usual result is still deleting inside the intended cache, but a redirect aimed at unrelated data that happens to contain cache-named folders would have that data deleted. Re-run with `.github/workflows/sa6i-clean-windows-cleanup-probe.yml`.
 
 Mitigations available today: tell users not to clean on a machine that uses junctions to relocate these folders, or ship a guard. A guard would have to refuse or canonicalise redirected roots; that means changing upstream code and re-testing the whole cleaner, which this candidate does not do.
 
