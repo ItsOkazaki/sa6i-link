@@ -443,6 +443,17 @@ try {
     Say ('PowerShell ' + $PSVersionTable.PSVersion.ToString() + ', ' + ([string]([IntPtr]::Size * 8)) + '-bit')
     Say ''
 
+    # When started only to replace the icon, do that and stop. This is what
+    # keeps the step isolated: it cannot fall through into the rest of the
+    # script, which would start another copy of itself.
+    if ($IconOnly) {
+        if ([string]::IsNullOrEmpty($Desktop)) { throw '-IconOnly needs -Desktop with the executable to change.' }
+        Say 'Icon step only.'
+        Invoke-IconReplacement $Desktop
+        Say 'Icon step finished.'
+        exit 0
+    }
+
     $cleanExe = Join-Path $here 'Sa6i Clean\Sa6i Clean Integration.exe'
     $cleanAsar = Join-Path $here 'Sa6i Clean\resources\app.asar'
     if (-not (Test-Path -LiteralPath $cleanExe)) { throw 'Sa6i Clean\Sa6i Clean Integration.exe was not found below this folder. Put these two retarget files in the candidate folder, the one that contains the "Sa6i Clean" folder.' }
@@ -643,11 +654,13 @@ try {
     } else {
         Say ''
         $self = $MyInvocation.MyCommand.Path
-        $argumentLine = '-NoProfile -ExecutionPolicy Bypass -File "' + $self + '" -IconOnly -Desktop "' + $launcherPath + '"'
+        $tempCmd = Join-Path $env:TEMP ('sa6i-icon-' + [Guid]::NewGuid().ToString('N') + '.cmd')
+        $inner = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + $self + '" -IconOnly -NoZip -Desktop "' + $launcherPath + '"'
+        [System.IO.File]::WriteAllText($tempCmd, '@echo off' + "`r`n" + $inner + "`r`n")
         Say 'Icon replacement runs on its own, with a 4 minute limit.'
         $child = $null
         try {
-            $child = Start-Process -FilePath 'powershell' -ArgumentList $argumentLine -NoNewWindow -PassThru
+            $child = Start-Process -FilePath $tempCmd -NoNewWindow -PassThru
         } catch {
             Say ('Could not start the icon step: ' + $_.Exception.Message)
         }
@@ -665,6 +678,7 @@ try {
             } else {
                 Say ('Icon step exit code: ' + $child.ExitCode)
             }
+            if (Test-Path -LiteralPath $tempCmd) { [System.IO.File]::Delete($tempCmd) }
         }
     }
 

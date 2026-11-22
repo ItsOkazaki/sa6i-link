@@ -197,9 +197,20 @@ class DeliveryFilesTest(unittest.TestCase):
         # It hung on the user's machine and blocked the archive entirely.
         code = ps1_code(RETARGET_NAME)
         self.assertIn("-IconOnly", code)
-        self.assertIn("Start-Process -FilePath 'powershell'", code)
+        self.assertIn("Start-Process -FilePath $tempCmd", code)
         self.assertIn("$child.Kill()", code)
         self.assertIn("did not finish within 4 minutes", code)
+
+    def test_icon_only_child_cannot_fall_through_into_the_main_flow(self):
+        # Without this branch the child re-ran the whole script and started
+        # another child, which is the recursion the user's console showed.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("if ($IconOnly) {", code)
+        self.assertIn("Invoke-IconReplacement $Desktop", code)
+        self.assertLess(code.index("if ($IconOnly) {"),
+                        code.index("Cleaner executable SHA-256"))
+        # belt and braces: the child is told not to pack even if it got that far
+        self.assertIn("-IconOnly -NoZip -Desktop", code)
 
     def test_log_says_which_build_ran(self):
         # A download that lands as "... (1).ps1" leaves the old script in place;
