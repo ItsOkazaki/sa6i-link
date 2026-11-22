@@ -33,32 +33,32 @@ jobs:
           tar -xzf "$env:RUNNER_TEMP\cleanly.tar.gz" -C "$env:RUNNER_TEMP\upstream"
           $dir = (Get-ChildItem "$env:RUNNER_TEMP\upstream" -Directory | Select-Object -First 1).FullName
           "UPSTREAM_DIR=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-      - name: Apply the Sa6i cache-root guard to a copy of the source
+      - name: Prepare the hardened source and run the guard probe
         shell: pwsh
         run: |
-          python sa6i/clean/harden_upstream.py "$env:UPSTREAM_DIR" "$env:RUNNER_TEMP\patched"
-          if ($LASTEXITCODE -ne 0) { throw 'Could not apply the guard source patch' }
-          "PATCHED_DIR=$env:RUNNER_TEMP\patched" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-      - name: Install esbuild outside the checkout
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path $env:ESBUILD_DIR | Out-Null
-          Set-Content "$env:ESBUILD_DIR\package.json" '{"name":"probe-tools","private":true}'
-          Push-Location $env:ESBUILD_DIR
-          npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2
-          Pop-Location
-      - name: Run the deletion-guard probe
-        shell: pwsh
-        run: |
-          $out = node sa6i/clean/tests/probe_upstream_cleanup_windows.mjs "$env:PATCHED_DIR" 2>&1 | Out-String
-          $code = $LASTEXITCODE
-          Write-Host $out
-          $line = ($out -split "`r?`n" | Where-Object { $_ -like 'PROBE_RESULT=*' } | Select-Object -First 1) -replace '^PROBE_RESULT=', ''
-          if ($line) { Write-Host "::notice title=Cleanup probe results::$line" }
-          if ($code -ne 0) {
-            $tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Error|error|Expected|expected|actual|assert' } | Select-Object -Last 3) -join ' | '
-            Write-Host "::error title=Cleanup probe failed::$($tail.Substring(0, [Math]::Min(800, $tail.Length)))"
-            exit $code
+          $ErrorActionPreference = 'Stop'
+          try {
+            python sa6i/clean/harden_upstream.py "$env:UPSTREAM_DIR" "$env:RUNNER_TEMP\patched"
+            if ($LASTEXITCODE -ne 0) { throw 'harden_upstream.py failed' }
+            New-Item -ItemType Directory -Path $env:ESBUILD_DIR | Out-Null
+            Set-Content "$env:ESBUILD_DIR\package.json" '{"name":"probe-tools","private":true}'
+            Push-Location $env:ESBUILD_DIR
+            npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2
+            if ($LASTEXITCODE -ne 0) { throw 'esbuild install failed' }
+            Pop-Location
+            $out = node sa6i/clean/tests/probe_upstream_cleanup_windows.mjs "$env:RUNNER_TEMP\patched" 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            Write-Host $out
+            $line = ($out -split "`r?`n" | Where-Object { $_ -like 'PROBE_RESULT=*' } | Select-Object -First 1) -replace '^PROBE_RESULT=', ''
+            if ($line) { Write-Host "::notice title=Guard probe results::$line" }
+            if ($code -ne 0) {
+              $tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Error|error|Expected|expected|actual|assert' } | Select-Object -Last 3) -join ' | '
+              throw "probe exited $code`: $tail"
+            }
+          } catch {
+            $message = $_.Exception.Message
+            Write-Host "::error title=Guard probe failed::$($message.Substring(0, [Math]::Min(900, $message.Length)))"
+            exit 1
           }
       - name: Record runner facts
         if: always()
