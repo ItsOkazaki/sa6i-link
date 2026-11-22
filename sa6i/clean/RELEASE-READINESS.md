@@ -43,4 +43,4 @@ If the cleaner is to ship beyond a preview, the next build should canonicalise t
 
 ## What to give users today
 
-The existing candidate archive, described as a preview rather than a finished product, with the safety text in its `READ FIRST - CANDIDATE.txt`. No new download is required for anything in this change: the delivered files are unchanged, and the documentation here is stricter than what shipped in the archive.
+The existing candidate archive, described as a preview rather than a finished product. No binary changed, so the working folder needs no re-download. Its own `READ FIRST - CANDIDATE.txt` and `Sa6i Clean/SAFETY-REVIEW.md` were written before the user's confirmation and before the source review, so they are stale; the corrected copies are in [Sa6i Clean Candidate Notices.zip](https://drive.google.com/file/d/1Qvoi16TLcq4RTGptUa4DoXJRiL7vRg81/view) (SHA-256 `e0dc2c3a7caa14a719bbddecc40052b12064d81e9cd8244e01a1b5255d860d32`) and can be extracted over the candidate folder.
