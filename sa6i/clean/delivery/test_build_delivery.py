@@ -21,6 +21,14 @@ import build_delivery  # noqa: E402
 HEADER_HASH = "8e6ee85e794723de784eb1adc1baedf28a612f968e7b88970297f91053e37fb9"
 
 
+def ps1_code() -> str:
+    """The patch script with its comment lines removed."""
+    script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+    return "\n".join(
+        line for line in script.splitlines() if not line.lstrip().startswith("#")
+    )
+
+
 class DeliveryFilesTest(unittest.TestCase):
     def test_payload_files_exist(self):
         for name in build_delivery.PAYLOAD:
@@ -57,6 +65,27 @@ class DeliveryFilesTest(unittest.TestCase):
         script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
         self.assertIn("$newAsar = Join-Path $here 'app.asar'", script)
         self.assertIn("app.asar is not next to this script.", script)
+
+    def test_script_avoids_net_four_only_apis(self):
+        # Windows 7 ships Windows PowerShell 2.0 on .NET 3.5. Dispose() on a
+        # hash object and System.IO.Compression both fail there, which is what
+        # an earlier package hit on the user's machine. Comments are excluded:
+        # they mention the broken calls on purpose.
+        code = ps1_code()
+        self.assertNotIn(".Dispose()", code)
+        self.assertNotIn("System.IO.Compression", code)
+        self.assertNotIn("Is64BitProcess", code)
+        self.assertIn("[void]$sha.Clear()", code)
+
+    def test_packing_uses_the_zip_support_built_into_windows(self):
+        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+        self.assertIn("CopyHere", script)
+        self.assertIn("Shell.Application", script)
+
+    def test_script_parks_backups_out_of_the_archive(self):
+        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+        self.assertIn("'*.bak'", script)
+        self.assertIn("patch-log.txt", script)
 
     def test_launcher_keeps_the_window_open(self):
         launcher = (HERE / "Apply Sa6i Clean Patch.cmd").read_text(encoding="utf-8")

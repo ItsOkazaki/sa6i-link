@@ -35,6 +35,9 @@ it finishes. If it fails, the patch is still applied; the log then suggests
 packing the folder by hand with right-click, Send to, Compressed (zipped)
 folder.
 
+It needs nothing installed: it runs on the PowerShell that Windows 7 already
+has (2.0) and packs with the ZIP support built into Windows.
+
 If the patch stops with an ERROR line, send me patch-log.txt: it names the
 exact check that failed, and nothing is changed when it stops.
 
