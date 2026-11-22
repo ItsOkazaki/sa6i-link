@@ -7,9 +7,15 @@ author of the cleaner it was built from.
 WHAT TO DO
 
 1. Close Sa6i Link (tray menu: Quit).
-2. Copy this folder's three files into your existing
+2. Copy all four files of this package into your existing
    "Sa6i Link Integrated Candidate\Sa6i Clean" folder, next to
-   "Sa6i Clean Integration.exe" and its "resources" folder.
+   "Sa6i Clean Integration.exe" and its "resources" folder:
+     Install-Sa6i-Clean-Patch.ps1
+     Apply Sa6i Clean Patch.cmd
+     README.txt
+     app.asar        <- beside the exe, NOT inside resources
+   The script copies app.asar into resources itself; dropping it there by
+   hand would leave the executable pointing at a bundle it cannot verify.
 3. There, double-click "Apply Sa6i Clean Patch.cmd". It keeps the window
    open and writes everything it prints to patch-log.txt, so nothing flashes
    past. If Windows asks about running a script, allow it.

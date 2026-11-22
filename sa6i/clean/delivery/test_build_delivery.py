@@ -45,6 +45,19 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("$oldHash = Get-HeaderHash $oldAsar", script)
         self.assertNotIn("$expectedOld", script)
 
+    def test_readme_tells_the_user_to_copy_all_four_files(self):
+        # The script reads app.asar from its own folder, so a package
+        # described as "three files" cannot work.
+        readme = (HERE / "README.txt").read_text(encoding="utf-8")
+        self.assertIn("all four files", readme)
+        self.assertIn("app.asar", readme)
+        self.assertNotIn("three files", readme)
+
+    def test_script_needs_the_bundle_beside_it(self):
+        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+        self.assertIn("$newAsar = Join-Path $here 'app.asar'", script)
+        self.assertIn("app.asar is not next to this script.", script)
+
     def test_launcher_keeps_the_window_open(self):
         launcher = (HERE / "Apply Sa6i Clean Patch.cmd").read_text(encoding="utf-8")
         self.assertIn("pause", launcher)
