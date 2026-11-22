@@ -23,7 +23,8 @@
 param(
     [string] $Desktop = '',
     [switch] $NoZip,
-    [switch] $NoIcon
+    [switch] $NoIcon,
+    [switch] $IconOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +32,10 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $log = Join-Path $here 'retarget-log.txt'
 $script:latin = [System.Text.Encoding]::GetEncoding(28591)
+
+# Printed in every log: it is the only way to tell which copy of this script
+# actually ran, which matters when a download lands as "... (1).ps1".
+$scriptBuild = '2026-11-22-icon-watchdog'
 
 # The cleaner builds whose digests a Sa6i Link executable could be pinning.
 $pairs = @(
@@ -379,6 +384,50 @@ function Set-LauncherIcon([byte[]] $bytes, $sections, [int] $root, [byte[]] $ico
     return @{ Replaced = $replaced; Skipped = $skipped }
 }
 
+
+# The icon lives in the executable's resources, so replacing it means walking
+# the resource section and writing into slots the old images already occupy.
+# This is the one step that reads the executable's structure, and the one that
+# failed on the user's machine, so it runs in its own process with a time
+# limit: a stuck icon must never stop the archive from being produced.
+function Invoke-IconReplacement([string] $exePath) {
+    $iconPath = Join-Path $here 'Sa6i-Link-Icon.ico'
+    if (-not (Test-Path -LiteralPath $iconPath)) {
+        Say 'No Sa6i-Link-Icon.ico beside this script, so the icon is left as it was.'
+        return
+    }
+    Say 'Replacing the icon in the executable'
+    $icoBytes = [System.IO.File]::ReadAllBytes($iconPath)
+    Say ('  icon file: ' + [Math]::Round($icoBytes.Length / 1024) + ' KB')
+    $raw = [System.IO.File]::ReadAllBytes($exePath)
+    Say ('  executable read: ' + [Math]::Round($raw.Length / 1MB, 1) + ' MB')
+    $original = [byte[]]$raw.Clone()
+    try {
+        $info = Get-PeInfo $raw
+        Say ('  executable parses: ' + $info.Sections.Count + ' sections')
+        $root = Convert-RvaToOffset $raw $info.Sections $info.ResourceRva
+        Say ('  resource section at byte ' + $root)
+        $groupsBefore = @(Get-ResourceLeaves $raw $info.Sections $root 14)
+        $imagesBefore = @(Get-ResourceLeaves $raw $info.Sections $root 3)
+        Say ('  found ' + $groupsBefore.Count + ' icon group(s) and ' + $imagesBefore.Count + ' image(s)')
+        $result = Set-LauncherIcon $raw $info.Sections $root $icoBytes
+        $check = @(Get-ResourceLeaves $raw $info.Sections $root 14)
+        if ($check.Count -lt 1) { throw 'the rewritten executable no longer has a readable icon group' }
+        Say ('  writing ' + [Math]::Round($raw.Length / 1MB, 1) + ' MB back to disk (antivirus may hold this up)')
+        [System.IO.File]::WriteAllBytes($exePath, $raw)
+        Say '  written.'
+        Say ('Replaced ' + $result.Replaced + ' icon image(s) with the Sa6i Link icon.')
+        if ($result.Skipped -gt 0) {
+            Say ('Left ' + $result.Skipped + ' image(s) alone: no replacement of that size fits the space they occupy.')
+        }
+    } catch {
+        [System.IO.File]::WriteAllBytes($exePath, $original)
+        Say ('Could not replace the icon: ' + $_.Exception.Message)
+        Say 'The executable was put back exactly as it was before this step.'
+        throw
+    }
+}
+
 function Get-ExeFiles([string] $folder) {
     return (Get-ChildItem -LiteralPath $folder -Force | Where-Object {
         (-not $_.PSIsContainer) -and ($_.Extension -eq '.exe') -and ($_.Length -gt 1048576) -and ($_.Name -notlike '*.bak')
@@ -388,6 +437,7 @@ function Get-ExeFiles([string] $folder) {
 try {
     Set-Content -Path $log -Value ('Sa6i Clean retarget log ' + (Get-Date).ToString('s'))
     Say 'Sa6i Clean: point Sa6i Link at the debranded cleaner'
+    Say ('script build ' + $scriptBuild)
     Say ''
     Say ('Folder: ' + $here)
     Say ('PowerShell ' + $PSVersionTable.PSVersion.ToString() + ', ' + ([string]([IntPtr]::Size * 8)) + '-bit')
@@ -577,59 +627,45 @@ try {
             }
         }
     } else {
-        Say 'The executable is already called ' + $newFile + '.'
+        Say ('The executable is already called ' + $newFile + '.')
     }
 
     Say ''
 
-    # --- the icon
-    $iconPath = Join-Path $here 'Sa6i-Link-Icon.ico'
+
+    # --- the icon, in a child process with a time limit
     if ($NoIcon) {
         Say ''
         Say 'Icon replacement skipped (-NoIcon was given).'
-    } elseif (Test-Path -LiteralPath $iconPath) {
-        Say ''
-        Say 'Replacing the icon in the executable'
-        $icoBytes = [System.IO.File]::ReadAllBytes($iconPath)
-        $raw = [System.IO.File]::ReadAllBytes($launcherPath)
-        $original = [byte[]]$raw.Clone()
-        $failure = $null
-        try {
-            $info = Get-PeInfo $raw
-            Say ('  executable parses: ' + $info.Sections.Count + ' sections')
-            $root = Convert-RvaToOffset $raw $info.Sections $info.ResourceRva
-            Say ('  resource section at byte ' + $root)
-            $groupsBefore = @(Get-ResourceLeaves $raw $info.Sections $root 14)
-            $imagesBefore = @(Get-ResourceLeaves $raw $info.Sections $root 3)
-            Say ('  found ' + $groupsBefore.Count + ' icon group(s) and ' + $imagesBefore.Count + ' image(s)')
-            $result = Set-LauncherIcon $raw $info.Sections $root $icoBytes
-            # Nothing touches the disk until the rewritten bytes have been
-            # read back successfully, so a bad rewrite cannot be the thing on
-            # disk.
-            $check = @(Get-ResourceLeaves $raw $info.Sections $root 14)
-            if ($check.Count -lt 1) { throw 'the rewritten executable no longer has a readable icon group' }
-            Say ('  writing ' + [Math]::Round($raw.Length / 1MB, 1) + ' MB back to disk (antivirus may hold this up)')
-            [System.IO.File]::WriteAllBytes($launcherPath, $raw)
-            Say '  written.'
-            # prove it still parses before treating it as done
-            $check = Get-PeInfo ([System.IO.File]::ReadAllBytes($launcherPath))
-            if ($check.Sections.Count -lt 1) { throw 'the rewritten executable does not parse' }
-            Say ('Replaced ' + $result.Replaced + ' icon image(s) with the Sa6i Link icon.')
-            if ($result.Skipped -gt 0) {
-                Say ('Left ' + $result.Skipped + ' image(s) alone: no replacement of that size fits in the space they occupy.')
-            }
-        } catch {
-            $failure = $_.Exception.Message
-            [System.IO.File]::WriteAllBytes($launcherPath, $original)
-            Say ('Could not replace the icon: ' + $failure)
-            Say 'The executable was put back exactly as it was before this step; everything else is done.'
-        }
-        $raw = $null
-        $original = $null
-        $icoBytes = $null
-    } else {
+    } elseif (-not (Test-Path -LiteralPath (Join-Path $here 'Sa6i-Link-Icon.ico'))) {
         Say ''
         Say 'No Sa6i-Link-Icon.ico beside this script, so the icon is left as it was.'
+    } else {
+        Say ''
+        $self = $MyInvocation.MyCommand.Path
+        $argumentLine = '-NoProfile -ExecutionPolicy Bypass -File "' + $self + '" -IconOnly -Desktop "' + $launcherPath + '"'
+        Say 'Icon replacement runs on its own, with a 4 minute limit.'
+        $child = $null
+        try {
+            $child = Start-Process -FilePath 'powershell' -ArgumentList $argumentLine -NoNewWindow -PassThru
+        } catch {
+            Say ('Could not start the icon step: ' + $_.Exception.Message)
+        }
+        if ($child -ne $null) {
+            $waited = 0
+            while (-not $child.HasExited -and $waited -lt 240) {
+                Start-Sleep -Seconds 2
+                $waited = $waited + 2
+                if (($waited % 30) -eq 0) { Say ('  still working (' + $waited + ' s)') }
+            }
+            if (-not $child.HasExited) {
+                try { $child.Kill() } catch { }
+                Say 'The icon step did not finish within 4 minutes and was stopped.'
+                Say 'The executable is untouched by it; continuing without the icon.'
+            } else {
+                Say ('Icon step exit code: ' + $child.ExitCode)
+            }
+        }
     }
 
     if ($NoZip) {

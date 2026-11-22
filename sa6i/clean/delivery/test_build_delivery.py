@@ -191,7 +191,20 @@ class DeliveryFilesTest(unittest.TestCase):
 
     def test_icon_replacement_puts_the_executable_back_when_it_fails(self):
         code = ps1_code(RETARGET_NAME)
-        self.assertIn("[System.IO.File]::WriteAllBytes($launcherPath, $original)", code)
+        self.assertIn("[System.IO.File]::WriteAllBytes($exePath, $original)", code)
+
+    def test_icon_step_runs_in_a_child_process_with_a_time_limit(self):
+        # It hung on the user's machine and blocked the archive entirely.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("-IconOnly", code)
+        self.assertIn("Start-Process -FilePath 'powershell'", code)
+        self.assertIn("$child.Kill()", code)
+        self.assertIn("did not finish within 4 minutes", code)
+
+    def test_log_says_which_build_ran(self):
+        # A download that lands as "... (1).ps1" leaves the old script in place;
+        # the banner is how the log shows which one executed.
+        self.assertIn("script build ' + $scriptBuild", source(RETARGET_NAME))
 
     def test_icon_file_is_delivered_beside_the_retarget_script(self):
         names = dict(build_delivery.PAYLOAD)
