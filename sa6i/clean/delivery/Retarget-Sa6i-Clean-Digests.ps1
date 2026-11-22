@@ -183,6 +183,35 @@ function New-CandidateZip([string] $root, [string] $outPath) {
     }
 }
 
+
+# Windows will not let anything write to an executable that is running, and
+# Sa6i Link lives in the notification area, so "closed" is easy to get wrong.
+function Test-Writable([string] $path) {
+    try {
+        $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        $stream.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Stop-Launcher([string] $path) {
+    $name = [System.IO.Path]::GetFileNameWithoutExtension($path)
+    $procs = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+    if ($procs.Count -eq 0) { return $false }
+    Say ('Sa6i Link is running as ' + $name + '. Asking it to close...')
+    foreach ($proc in $procs) { [void]$proc.CloseMainWindow() }
+    for ($i = 0; $i -lt 15; $i++) {
+        Start-Sleep -Seconds 2
+        if (Test-Writable $path) {
+            Say 'Sa6i Link closed.'
+            return $true
+        }
+    }
+    return $false
+}
+
 function Get-ExeFiles([string] $folder) {
     return (Get-ChildItem -LiteralPath $folder -Force | Where-Object {
         (-not $_.PSIsContainer) -and ($_.Extension -eq '.exe') -and ($_.Length -gt 1048576) -and ($_.Name -notlike '*.bak')
@@ -273,6 +302,15 @@ try {
     Say ''
     Say ('Sa6i Link executable: ' + $target.FullName)
     Say ('  name: ' + $target.Name + ', ' + [Math]::Round($target.Length / 1MB, 1) + ' MB')
+    Say ''
+
+    # Both the digest swap and the rename write to this file, so establish up
+    # front that it can be written, instead of failing halfway through.
+    if (-not (Test-Writable $target.FullName)) {
+        if (-not (Stop-Launcher $target.FullName)) {
+            throw 'Sa6i Link is still running, so its executable cannot be written. It is probably minimised to the notification area: right-click its icon there, choose Quit, then run this again. Nothing was changed.'
+        }
+    }
     $Desktop = $target.FullName
 
     if ($already) {

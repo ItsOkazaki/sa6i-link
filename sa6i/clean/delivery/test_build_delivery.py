@@ -124,6 +124,21 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertLess(code.index("Branding the Sa6i Link executable"),
                         code.index("New-CandidateZip $here"))
 
+    def test_retarget_checks_the_executable_can_be_written_first(self):
+        # A running Sa6i Link locks its own exe; the user hit exactly that, in
+        # the middle of the branding step, after the swap had been skipped.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("Test-Writable $target.FullName", code)
+        self.assertIn("FileShare]::None", code)
+        self.assertLess(code.index("Test-Writable $target.FullName"),
+                        code.index("if ($already)"))
+
+    def test_retarget_closes_the_launcher_but_does_not_kill_it(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("CloseMainWindow()", code)
+        self.assertNotIn("Stop-Process -Force", code)
+        self.assertIn("notification area", code)
+
     def test_retarget_verifies_without_holding_the_file_twice(self):
         code = ps1_code(RETARGET_NAME)
         self.assertIn("Count-InFile $Desktop", code)
