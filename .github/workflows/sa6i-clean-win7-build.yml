@@ -196,16 +196,18 @@ jobs:
         shell: pwsh
         run: |
           $log = Join-Path $env:RUNNER_TEMP 'build.log'
-          if (-not (Test-Path $log)) { exit 0 }
+          $check = Join-Path $env:RUNNER_TEMP 'sa6i-check-stderr.txt'
+          if (-not (Test-Path $log) -and -not (Test-Path $check)) { exit 0 }
           $dir = Join-Path $env:RUNNER_TEMP 'log-bridge'
           New-Item -ItemType Directory -Force -Path $dir | Out-Null
           git -C $dir init --quiet
           git -C $dir checkout --quiet -B ci-desktop
-          Copy-Item $log (Join-Path $dir 'build.log') -Force
+          if (Test-Path $log) { Copy-Item $log (Join-Path $dir 'build.log') -Force }
+          if (Test-Path $check) { Copy-Item $check (Join-Path $dir 'check-stderr.txt') -Force }
           Set-Content -Path (Join-Path $dir 'SOURCE-COMMIT.txt') -Value $env:GITHUB_SHA -Encoding ASCII
           git -C $dir config user.name 'Sa6i CI'
           git -C $dir config user.email 'ci@users.noreply.github.com'
-          git -C $dir add build.log SOURCE-COMMIT.txt
+          git -C $dir add -A
           git -C $dir commit --quiet -m "Build log for $env:GITHUB_SHA"
           git -C $dir push --force "https://x-access-token:$env:GITHUB_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" ci-desktop
         env:
