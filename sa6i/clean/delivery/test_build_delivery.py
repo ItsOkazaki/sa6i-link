@@ -77,6 +77,23 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("Test-Path -LiteralPath ($exe + '.bak')", source(PATCH_NAME))
         self.assertIn("Test-Path -LiteralPath ($Desktop + '.bak')", source(RETARGET_NAME))
 
+    def test_retarget_finds_the_launcher_instead_of_assuming_its_name(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("Looking for the Sa6i Link executable", code)
+        self.assertNotIn("Join-Path $here 'sa6i-link.exe'", code)
+        self.assertNotIn("Join-Path $here \"sa6i-link.exe\"", code)
+
+    def test_retarget_scans_files_small_enough_to_be_the_launcher(self):
+        # Sa6i Link is a Tauri build: its exe is around ten megabytes, so any
+        # size floor must stay well below that. The cleaner is the big one.
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("($_.Length -gt 1048576)", code)
+        self.assertNotIn("20971520", code)
+
+    def test_retarget_verifies_without_holding_the_file_twice(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("Count-InFile $Desktop", code)
+
     def test_patch_avoids_net_four_only_apis(self):
         # Windows 7 ships Windows PowerShell 2.0 on .NET 3.5. Dispose() on a
         # hash object and System.IO.Compression both fail there, which is what

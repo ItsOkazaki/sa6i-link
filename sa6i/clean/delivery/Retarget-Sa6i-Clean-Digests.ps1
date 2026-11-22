@@ -2,21 +2,22 @@
 #
 # Sa6i Link never launches a cleaner it has not identified: before starting
 # "Sa6i Clean\Sa6i Clean Integration.exe" it hashes that executable and its
-# resources\app.asar and compares them with two digests compiled into
-# sa6i-link.exe (sa6i/clean/native_embed.c). Debranding changes both files, so
-# without this step the tab refuses to start the cleaner and says so. Nothing
-# falls back to a different executable.
+# resources\app.asar and compares them with two digests compiled into the
+# Sa6i Link executable itself. Debranding changes both files, so without this
+# step the tab refuses to start the cleaner and says so. Nothing falls back to
+# a different executable.
 #
-# This reads the two digests from the files that are actually installed, finds
-# the pinned digests in sa6i-link.exe, and swaps them, keeping a .bak of the
-# executable. It touches only those 64 bytes; no other content changes.
+# This finds the Sa6i Link executable by looking for one of those pinned
+# digests inside it - the file name does not matter - reads the two digests
+# from the files that are actually installed, and swaps the pinned pair,
+# keeping a .bak. It touches only those 64 bytes.
 #
 # When that is done it also packs the whole candidate folder into
 # "Sa6i-Link-Integrated-Candidate.zip" beside it, using the ZIP support built
 # into Windows, so the archive is produced after the digests are correct.
 #
-# Put this file and "Retarget Sa6i Clean.cmd" next to sa6i-link.exe (the
-# candidate folder, one level above "Sa6i Clean"), then run the .cmd.
+# Put this file and "Retarget Sa6i Clean.cmd" in the candidate folder, the one
+# that contains the "Sa6i Clean" folder, then run the .cmd.
 
 [CmdletBinding()]
 param(
@@ -28,8 +29,9 @@ $ErrorActionPreference = 'Stop'
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $log = Join-Path $here 'retarget-log.txt'
+$script:latin = [System.Text.Encoding]::GetEncoding(28591)
 
-# The cleaner builds whose digests an earlier sa6i-link.exe could be pinning.
+# The cleaner builds whose digests a Sa6i Link executable could be pinning.
 $pairs = @(
     @('2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74',
       '4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba'),
@@ -40,18 +42,6 @@ $pairs = @(
 function Say([string] $text) {
     Write-Host $text
     Add-Content -Path $log -Value $text
-}
-
-function Get-HashBytes([string] $path) {
-    $sha = [System.Security.Cryptography.SHA256]::Create()
-    $stream = [System.IO.File]::OpenRead($path)
-    try {
-        $hash = $sha.ComputeHash($stream)
-    } finally {
-        $stream.Close()
-        [void]$sha.Clear()
-    }
-    return $hash
 }
 
 function ConvertTo-Hex([byte[]] $bytes) {
@@ -68,6 +58,22 @@ function ConvertFrom-Hex([string] $hex) {
     return $bytes
 }
 
+function Get-HashBytes([string] $path) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($path)
+    try {
+        $hash = $sha.ComputeHash($stream)
+    } finally {
+        $stream.Close()
+        [void]$sha.Clear()
+    }
+    return $hash
+}
+
+function Get-FileHashText([string] $path) {
+    return (ConvertTo-Hex (Get-HashBytes $path))
+}
+
 function Count-Of([string] $text, [string] $pattern) {
     $count = 0
     $from = 0
@@ -80,17 +86,33 @@ function Count-Of([string] $text, [string] $pattern) {
     return $count
 }
 
-
-function Get-FileHashText([string] $path) {
-    $sha = [System.Security.Cryptography.SHA256]::Create()
+# Counts a byte pattern in a file without holding the whole file in memory.
+function Count-InFile([string] $path, [string] $pattern) {
     $stream = [System.IO.File]::OpenRead($path)
+    $buffer = New-Object byte[] 1048576
+    $carry = ''
+    $count = 0
     try {
-        $hash = $sha.ComputeHash($stream)
+        while (($n = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $chunk = $carry + $script:latin.GetString($buffer, 0, $n)
+            $from = 0
+            while ($true) {
+                $at = $chunk.IndexOf($pattern, $from, [System.StringComparison]::Ordinal)
+                if ($at -lt 0) { break }
+                $count = $count + 1
+                $from = $at + $pattern.Length
+            }
+            $tail = $pattern.Length - 1
+            if ($chunk.Length -gt $tail) {
+                $carry = $chunk.Substring($chunk.Length - $tail)
+            } else {
+                $carry = $chunk
+            }
+        }
     } finally {
         $stream.Close()
-        [void]$sha.Clear()
     }
-    return (ConvertTo-Hex $hash)
+    return $count
 }
 
 # System.IO.Compression needs .NET 4.5 and Windows 7 ships .NET 3.5, so packing
@@ -161,80 +183,118 @@ function New-CandidateZip([string] $root, [string] $outPath) {
     }
 }
 
+function Get-ExeFiles([string] $folder) {
+    return (Get-ChildItem -LiteralPath $folder -Force | Where-Object {
+        (-not $_.PSIsContainer) -and ($_.Extension -eq '.exe') -and ($_.Length -gt 1048576) -and ($_.Name -notlike '*.bak')
+    })
+}
+
 try {
     Set-Content -Path $log -Value ('Sa6i Clean retarget log ' + (Get-Date).ToString('s'))
     Say 'Sa6i Clean: point Sa6i Link at the debranded cleaner'
     Say ''
     Say ('Folder: ' + $here)
-    Say ('PowerShell ' + $PSVersionTable.PSVersion.ToString())
+    Say ('PowerShell ' + $PSVersionTable.PSVersion.ToString() + ', ' + ([string]([IntPtr]::Size * 8)) + '-bit')
     Say ''
 
-    if ([string]::IsNullOrEmpty($Desktop)) { $Desktop = Join-Path $here 'sa6i-link.exe' }
     $cleanExe = Join-Path $here 'Sa6i Clean\Sa6i Clean Integration.exe'
     $cleanAsar = Join-Path $here 'Sa6i Clean\resources\app.asar'
-
-    if (-not (Test-Path -LiteralPath $Desktop)) { throw 'sa6i-link.exe is not next to this script. Put the two retarget files in the candidate folder, beside sa6i-link.exe.' }
-    if (-not (Test-Path -LiteralPath $cleanExe)) { throw 'Sa6i Clean\Sa6i Clean Integration.exe was not found below this folder.' }
+    if (-not (Test-Path -LiteralPath $cleanExe)) { throw 'Sa6i Clean\Sa6i Clean Integration.exe was not found below this folder. Put these two retarget files in the candidate folder, the one that contains the "Sa6i Clean" folder.' }
     if (-not (Test-Path -LiteralPath $cleanAsar)) { throw 'Sa6i Clean\resources\app.asar was not found below this folder.' }
 
     $newExe = Get-HashBytes $cleanExe
     $newAsar = Get-HashBytes $cleanAsar
+    $newExeText = $script:latin.GetString($newExe)
+    $newAsarText = $script:latin.GetString($newAsar)
     Say ('Cleaner executable SHA-256: ' + (ConvertTo-Hex $newExe))
     Say ('Cleaner bundle SHA-256:     ' + (ConvertTo-Hex $newAsar))
     Say ''
 
-    # One byte maps to one character in Latin-1, so a character index is a byte
-    # offset; that lets the pinned digests be found as text.
-    $latin = [System.Text.Encoding]::GetEncoding(28591)
-    $bytes = [System.IO.File]::ReadAllBytes($Desktop)
-    $text = $latin.GetString($bytes)
-    Say ('sa6i-link.exe: ' + [Math]::Round($bytes.Length / 1MB, 1) + ' MB')
-
-    $newExeText = $latin.GetString($newExe)
-    $newAsarText = $latin.GetString($newAsar)
-    $already = $false
-    if ((Count-Of $text $newExeText) -eq 1 -and (Count-Of $text $newAsarText) -eq 1) {
-        Say 'This executable already accepts these two files. No digest change needed.'
-        $already = $true
+    # Find the Sa6i Link executable by its content. Its name differs between
+    # builds, and a wrong guess must not be reported as a missing file.
+    Say 'Looking for the Sa6i Link executable...'
+    $search = New-Object System.Collections.ArrayList
+    if (-not [string]::IsNullOrEmpty($Desktop)) {
+        if (-not (Test-Path -LiteralPath $Desktop)) { throw ('The path given with -Desktop does not exist: ' + $Desktop) }
+        [void]$search.Add((Get-Item -LiteralPath $Desktop))
+    }
+    foreach ($file in (Get-ExeFiles $here)) { [void]$search.Add($file) }
+    if ($search.Count -eq 0) {
+        foreach ($folder in (Get-ChildItem -LiteralPath $here -Force | Where-Object { $_.PSIsContainer })) {
+            foreach ($file in (Get-ExeFiles $folder.FullName)) { [void]$search.Add($file) }
+        }
+    }
+    if ($search.Count -eq 0) {
+        throw ('No executable larger than 1 MB was found in ' + $here + '. Sa6i Link may live somewhere else; tell me the full path of its .exe and I will point this at it.')
     }
 
-    if (-not $already) {
-    $chosen = $null
-    foreach ($pair in $pairs) {
-        $oldExeText = $latin.GetString((ConvertFrom-Hex $pair[0]))
-        $oldAsarText = $latin.GetString((ConvertFrom-Hex $pair[1]))
-        $exeCount = Count-Of $text $oldExeText
-        $asarCount = Count-Of $text $oldAsarText
-        Say ('Known build ' + $pair[0].Substring(0, 8) + ': ' + $exeCount + ' executable digest, ' + $asarCount + ' bundle digest')
-        if ($exeCount -eq 1 -and $asarCount -eq 1) { $chosen = $pair; break }
-    }
-    if ($chosen -eq $null) {
-        throw 'This sa6i-link.exe does not pin either cleaner build this script knows. Nothing was changed.'
-    }
-
-    if (-not (Test-Path -LiteralPath ($Desktop + '.bak'))) {
-        Copy-Item -LiteralPath $Desktop -Destination ($Desktop + '.bak') -Force
-        Say 'Backed up sa6i-link.exe as .bak.'
-    } else {
-        Say 'Kept the existing sa6i-link.exe backup.'
-    }
-
-    $offset = $text.IndexOf($latin.GetString((ConvertFrom-Hex $chosen[0])), 0, [System.StringComparison]::Ordinal)
-    [Array]::Copy($newExe, 0, $bytes, $offset, $newExe.Length)
-    $offset = $text.IndexOf($latin.GetString((ConvertFrom-Hex $chosen[1])), 0, [System.StringComparison]::Ordinal)
-    [Array]::Copy($newAsar, 0, $bytes, $offset, $newAsar.Length)
-    $text = $null
-
-    [System.IO.File]::WriteAllBytes($Desktop, $bytes)
+    $target = $null
     $bytes = $null
-
-    $check = $latin.GetString([System.IO.File]::ReadAllBytes($Desktop))
-    if ((Count-Of $check $newExeText) -ne 1 -or (Count-Of $check $newAsarText) -ne 1) {
-        throw 'The new digests are not in the executable exactly once. Restore sa6i-link.exe.bak.'
+    $text = $null
+    $chosen = $null
+    $already = $false
+    foreach ($file in $search) {
+        Say ('  checking ' + $file.FullName + ' (' + [Math]::Round($file.Length / 1MB, 1) + ' MB)')
+        $candidateBytes = [System.IO.File]::ReadAllBytes($file.FullName)
+        $candidateText = $script:latin.GetString($candidateBytes)
+        if ((Count-Of $candidateText $newExeText) -eq 1 -and (Count-Of $candidateText $newAsarText) -eq 1) {
+            $target = $file
+            $bytes = $candidateBytes
+            $text = $candidateText
+            $already = $true
+            break
+        }
+        foreach ($pair in $pairs) {
+            $exeCount = Count-Of $candidateText ($script:latin.GetString((ConvertFrom-Hex $pair[0])))
+            $asarCount = Count-Of $candidateText ($script:latin.GetString((ConvertFrom-Hex $pair[1])))
+            if ($exeCount -eq 1 -and $asarCount -eq 1) {
+                $target = $file
+                $bytes = $candidateBytes
+                $text = $candidateText
+                $chosen = $pair
+                break
+            }
+        }
+        if ($target -ne $null) { break }
+        $candidateBytes = $null
+        $candidateText = $null
+        Say '    no cleaner digests in this one'
     }
+
+    if ($target -eq $null) {
+        Say ''
+        Say 'No Sa6i Link executable here carries the pins I know. Files checked:'
+        foreach ($file in $search) { Say ('  ' + $file.FullName + '  ' + [Math]::Round($file.Length / 1MB, 1) + ' MB') }
+        throw 'This Sa6i Link build verifies its cleaner some other way. Nothing was changed.'
+    }
+
     Say ''
-    Say 'Sa6i Link will now start the debranded cleaner from its Sa6i Clean tab.'
-    Say ('Backup: ' + $Desktop + '.bak')
+    Say ('Sa6i Link executable: ' + $target.FullName)
+    $Desktop = $target.FullName
+
+    if ($already) {
+        Say 'It already accepts these two files. No digest change needed.'
+    } else {
+        if (-not (Test-Path -LiteralPath ($Desktop + '.bak'))) {
+            Copy-Item -LiteralPath $Desktop -Destination ($Desktop + '.bak') -Force
+            Say 'Backed up the executable as .bak.'
+        } else {
+            Say 'Kept the existing executable backup.'
+        }
+
+        $offset = $text.IndexOf($script:latin.GetString((ConvertFrom-Hex $chosen[0])), 0, [System.StringComparison]::Ordinal)
+        [Array]::Copy($newExe, 0, $bytes, $offset, $newExe.Length)
+        $offset = $text.IndexOf($script:latin.GetString((ConvertFrom-Hex $chosen[1])), 0, [System.StringComparison]::Ordinal)
+        [Array]::Copy($newAsar, 0, $bytes, $offset, $newAsar.Length)
+        $text = $null
+
+        [System.IO.File]::WriteAllBytes($Desktop, $bytes)
+        $bytes = $null
+
+        if ((Count-InFile $Desktop $newExeText) -ne 1 -or (Count-InFile $Desktop $newAsarText) -ne 1) {
+            throw 'The new digests are not in the executable exactly once. Restore the .bak file.'
+        }
+        Say 'Done. Sa6i Link will now start the debranded cleaner from its Sa6i Clean tab.'
     }
 
     Say ''

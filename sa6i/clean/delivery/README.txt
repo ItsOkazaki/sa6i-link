@@ -33,7 +33,7 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
    is kept, so the oldest original backup is never replaced by a patched file.
 
 3. SA6I LINK. Copy the two files inside "2 - into the candidate folder" into
-   the candidate folder itself, beside sa6i-link.exe:
+   the candidate folder itself, beside the Sa6i Link executable:
 
      Retarget-Sa6i-Clean-Digests.ps1
      Retarget Sa6i Clean.cmd
@@ -42,8 +42,13 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
 
    Sa6i Link never starts a cleaner it has not identified: it hashes the
    cleaner's exe and bundle and compares them with two digests compiled into
-   sa6i-link.exe. Step 2 changed both files, so without this step the
-   Sa6i Clean tab refuses to start it. This step is also the one that packs
+   the Sa6i Link executable. Step 2 changed both files, so without this step
+   the Sa6i Clean tab refuses to start it.
+
+   You do not need to know what that executable is called: the script looks
+   through the folder for the one carrying those digests and says which file
+   it picked. If it finds none it lists every executable it saw instead of
+   blaming a missing file.  This step is also the one that packs
    the whole candidate folder into
 
      Sa6i-Link-Integrated-Candidate.zip
