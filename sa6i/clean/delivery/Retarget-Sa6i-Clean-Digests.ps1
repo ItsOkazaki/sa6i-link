@@ -115,28 +115,32 @@ function Count-InFile([string] $path, [string] $pattern) {
     return $count
 }
 
+# Rename-Item gained -LiteralPath only in PowerShell 3.0, and this has to run on
+# the 2.0 that ships with Windows 7, so renaming and moving go through
+# System.IO directly: those calls mean the same thing in every version.
+#
 # System.IO.Compression needs .NET 4.5 and Windows 7 ships .NET 3.5, so packing
 # goes through the ZIP support built into Windows. Local backups and logs are
 # parked beside the folder while it packs: the executable backup alone would
 # double the size of the result.
 function New-CandidateZip([string] $root, [string] $outPath) {
-    $root = (Get-Item -LiteralPath $root).FullName.TrimEnd('\')
+    $root = [System.IO.Path]::GetFullPath($root).TrimEnd('\')
     $parent = Split-Path -Parent $root
     $leaf = Split-Path -Leaf $root
 
-    if (Test-Path -LiteralPath $outPath) { Remove-Item -LiteralPath $outPath -Force }
+    if (Test-Path -LiteralPath $outPath) { [System.IO.File]::Delete($outPath) }
     $emptyZip = New-Object byte[] 22
     $emptyZip[0] = 80; $emptyZip[1] = 75; $emptyZip[2] = 5; $emptyZip[3] = 6
     [System.IO.File]::WriteAllBytes($outPath, $emptyZip)
 
     $park = Join-Path $parent ('_sa6i_pack_' + [Guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $park -Force | Out-Null
+    [void][System.IO.Directory]::CreateDirectory($park)
     $parked = New-Object System.Collections.ArrayList
     try {
         foreach ($file in (Get-ChildItem -LiteralPath $root -Recurse -Force | Where-Object { -not $_.PSIsContainer })) {
             if ($file.Name -like '*.bak' -or $file.Name -like '*-log.txt') {
                 $target = Join-Path $park ([Guid]::NewGuid().ToString('N'))
-                Move-Item -LiteralPath $file.FullName -Destination $target
+                [System.IO.File]::Move($file.FullName, $target)
                 [void]$parked.Add(@($target, $file.FullName))
             }
         }
@@ -157,7 +161,7 @@ function New-CandidateZip([string] $root, [string] $outPath) {
         for ($i = 0; $i -lt 900; $i++) {
             Start-Sleep -Seconds 2
             $size = 0
-            if (Test-Path -LiteralPath $outPath) { $size = (Get-Item -LiteralPath $outPath).Length }
+            if (Test-Path -LiteralPath $outPath) { $size = (New-Object System.IO.FileInfo($outPath)).Length }
             try { $count = $zipNs.Items().Count } catch { }
             $sig = ([string]$size) + '/' + ([string]$count)
             if ($sig -eq $last -and $count -ge 1 -and $size -gt 100000) {
@@ -176,10 +180,11 @@ function New-CandidateZip([string] $root, [string] $outPath) {
     } finally {
         foreach ($pair in $parked) {
             if (Test-Path -LiteralPath $pair[0]) {
-                Move-Item -LiteralPath $pair[0] -Destination $pair[1] -Force
+                if (Test-Path -LiteralPath $pair[1]) { [System.IO.File]::Delete($pair[1]) }
+                [System.IO.File]::Move($pair[0], $pair[1])
             }
         }
-        if (Test-Path -LiteralPath $park) { Remove-Item -LiteralPath $park -Recurse -Force }
+        if ([System.IO.Directory]::Exists($park)) { [System.IO.Directory]::Delete($park, $true) }
     }
 }
 
@@ -385,7 +390,7 @@ try {
         if (Test-Path -LiteralPath $newPath) {
             Say ('A file called ' + $newFile + ' already exists, so the executable keeps its name: ' + $oldFile)
         } else {
-            Rename-Item -LiteralPath $launcherPath -NewName $newFile
+            [System.IO.File]::Move($launcherPath, $newPath)
             Say ('Renamed the executable: ' + $oldFile + ' -> ' + $newFile)
             $launcherPath = $newPath
             $Desktop = $newPath
@@ -423,7 +428,7 @@ try {
 
         try {
             $count = New-CandidateZip $here $zipPath
-            $zipSize = (Get-Item -LiteralPath $zipPath).Length
+            $zipSize = (New-Object System.IO.FileInfo($zipPath)).Length
             Say ('Packed ' + $count + ' top-level entries into ' + [Math]::Round($zipSize / 1MB, 1) + ' MB.')
             Say ('ZIP SHA-256: ' + (Get-FileHashText $zipPath))
         } catch {

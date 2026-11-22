@@ -104,7 +104,7 @@ class DeliveryFilesTest(unittest.TestCase):
         # The launcher's own name is part of the branding the user asked for.
         self.assertIn("'NectarLink'", code)
         self.assertIn("'Sa6i Link.exe'", code)
-        self.assertIn("Rename-Item -LiteralPath $launcherPath -NewName $newFile", code)
+        self.assertIn("[System.IO.File]::Move($launcherPath, $newPath)", code)
 
     def test_retarget_leaves_utf8_alone_in_the_launcher(self):
         # UTF-16 strings are file properties; the UTF-8 bytes in the same file
@@ -138,6 +138,16 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("CloseMainWindow()", code)
         self.assertNotIn("Stop-Process -Force", code)
         self.assertIn("notification area", code)
+
+    def test_retarget_avoids_cmdlets_whose_parameters_power_shell_2_lacks(self):
+        # Rename-Item -LiteralPath exists only from PowerShell 3.0; using it
+        # aborted the run one line after the strings had been renamed.
+        code = ps1_code(RETARGET_NAME)
+        for missing in ("Rename-Item", "Move-Item", "Remove-Item", "New-Item"):
+            self.assertNotIn(missing, code, missing)
+        self.assertIn("[System.IO.File]::Move($launcherPath, $newPath)", code)
+        self.assertIn("[System.IO.Directory]::CreateDirectory($park)", code)
+        self.assertIn("[System.IO.Directory]::Delete($park, $true)", code)
 
     def test_retarget_verifies_without_holding_the_file_twice(self):
         code = ps1_code(RETARGET_NAME)
