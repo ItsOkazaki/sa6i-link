@@ -1033,8 +1033,8 @@ Item {
                                 description: qsTr("Top-screen pill for calls, transfers & media.")
                                 Toggle {
                                     label: qsTr("Sa6i Island")
-                                    checked: Preferences.sa6iIsland
-                                    onToggled: (on) => Preferences.sa6iIsland = on
+                                    checked: Preferences.island
+                                    onToggled: (on) => Preferences.island = on
                                 }
                             }
 
@@ -1074,7 +1074,7 @@ Item {
                         // Sub-row: Granular Sa6i Island triggers (Calls, Transfers, Media, Notifications)
                         Column {
                             id: islandTriggersBlock
-                            visible: Preferences.sa6iIsland
+                            visible: Preferences.island
                             width: parent.width
                             spacing: 0
 
@@ -1101,16 +1101,16 @@ Item {
                                             id: trigChip
                                             required property var modelData
                                             readonly property bool active: {
-                                                if (modelData.key === "calls") return Preferences.sa6iIslandCalls
-                                                if (modelData.key === "transfers") return Preferences.sa6iIslandTransfers
-                                                if (modelData.key === "media") return Preferences.sa6iIslandMedia
-                                                return Preferences.sa6iIslandNotifications
+                                                if (modelData.key === "calls") return Preferences.islandCalls
+                                                if (modelData.key === "transfers") return Preferences.islandTransfers
+                                                if (modelData.key === "media") return Preferences.islandMedia
+                                                return Preferences.islandNotifications
                                             }
                                             function toggleTrigger(nextVal) {
-                                                if (modelData.key === "calls") Preferences.sa6iIslandCalls = nextVal
-                                                else if (modelData.key === "transfers") Preferences.sa6iIslandTransfers = nextVal
-                                                else if (modelData.key === "media") Preferences.sa6iIslandMedia = nextVal
-                                                else Preferences.sa6iIslandNotifications = nextVal
+                                                if (modelData.key === "calls") Preferences.islandCalls = nextVal
+                                                else if (modelData.key === "transfers") Preferences.islandTransfers = nextVal
+                                                else if (modelData.key === "media") Preferences.islandMedia = nextVal
+                                                else Preferences.islandNotifications = nextVal
                                             }
                                             height: 30
                                             width: trigChipRow.implicitWidth + 16

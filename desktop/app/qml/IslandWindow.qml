@@ -70,7 +70,7 @@ Window {
         target: NotificationList
         function onCountChanged() {
             const cur = NotificationList.count
-            if (cur > islandWin.lastNotificationCount && Preferences.sa6iIslandNotifications) {
+            if (cur > islandWin.lastNotificationCount && Preferences.islandNotifications) {
                 islandWin.notificationToastActive = true
                 notificationToastTimer.restart()
             } else if (cur === 0) {
@@ -195,16 +195,16 @@ Window {
 
     readonly property bool hasMediaCandidate: mediaPlaying && mediaDeviceId !== "local" && mediaTitle.length > 0
     readonly property string mode: {
-        if (Preferences.sa6iIslandCalls && PhoneCall.active) return "call"
-        if (Preferences.sa6iIslandTransfers && (TransferList.active > 0 || transferJustFinished)) return "transfer"
-        if (Preferences.sa6iIslandMedia && hasMediaCandidate) return "media"
-        if (Preferences.sa6iIslandNotifications && notificationToastActive && NotificationList.count > 0) return "notification"
-        if (Preferences.sa6iIslandTransfers && TransferList.waitingCount > 0) return "waiting"
+        if (Preferences.islandCalls && PhoneCall.active) return "call"
+        if (Preferences.islandTransfers && (TransferList.active > 0 || transferJustFinished)) return "transfer"
+        if (Preferences.islandMedia && hasMediaCandidate) return "media"
+        if (Preferences.islandNotifications && notificationToastActive && NotificationList.count > 0) return "notification"
+        if (Preferences.islandTransfers && TransferList.waitingCount > 0) return "waiting"
         return "idle"
     }
 
     readonly property bool hasActivity: mode !== "idle"
-    visible: Preferences.sa6iIsland && hasActivity
+    visible: Preferences.island && hasActivity
 
     onVisibleChanged: {
         if (visible) {
@@ -224,14 +224,14 @@ Window {
 
     Connections {
         target: Preferences
-        function onSa6iIslandChanged() {
-            if (Preferences.sa6iIsland) {
+        function onIslandChanged() {
+            if (Preferences.island) {
                 Qt.callLater(() => AppController.styleShelfWindow())
             }
         }
     }
 
-    readonly property bool expanded: pillHover.hovered || (Preferences.sa6iIslandCalls && PhoneCall.active && PhoneCall.ringing)
+    readonly property bool expanded: pillHover.hovered || (Preferences.islandCalls && PhoneCall.active && PhoneCall.ringing)
     readonly property real pillWidth: expanded ? 380 : 340
     readonly property real pillHeight: expanded ? 88 : 40
     width: 400
@@ -302,7 +302,7 @@ Window {
         // Hidden repeaters inside Item scope so QtQuick instantiates delegates cleanly
         Repeater {
             id: mediaRepeater
-            model: Preferences.sa6iIsland ? MediaList : null
+            model: Preferences.island ? MediaList : null
             onItemAdded: islandWin.recomputeMedia()
             onItemRemoved: islandWin.recomputeMedia()
             delegate: Item {
@@ -337,7 +337,7 @@ Window {
 
         Repeater {
             id: transferRepeater
-            model: Preferences.sa6iIsland ? TransferList : null
+            model: Preferences.island ? TransferList : null
             onItemAdded: islandWin.recomputeTransfer()
             onItemRemoved: islandWin.recomputeTransfer()
             delegate: Item {

@@ -30,7 +30,7 @@ QtObject {
     }
 
     function syncIslandWindow() {
-        if (Preferences.sa6iIsland) {
+        if (Preferences.island) {
             if (!app.islandWindow) {
                 const w = islandWindowComponent.createObject(app)
                 if (w) {
@@ -194,7 +194,7 @@ QtObject {
     Component.onCompleted: {
         Mirror.windowsChanged.connect(app.syncMirrorWindows)
         AppController.shelfOpenChanged.connect(app.syncShelfWindow)
-        Preferences.sa6iIslandChanged.connect(app.syncIslandWindow)
+        Preferences.islandChanged.connect(app.syncIslandWindow)
         app.syncMirrorWindows()
         app.syncShelfWindow()
         app.syncIslandWindow()

@@ -11,9 +11,9 @@ QtObject {
     property string seed: ""
     property string commandPaletteHotkey: ""
     property bool streamPcAudioToPhone: false
-    property bool sa6iIsland: true
-    property bool sa6iIslandCalls: true
-    property bool sa6iIslandMedia: true
-    property bool sa6iIslandNotifications: true
-    property bool sa6iIslandTransfers: true
+    property bool island: true
+    property bool islandCalls: true
+    property bool islandMedia: true
+    property bool islandNotifications: true
+    property bool islandTransfers: true
 }

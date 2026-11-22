@@ -165,11 +165,11 @@ pub fn set_open_shared_files(on: bool) {
 }
 
 #[allow(dead_code)]
-pub fn sa6i_island() -> bool {
+pub fn island() -> bool {
     SA6I_ISLAND.load(std::sync::atomic::Ordering::Relaxed)
 }
 
-pub fn set_sa6i_island(on: bool) {
+pub fn set_island(on: bool) {
     SA6I_ISLAND.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
@@ -482,20 +482,20 @@ pub struct Settings {
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "folder_sync_rules")]
     pub folder_sync_rules: Vec<crate::folder_sync::FolderSyncRule>,
     /// Show the optional top-of-screen Sa6i Island status pill when phone activity is ongoing.
-    #[serde(default, alias = "sa6i_island")]
-    pub sa6i_island: bool,
+    #[serde(default)]
+    pub island: bool,
     /// Trigger Sa6i Island for incoming and active phone calls.
-    #[serde(default = "default_true", alias = "sa6i_island_calls")]
-    pub sa6i_island_calls: bool,
+    #[serde(default = "default_true")]
+    pub island_calls: bool,
     /// Trigger Sa6i Island for active file transfers.
-    #[serde(default = "default_true", alias = "sa6i_island_transfers")]
-    pub sa6i_island_transfers: bool,
+    #[serde(default = "default_true")]
+    pub island_transfers: bool,
     /// Trigger Sa6i Island for active media playback.
-    #[serde(default = "default_true", alias = "sa6i_island_media")]
-    pub sa6i_island_media: bool,
+    #[serde(default = "default_true")]
+    pub island_media: bool,
     /// Trigger Sa6i Island for phone notifications.
-    #[serde(default, alias = "sa6i_island_notifications")]
-    pub sa6i_island_notifications: bool,
+    #[serde(default)]
+    pub island_notifications: bool,
     /// Configured "When X, Do Y" automation rules.
     #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "automation_rules")]
     pub automation_rules: Vec<crate::automations::AutomationRule>,
@@ -592,11 +592,11 @@ impl Default for Settings {
             open_shared_files: false,
             flow_follow_clipboard: true,
             folder_sync_rules: Vec::new(),
-            sa6i_island: false,
-            sa6i_island_calls: true,
-            sa6i_island_transfers: true,
-            sa6i_island_media: true,
-            sa6i_island_notifications: false,
+            island: false,
+            island_calls: true,
+            island_transfers: true,
+            island_media: true,
+            island_notifications: false,
             automation_rules: Vec::new(),
             stream_pc_audio_to_phone: false,
             share_pc_storage: false,
@@ -661,7 +661,7 @@ impl Settings {
             if self.obs_port == 0 { crate::obs::DEFAULT_PORT } else { self.obs_port },
             self.obs_password.clone(),
         );
-        set_sa6i_island(self.sa6i_island);
+        set_island(self.island);
         set_automation_rules(self.automation_rules.clone());
         set_stream_pc_audio_to_phone(self.stream_pc_audio_to_phone);
         set_share_pc_storage(self.share_pc_storage);
@@ -783,7 +783,7 @@ mod tests {
         assert_eq!(def.local_api_port, 53320);
         def.apply_runtime();
         assert!(flow_follow_clipboard());
-        assert!(!sa6i_island());
+        assert!(!island());
         assert!(!stream_pc_audio_to_phone());
 
         let settings = Settings {
@@ -829,11 +829,11 @@ mod tests {
             open_shared_files: true,
             flow_follow_clipboard: false,
             folder_sync_rules: Vec::new(),
-            sa6i_island: true,
-            sa6i_island_calls: true,
-            sa6i_island_transfers: true,
-            sa6i_island_media: true,
-            sa6i_island_notifications: false,
+            island: true,
+            island_calls: true,
+            island_transfers: true,
+            island_media: true,
+            island_notifications: false,
             automation_rules: Vec::new(),
             stream_pc_audio_to_phone: true,
             share_pc_storage: true,

@@ -108,15 +108,15 @@ pub mod qobject {
         /// Send the clipboard to the phone when control moves to it.
         #[qproperty(bool, flow_follow_clipboard)]
         /// Floating Sa6i Island pill at the top center of the screen.
-        #[qproperty(bool, sa6i_island)]
+        #[qproperty(bool, island)]
         /// Trigger Sa6i Island for phone calls.
-        #[qproperty(bool, sa6i_island_calls)]
+        #[qproperty(bool, island_calls)]
         /// Trigger Sa6i Island for file transfers.
-        #[qproperty(bool, sa6i_island_transfers)]
+        #[qproperty(bool, island_transfers)]
         /// Trigger Sa6i Island for media playback.
-        #[qproperty(bool, sa6i_island_media)]
+        #[qproperty(bool, island_media)]
         /// Trigger Sa6i Island for phone notifications.
-        #[qproperty(bool, sa6i_island_notifications)]
+        #[qproperty(bool, island_notifications)]
         /// Stream PC system audio to the connected phone via WASAPI loopback.
         #[qproperty(bool, stream_pc_audio_to_phone)]
         /// Share PC user folders (Downloads, Documents, Desktop, Pictures) with phones.
@@ -337,11 +337,11 @@ pub struct PreferencesRust {
     clipboard_auto_copy_received_files: bool,
     open_shared_files: bool,
     flow_follow_clipboard: bool,
-    sa6i_island: bool,
-    sa6i_island_calls: bool,
-    sa6i_island_transfers: bool,
-    sa6i_island_media: bool,
-    sa6i_island_notifications: bool,
+    island: bool,
+    island_calls: bool,
+    island_transfers: bool,
+    island_media: bool,
+    island_notifications: bool,
     stream_pc_audio_to_phone: bool,
     share_pc_storage: bool,
     forward_pc_notifications_to_phone: bool,
@@ -433,11 +433,11 @@ impl cxx_qt::Initialize for qobject::Preferences {
         self.as_mut().set_clipboard_auto_copy_received_files(settings.clipboard_auto_copy_received_files);
         self.as_mut().set_open_shared_files(settings.open_shared_files);
         self.as_mut().set_flow_follow_clipboard(settings.flow_follow_clipboard);
-        self.as_mut().set_sa6i_island(settings.sa6i_island);
-        self.as_mut().set_sa6i_island_calls(settings.sa6i_island_calls);
-        self.as_mut().set_sa6i_island_transfers(settings.sa6i_island_transfers);
-        self.as_mut().set_sa6i_island_media(settings.sa6i_island_media);
-        self.as_mut().set_sa6i_island_notifications(settings.sa6i_island_notifications);
+        self.as_mut().set_island(settings.island);
+        self.as_mut().set_island_calls(settings.island_calls);
+        self.as_mut().set_island_transfers(settings.island_transfers);
+        self.as_mut().set_island_media(settings.island_media);
+        self.as_mut().set_island_notifications(settings.island_notifications);
         self.as_mut().set_stream_pc_audio_to_phone(settings.stream_pc_audio_to_phone);
         self.as_mut().set_share_pc_storage(settings.share_pc_storage);
         self.as_mut().set_forward_pc_notifications_to_phone(settings.forward_pc_notifications_to_phone);
@@ -697,15 +697,15 @@ impl cxx_qt::Initialize for qobject::Preferences {
             })
             .release();
         self.as_mut()
-            .on_sa6i_island_changed(|p| {
-                crate::settings::set_sa6i_island(p.sa6i_island);
+            .on_island_changed(|p| {
+                crate::settings::set_island(p.island);
                 p.save();
             })
             .release();
-        self.as_mut().on_sa6i_island_calls_changed(|p| p.save()).release();
-        self.as_mut().on_sa6i_island_transfers_changed(|p| p.save()).release();
-        self.as_mut().on_sa6i_island_media_changed(|p| p.save()).release();
-        self.as_mut().on_sa6i_island_notifications_changed(|p| p.save()).release();
+        self.as_mut().on_island_calls_changed(|p| p.save()).release();
+        self.as_mut().on_island_transfers_changed(|p| p.save()).release();
+        self.as_mut().on_island_media_changed(|p| p.save()).release();
+        self.as_mut().on_island_notifications_changed(|p| p.save()).release();
         self.as_mut()
             .on_stream_pc_audio_to_phone_changed(|p| {
                 crate::settings::set_stream_pc_audio_to_phone(p.stream_pc_audio_to_phone);
@@ -1095,11 +1095,11 @@ impl qobject::Preferences {
             open_shared_files: p.open_shared_files,
             flow_follow_clipboard: p.flow_follow_clipboard,
             folder_sync_rules: crate::settings::folder_sync_rules(),
-            sa6i_island: p.sa6i_island,
-            sa6i_island_calls: p.sa6i_island_calls,
-            sa6i_island_transfers: p.sa6i_island_transfers,
-            sa6i_island_media: p.sa6i_island_media,
-            sa6i_island_notifications: p.sa6i_island_notifications,
+            island: p.island,
+            island_calls: p.island_calls,
+            island_transfers: p.island_transfers,
+            island_media: p.island_media,
+            island_notifications: p.island_notifications,
             automation_rules: crate::settings::automation_rules(),
             stream_pc_audio_to_phone: p.stream_pc_audio_to_phone,
             share_pc_storage: p.share_pc_storage,
