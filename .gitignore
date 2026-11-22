@@ -68,3 +68,7 @@ result-*
 
 # ---- Sa6i Link local staging (connector downloads) ----
 google_drive/
+
+# ---- Sa6i Clean delivery staging (rebuilt by sa6i/clean/delivery/build_delivery.py) ----
+sa6i/clean/delivery/app.asar
+sa6i/clean/delivery/*.zip
