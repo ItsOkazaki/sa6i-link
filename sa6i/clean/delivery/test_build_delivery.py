@@ -268,9 +268,17 @@ class DeliveryFilesTest(unittest.TestCase):
         code = source("Make-Sa6i-Link-Shortcut.ps1")
         self.assertIn("New-Object -ComObject WScript.Shell", code)
         self.assertIn("$shortcut.IconLocation", code)
-        self.assertIn("$shortcut.WindowStyle = 7", code)
+        # The launcher, not the batch file, is what the shortcut starts: a
+        # windowed shortcut to a .cmd still flashes a console.
+        self.assertIn("$shortcut.TargetPath = $wscript", code)
+        self.assertIn("Sa6i Link (hidden).vbs", code)
         for banned in (".Dispose()", "Start-Job", "System.IO.Compression"):
             self.assertNotIn(banned, code, banned)
+
+    def test_hidden_launcher_runs_the_batch_file_and_nothing_else(self):
+        code = source("Make-Sa6i-Link-Shortcut.ps1")
+        self.assertIn("shell.Run Chr(34) & \"' + $batch.FullName", code)
+        self.assertIn("[System.IO.File]::WriteAllLines($launcher, $vbs)", code)
 
     def test_shortcut_script_keeps_the_batch_file_contents(self):
         # That is the only view of what the batch file does; without it the
