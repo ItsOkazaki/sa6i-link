@@ -202,8 +202,10 @@ try {
     if (-not (Test-Path -LiteralPath $cleanExe)) { throw 'Sa6i Clean\Sa6i Clean Integration.exe was not found below this folder. Put these two retarget files in the candidate folder, the one that contains the "Sa6i Clean" folder.' }
     if (-not (Test-Path -LiteralPath $cleanAsar)) { throw 'Sa6i Clean\resources\app.asar was not found below this folder.' }
 
-    $newExe = Get-HashBytes $cleanExe
-    $newAsar = Get-HashBytes $cleanAsar
+    # A function that returns byte[] hands back Object[] in Windows PowerShell,
+    # so every digest that gets written back is cast explicitly.
+    [byte[]] $newExe = Get-HashBytes $cleanExe
+    [byte[]] $newAsar = Get-HashBytes $cleanAsar
     $newExeText = $script:latin.GetString($newExe)
     $newAsarText = $script:latin.GetString($newAsar)
     Say ('Cleaner executable SHA-256: ' + (ConvertTo-Hex $newExe))
@@ -245,8 +247,8 @@ try {
             break
         }
         foreach ($pair in $pairs) {
-            $exeCount = Count-Of $candidateText ($script:latin.GetString((ConvertFrom-Hex $pair[0])))
-            $asarCount = Count-Of $candidateText ($script:latin.GetString((ConvertFrom-Hex $pair[1])))
+            $exeCount = Count-Of $candidateText ($script:latin.GetString([byte[]](ConvertFrom-Hex $pair[0])))
+            $asarCount = Count-Of $candidateText ($script:latin.GetString([byte[]](ConvertFrom-Hex $pair[1])))
             if ($exeCount -eq 1 -and $asarCount -eq 1) {
                 $target = $file
                 $bytes = $candidateBytes
@@ -270,6 +272,7 @@ try {
 
     Say ''
     Say ('Sa6i Link executable: ' + $target.FullName)
+    Say ('  name: ' + $target.Name + ', ' + [Math]::Round($target.Length / 1MB, 1) + ' MB')
     $Desktop = $target.FullName
 
     if ($already) {
@@ -282,11 +285,15 @@ try {
             Say 'Kept the existing executable backup.'
         }
 
-        $offset = $text.IndexOf($script:latin.GetString((ConvertFrom-Hex $chosen[0])), 0, [System.StringComparison]::Ordinal)
-        [Array]::Copy($newExe, 0, $bytes, $offset, $newExe.Length)
-        $offset = $text.IndexOf($script:latin.GetString((ConvertFrom-Hex $chosen[1])), 0, [System.StringComparison]::Ordinal)
-        [Array]::Copy($newAsar, 0, $bytes, $offset, $newAsar.Length)
+        $pinnedExe = $script:latin.GetString([byte[]](ConvertFrom-Hex $chosen[0]))
+        $pinnedAsar = $script:latin.GetString([byte[]](ConvertFrom-Hex $chosen[1]))
+        $offset = $text.IndexOf($pinnedExe, 0, [System.StringComparison]::Ordinal)
+        for ($i = 0; $i -lt $newExe.Length; $i++) { $bytes[$offset + $i] = $newExe[$i] }
+        $offset = $text.IndexOf($pinnedAsar, 0, [System.StringComparison]::Ordinal)
+        for ($i = 0; $i -lt $newAsar.Length; $i++) { $bytes[$offset + $i] = $newAsar[$i] }
         $text = $null
+        $pinnedExe = $null
+        $pinnedAsar = $null
 
         [System.IO.File]::WriteAllBytes($Desktop, $bytes)
         $bytes = $null

@@ -90,6 +90,15 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("($_.Length -gt 1048576)", code)
         self.assertNotIn("20971520", code)
 
+    def test_retarget_writes_the_digests_without_array_copy(self):
+        # Windows PowerShell 2.0 hands Object[] back from a function that
+        # returns byte[], and Array::Copy then refuses the cast - which is
+        # exactly how this step failed on the user's machine.
+        code = ps1_code(RETARGET_NAME)
+        self.assertNotIn("[Array]::Copy", code)
+        self.assertIn("[byte[]] $newExe = Get-HashBytes", code)
+        self.assertIn("[byte[]] $newAsar = Get-HashBytes", code)
+
     def test_retarget_verifies_without_holding_the_file_twice(self):
         code = ps1_code(RETARGET_NAME)
         self.assertIn("Count-InFile $Desktop", code)
