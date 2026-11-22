@@ -42,6 +42,8 @@ jobs:
         run: python -m unittest discover -s sa6i/clean -p 'test_*.py' -v
       - name: Run mock bridge tests
         run: node --test sa6i/clean/test-renderer-bridge.mjs
+      - name: Run the packaged guard snippet tests
+        run: node --test sa6i/clean/tests/test_guard_snippet.mjs
       - name: Run native simulations
         run: |
           cc -std=c11 -Wall -Wextra -Werror -pedantic sa6i/clean/host_lifecycle.c sa6i/clean/test_host_lifecycle.c -o /tmp/host-lifecycle-test

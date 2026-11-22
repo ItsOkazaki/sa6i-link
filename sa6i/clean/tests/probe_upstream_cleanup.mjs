@@ -18,7 +18,7 @@ const expectGuard = !process.argv.includes('--expect-unguarded');
 const source = process.argv[2] && path.resolve(process.argv[2]);
 if (!source) throw new Error('Pass the pinned Cleanly v0.2.0 source directory (with esbuild installed)');
 const upstreamTrash = '28a2f68426ec7511fcbd0e20ce96763dd3042770d8ef314975d5e93b6cde2252';
-const hardenedTrash = 'f24e1c0be3fc1766c599df796cff4eeead57c0dd50102c236842021f706156ac';
+const hardenedTrash = 'a768fff423b6cdec80bb134a324d3a13f964d09a710ccc319243bca571ee0cc1';
 const pinned = {
   'electron/services/trash.ts': expectGuard ? hardenedTrash : upstreamTrash,
   'electron/services/walk.ts': 'ec40101e574b4746129f440ba330cbd5a38a5b509bb58938d24a26667d63da62',

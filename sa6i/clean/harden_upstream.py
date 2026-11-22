@@ -18,26 +18,35 @@ import shutil
 from pathlib import Path
 
 SOURCE_TRASH_SHA = '28a2f68426ec7511fcbd0e20ce96763dd3042770d8ef314975d5e93b6cde2252'
-PATCHED_TRASH_SHA = 'f24e1c0be3fc1766c599df796cff4eeead57c0dd50102c236842021f706156ac'
+PATCHED_TRASH_SHA = 'a768fff423b6cdec80bb134a324d3a13f964d09a710ccc319243bca571ee0cc1'
 
 HELPER = '''
 /** Cache roots already checked in this process, keyed by lower-cased path. */
 const sa6iRootChecks = new Map<string, boolean>();
 
 /**
- * A cache root reached through a junction or symlink is not the folder this code
- * believes it is: its contents would be deleted through the redirect. Compare
- * the real path with the requested one; Windows and macOS are case-insensitive,
- * and an unresolvable root is refused. Refusing only skips cleaning.
+ * Refuse a cache root whose own path, or any folder above it, is a junction or
+ * symlink: deleting inside would act on the redirect target. Inspecting the
+ * components avoids false refusals from case or 8.3 short-name differences,
+ * which a canonical-path comparison produces. An unreadable root is refused.
+ * Refusing only skips cleaning.
  */
 export async function isUnredirectedRoot(root: string): Promise<boolean> {
   const key = path.resolve(root).replace(/[\\/]+$/, '');
   const cached = sa6iRootChecks.get(key.toLowerCase());
   if (cached !== undefined) return cached;
-  let ok = false;
+  let ok = true;
+  let current = key;
   try {
-    const real = (await fsp.realpath(root)).replace(/[\\/]+$/, '');
-    ok = isWin || isMac ? real.toLowerCase() === key.toLowerCase() : real === key;
+    for (;;) {
+      if ((await fsp.lstat(current)).isSymbolicLink()) {
+        ok = false;
+        break;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
   } catch {
     ok = false;
   }

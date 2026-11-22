@@ -22,16 +22,19 @@ CLEANER_ASAR_SHA = 'b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93
 
 FUNC = 'async function dS(r,i,e={}){'
 FUNC_BODY = 'try{let n=await st.lstat(r);if(n.isSymbolicLink()||!re(i,r))'
-HELPER = (
-    'var Sa6iRootChecks=new Map;'
-    'async function Sa6iUnredirectedRoot(r){'
-    'var i=String(r).replace(/[\\\\/]+$/,""),e=Sa6iRootChecks.get(i.toLowerCase());'
-    'if(e!==void 0)return e;var t=!1;'
-    'try{var s=(await st.realpath(r)).replace(/[\\\\/]+$/,"");'
-    't=(Ir||process.platform==="darwin")?s.toLowerCase()===i.toLowerCase():s===i}'
-    'catch{t=!1}'
-    'return Sa6iRootChecks.set(i.toLowerCase(),t),t}'
-)
+SNIPPET = Path(__file__).resolve().parent / 'guard_snippet.js'
+SNIPPET_SHA = 'a5ad5d41643a7e0eff6c57a125d253cdf2dd236cfb55b98c10d8aeb1f5454e62'
+
+
+def helper_snippet():
+    """The tested minified guard, without its comment lines."""
+    code = '\n'.join(line for line in SNIPPET.read_text(encoding='utf-8').splitlines()
+                      if line.strip() and not line.lstrip().startswith('//'))
+    if hashlib.sha256((code + '\n').encode('utf-8')).hexdigest() != SNIPPET_SHA:
+        raise ValueError('guard_snippet.js does not match the reviewed guard')
+    return code
+
+
 GUARD = 'if(!await Sa6iUnredirectedRoot(i))return t.refused=!0,t;'
 
 
@@ -56,7 +59,7 @@ def patch_main(main):
         raise ValueError('Guard already present')
     if text.count(FUNC) != 1 or text.count(FUNC_BODY) != 1:
         raise ValueError('Unexpected packaged bundle layout')
-    text = text.replace(FUNC, HELPER + FUNC, 1)
+    text = text.replace(FUNC, helper_snippet() + FUNC, 1)
     text = text.replace(FUNC_BODY, 'try{' + GUARD + 'let n=await st.lstat(r);if(n.isSymbolicLink()||!re(i,r))', 1)
     # Force LF so the bundle is identical on any build host.
     main.write_text(text, encoding='utf-8', newline='\n')

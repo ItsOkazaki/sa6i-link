@@ -24,7 +24,7 @@ const source = process.argv[2] && path.resolve(process.argv[2]);
 if (!source) throw new Error('Pass the hardened Cleanly v0.2.0 source directory as the first argument');
 const expectGuard = true; // this workflow always runs the hardened source
 const pinned = {
-  'electron/services/trash.ts': 'f24e1c0be3fc1766c599df796cff4eeead57c0dd50102c236842021f706156ac',
+  'electron/services/trash.ts': 'a768fff423b6cdec80bb134a324d3a13f964d09a710ccc319243bca571ee0cc1',
   'electron/services/walk.ts': 'ec40101e574b4746129f440ba330cbd5a38a5b509bb58938d24a26667d63da62',
 };
 for (const [name, expected] of Object.entries(pinned)) {
