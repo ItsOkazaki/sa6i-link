@@ -1,5 +1,8 @@
 # Sa6i Clean: experimental packaged-binary rebrand
 
+> **Current status (2026-11-16):** the packaged cleaner is now traceable to the public Cleanly v0.2.0 source. Rebuilding commit `b62bef4` and applying the documented Sa6i patches reproduces every packaged file byte for byte (`verify_upstream_equivalence.py`). Cleanup safety is still unvalidated: `SAFETY-REVIEW.md` records how deletion works and one containment gap for redirected cache roots, and `RELEASE-READINESS.md` is the go/no-go summary. Run `node sa6i/clean/tests/probe_upstream_cleanup.mjs SOURCE` for the isolated guard check; nothing in it touches real files outside a temporary fixture.
+
+
 The user confirmed they have permission from the Cleanly rights holder to modify and redistribute the supplied build. This work is separate from Sa6i Link. It patches the supplied **Cleanly 0.2.0 Windows x64 packaged application**, not a full source project. Original input archives are not changed. This is not a production release.
 
 ## What is changed

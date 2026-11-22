@@ -28,9 +28,11 @@ REPLACED = {'nectarlink-desktop.exe', 'nectarlink_vcam.dll',
 README = '''SA6I LINK INTEGRATED CANDIDATE - EXPERIMENTAL, NOT A FINAL RELEASE
 
 This folder contains Sa6i Link with Sa6i Clean in the same window, including
-the header-clearance and reopen-speed changes. The user observed that the
-preview looked good and reopened faster on one Windows 7/VxKex setup. This
-separately assembled package itself has not yet been tested on that machine.
+the header-clearance and reopen-speed changes. The user reported that this
+assembled package works on one Windows 7/VxKex setup, after reporting that the
+earlier preview looked good and reopened faster. That report covers launching
+and using the interface only; no cleanup or system-management action has been
+exercised, and Windows 10/11 behaviour is unverified.
 
 Extract to a NEW folder, never over an existing installation or preview. Run
 Start Sa6i Link Candidate.cmd. Windows 7 may need VxKex enabled separately
