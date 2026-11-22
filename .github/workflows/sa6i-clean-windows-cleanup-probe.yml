@@ -8,7 +8,9 @@ on:
     branches: [arena/077ce3b0-sa6i-link]
     paths:
       - '.github/workflows/sa6i-clean-windows-cleanup-probe.yml'
-      - 'sa6i/clean/tests/probe_upstream_cleanup_windows.mjs'
+      - 'sa6i/clean/harden_upstream.py'
+      - 'sa6i/clean/harden_cleaner.py'
+      - 'sa6i/clean/tests/probe_upstream_cleanup*.mjs'
   workflow_dispatch:
 permissions:
   contents: read
