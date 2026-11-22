@@ -1,29 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! The Sa6i Link mark, the Waggle Dance (`assets/brand/icon.svg`): two loops,
-//! the phone and the PC, around a drop of nectar, tilted like a bee's waggle
-//! run, on an espresso tile with a warm glow. Drawn in code at any pixel
-//! size: the tray, window and toast icons at runtime, and the executable's
-//! icon at build time (`build.rs` includes this file), so every size is sharp
-//! without bitmap assets. At 32 px and below the strokes are heavier and the
-//! tile fills more of the square, as in the hand-tuned small sizes.
+//! The Sa6i Link mark (`assets/brand/icon.svg`): a violet-to-blue shield with
+//! a four-point spark, on the dark Sa6i tile. It is the same shield family as
+//! the Sa6i Clean icon, so the two windows read as one product. Drawn in code
+//! at any pixel size: the tray, window and toast icons at runtime, and the
+//! executable's icon at build time (`build.rs` includes this file), so every
+//! size is sharp without bitmap assets. At 32 px and below the shield fills
+//! more of the tile and the spark is larger, as in the hand-tuned small sizes.
 
-/// Espresso tile, its glow, the honey rim, and the two loops and the drop
-/// (docs/design/tokens.json, Honey palette).
-const TILE: [f32; 3] = rgb(0x2C, 0x16, 0x00);
-const GLOW: [f32; 3] = rgb(0x69, 0x3C, 0x00);
-const RIM: [f32; 3] = rgb(0xFF, 0xB9, 0x5F);
-const PHONE: [f32; 3] = rgb(0xFF, 0xF8, 0xF3);
-const PC: [f32; 3] = rgb(0xFF, 0xDD, 0xB8);
-const NECTAR: [f32; 3] = rgb(0xFF, 0xB9, 0x5F);
+/// The tile, from violet-black at the top to near-black at the bottom, and its
+/// edge.
+const TILE_TOP: [f32; 3] = rgb(0x1B, 0x0D, 0x33);
+const TILE_BOTTOM: [f32; 3] = rgb(0x0B, 0x05, 0x16);
+const RIM: [f32; 3] = rgb(0x3A, 0x2A, 0x5E);
+/// The shield, left to right, its outline, and the spark inside it.
+const SHIELD_LEFT: [f32; 3] = rgb(0x9B, 0x5C, 0xF0);
+const SHIELD_RIGHT: [f32; 3] = rgb(0x2F, 0x7B, 0xFF);
+const SHIELD_RIM: [f32; 3] = rgb(0x8B, 0x6C, 0xE8);
+const SPARK: [f32; 3] = rgb(0xF2, 0xEE, 0xFF);
 
-/// The loops in a 100×100 design grid, before the tilt: each is two cubic
-/// Béziers (start, control, control, end, control, control, end).
-const LEFT_LOOP: [(f32, f32); 7] =
-    [(41.5, 42.5), (26.0, 24.0), (13.5, 31.0), (13.5, 50.0), (13.5, 69.0), (26.0, 76.0), (41.5, 57.5)];
-const RIGHT_LOOP: [(f32, f32); 7] =
-    [(58.5, 42.5), (74.0, 24.0), (86.5, 31.0), (86.5, 50.0), (86.5, 69.0), (74.0, 76.0), (58.5, 57.5)];
-/// The tilt, degrees (counterclockwise on screen).
-const TILT: f32 = -25.0;
+/// The shield in the 100×100 design grid, clockwise from the top point: a
+/// crested top, straight sides, then the point at the bottom.
+const SHIELD: [(f32, f32); 10] = [
+    (50.0, 24.0),
+    (73.0, 32.0),
+    (73.0, 52.0),
+    (71.0, 62.0),
+    (63.0, 72.0),
+    (50.0, 81.0),
+    (37.0, 72.0),
+    (29.0, 62.0),
+    (27.0, 52.0),
+    (27.0, 32.0),
+];
 
 /// Supersampling grid per pixel (SS×SS samples) for smooth edges.
 const SS: usize = 4;
@@ -36,16 +44,17 @@ const fn rgb(r: u8, g: u8, b: u8) -> [f32; 3] {
 struct Geometry {
     inset: f32,
     corner: f32,
-    stroke: f32,
-    drop: f32,
+    shield_scale: f32,
+    spark_outer: f32,
+    spark_inner: f32,
 }
 
 impl Geometry {
     fn for_size(size: usize) -> Self {
         if size <= 32 {
-            Geometry { inset: 2.0, corner: 20.0, stroke: 11.4, drop: 8.8 }
+            Geometry { inset: 2.0, corner: 22.0, shield_scale: 1.12, spark_outer: 13.0, spark_inner: 3.4 }
         } else {
-            Geometry { inset: 4.0, corner: 22.0, stroke: 10.4, drop: 8.2 }
+            Geometry { inset: 3.0, corner: 22.0, shield_scale: 1.0, spark_outer: 11.0, spark_inner: 2.6 }
         }
     }
 }
@@ -54,11 +63,13 @@ impl Geometry {
 pub fn render(size: usize) -> Vec<u8> {
     let g = Geometry::for_size(size);
     let unit = 100.0 / size as f32;
-    let left = polyline(&LEFT_LOOP);
-    let right = polyline(&RIGHT_LOOP);
-    let (sin, cos) = (-TILT.to_radians()).sin_cos();
+    let shield: Vec<(f32, f32)> = SHIELD
+        .iter()
+        .map(|&(x, y)| (50.0 + (x - 50.0) * g.shield_scale, 50.0 + (y - 50.0) * g.shield_scale))
+        .collect();
+    let spark = spark_points(50.0, 50.0, g.spark_outer, g.spark_inner);
     // The rim is at least about a pixel wide, so the tile keeps an edge on dark taskbars.
-    let rim = (1.5f32).max(unit * 0.6);
+    let rim = (1.2f32).max(unit * 0.5);
 
     let mut out = vec![0u8; size * size * 4];
     for py in 0..size {
@@ -75,22 +86,20 @@ pub fn render(size: usize) -> Vec<u8> {
                         continue;
                     }
                     covered += 1;
-                    // Undo the tilt to test against the upright loops.
-                    let (dx, dy) = (x - 50.0, y - 50.0);
-                    let (ux, uy) = (50.0 + dx * cos - dy * sin, 50.0 + dx * sin + dy * cos);
-                    let half = g.stroke / 2.0;
-                    let paint = if (dx * dx + dy * dy).sqrt() <= g.drop {
-                        NECTAR
-                    } else if distance_to(&left, (ux, uy)) <= half {
-                        PHONE
-                    } else if distance_to(&right, (ux, uy)) <= half {
-                        PC
+                    let backdrop = mix(TILE_TOP, TILE_BOTTOM, (y / 100.0).clamp(0.0, 1.0));
+                    let paint = if polygon_distance(&shield, (x, y)) < 0.0 {
+                        let across = ((x - 25.0) / 50.0).clamp(0.0, 1.0);
+                        if polygon_distance(&spark, (x, y)) < 0.0 {
+                            SPARK
+                        } else {
+                            mix(SHIELD_LEFT, SHIELD_RIGHT, across)
+                        }
+                    } else if polygon_distance(&shield, (x, y)) < rim {
+                        mix(backdrop, SHIELD_RIM, 0.55)
                     } else if -edge <= rim {
-                        mix(TILE, RIM, 0.34)
+                        mix(backdrop, RIM, 0.8)
                     } else {
-                        // The glow fades from the middle to the tile color at 40 units.
-                        let t = ((dx * dx + dy * dy).sqrt() / 40.0).min(1.0);
-                        mix(GLOW, TILE, t)
+                        backdrop
                     };
                     for c in 0..3 {
                         color[c] += paint[c];
@@ -114,45 +123,43 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 }
 
+/// A four-point spark: eight alternating radii, starting at the top point.
+fn spark_points(cx: f32, cy: f32, outer: f32, inner: f32) -> Vec<(f32, f32)> {
+    (0..8)
+        .map(|i| {
+            let angle = std::f32::consts::FRAC_PI_2 + i as f32 * std::f32::consts::FRAC_PI_4;
+            let radius = if i % 2 == 0 { outer } else { inner };
+            (cx + radius * angle.cos(), cy + radius * angle.sin())
+        })
+        .collect()
+}
+
 /// How far (x, y) is outside the rounded square from `inset` to
 /// `100 - inset` with corner radius `r` (negative inside).
 fn rounded_square_distance(x: f32, y: f32, inset: f32, r: f32) -> f32 {
-    let (lo, hi) = (inset + r, 100.0 - inset - r);
-    let qx = (x.clamp(lo, hi) - x).abs();
-    let qy = (y.clamp(lo, hi) - y).abs();
-    if x > lo && x < hi || y > lo && y < hi {
-        // Along a straight side.
-        let to_x = (x - inset).min(100.0 - inset - x);
-        let to_y = (y - inset).min(100.0 - inset - y);
-        return -to_x.min(to_y);
-    }
-    (qx * qx + qy * qy).sqrt() - r
+    let half = 50.0 - inset;
+    let qx = (x - 50.0).abs() - (half - r);
+    let qy = (y - 50.0).abs() - (half - r);
+    let ax = qx.max(0.0);
+    let ay = qy.max(0.0);
+    (ax * ax + ay * ay).sqrt() + qx.max(qy).min(0.0) - r
 }
 
-/// A loop's two Béziers as points close enough together to measure against.
-fn polyline(loop_points: &[(f32, f32); 7]) -> Vec<(f32, f32)> {
-    const STEPS: usize = 32;
-    let mut points = Vec::with_capacity(STEPS * 2 + 1);
-    for segment in [&loop_points[0..4], &loop_points[3..7]] {
-        for step in 0..=STEPS {
-            if step == 0 && !points.is_empty() {
-                continue;
-            }
-            let t = step as f32 / STEPS as f32;
-            let u = 1.0 - t;
-            let (a, b, c, d) = (segment[0], segment[1], segment[2], segment[3]);
-            let w = [u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t];
-            points.push((
-                w[0] * a.0 + w[1] * b.0 + w[2] * c.0 + w[3] * d.0,
-                w[0] * a.1 + w[1] * b.1 + w[2] * c.1 + w[3] * d.1,
-            ));
+/// Signed distance to a closed polygon (negative inside), by the nearest edge
+/// and a ray-cast parity test.
+fn polygon_distance(points: &[(f32, f32)], p: (f32, f32)) -> f32 {
+    let mut distance = f32::INFINITY;
+    let mut inside = false;
+    for (i, &a) in points.iter().enumerate() {
+        let b = points[(i + 1) % points.len()];
+        distance = distance.min(dist_to_segment(p, a, b));
+        if (a.1 <= p.1) != (b.1 <= p.1)
+            && p.0 < (b.0 - a.0) * (p.1 - a.1) / (b.1 - a.1) + a.0
+        {
+            inside = !inside;
         }
     }
-    points
-}
-
-fn distance_to(polyline: &[(f32, f32)], p: (f32, f32)) -> f32 {
-    polyline.windows(2).map(|w| dist_to_segment(p, w[0], w[1])).fold(f32::INFINITY, f32::min)
+    if inside { -distance } else { distance }
 }
 
 fn dist_to_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
@@ -173,27 +180,25 @@ mod tests {
     }
 
     #[test]
-    fn corners_are_transparent_and_the_drop_sits_in_the_middle() {
+    fn corners_are_transparent_and_the_spark_sits_in_the_middle() {
         let size = 64;
         let img = render(size);
         assert_eq!(img.len(), size * size * 4);
         assert_eq!(pixel(&img, size, 0, 0)[3], 0, "rounded corner");
-        let middle = pixel(&img, size, 32, 32);
-        assert_eq!(middle, [0xFF, 0xB9, 0x5F, 255], "the nectar drop");
-        // Near the top edge, between the loops: the dark tile.
+        assert_eq!(pixel(&img, size, 32, 32), [0xF2, 0xEE, 0xFF, 255], "the spark");
+        // Near the top edge, above the shield: the dark tile.
         let tile = pixel(&img, size, 32, 8);
-        assert!(tile[0] < 0x80 && tile[3] == 255, "{tile:?}");
+        assert!(tile[0] < 0x30 && tile[3] == 255, "{tile:?}");
     }
 
     #[test]
-    fn both_loops_are_drawn() {
+    fn the_shield_is_violet_on_the_left_and_blue_on_the_right() {
         let size = 128;
         let img = render(size);
-        let light = |p: [u8; 4]| p[0] > 0xF0 && p[3] == 255;
-        // Somewhere left and right of the drop there's loop ink.
-        let left = (8..56).any(|x| light(pixel(&img, size, x, 64)) || light(pixel(&img, size, x, 70)));
-        let right = (72..120).any(|x| light(pixel(&img, size, x, 64)) || light(pixel(&img, size, x, 58)));
-        assert!(left && right);
+        let left = pixel(&img, size, 42, 64);
+        let right = pixel(&img, size, 86, 64);
+        assert!(left[2] > 0xC0 && left[0] > right[0], "left {left:?}");
+        assert!(right[2] > 0xC0 && right[2] > right[1], "right {right:?}");
     }
 
     #[test]

@@ -1,22 +1,19 @@
-# The NectarLink mark
+# The Sa6i Link mark
 
-The Waggle Dance: two loops, the phone and the PC, around a drop of nectar,
-tilted like the run of a honeybee's waggle dance, which is how bees tell each
-other where to find nectar.
+The Sa6i shield: a violet-to-blue shield with a four-point spark on the dark
+Sa6i tile. It is the same shield family as the Sa6i Clean icon, so the two
+windows read as one product.
 
 | File | What it is |
 |---|---|
-| `icon.svg` | The full-color app icon: espresso tile, warm glow, honey rim |
-| `icon-flat.svg` | The same without the glow and highlights, for flat contexts |
+| `icon.svg` | The full-color app icon: dark tile, gradient shield, spark |
+| `icon-flat.svg` | The same without the gradients, for flat contexts |
 | `icon-mono.svg` | The mark alone in white, for one-color uses (notifications, themed icons) |
 | `icon-512.png` | `icon.svg` at 512 × 512 |
 
-The apps draw the mark themselves from the same geometry:
-`desktop/app/src/mark.rs` (the Windows icon, tray and notifications at every
-size) and `android/app/src/main/res/drawable/ic_launcher_*.xml` and
-`ic_notification.xml`.
+The desktop app draws the mark itself from the same geometry
+(`desktop/app/src/mark.rs`): the executable's icon, the tray and notification
+icons at every size.
 
-Colors (Honey palette, `docs/design/tokens.json`): tile `#2C1600`, glow
-`#693C00`, phone loop `#FFF8F3`, PC loop `#FFDDB8`, nectar and rim `#FFB95F`.
-
-The name and the mark are covered by the [trademark policy](../../TRADEMARKS.md).
+Colors: tile `#1B0D33` to `#0B0516`, tile edge `#3A2A5E`, shield `#9B5CF0` to
+`#2F7BFF`, shield edge `#8B6CE8`, spark `#F2EEFF`.
