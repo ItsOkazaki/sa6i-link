@@ -337,6 +337,18 @@ static void post_attached_close(EmbedHost *host) {
     }
 }
 
+BOOL embed_forward_wheel(EmbedHost *host, int screen_x, int screen_y, int delta) {
+    if (!host || delta == 0 || delta > 32767 || delta < -32768) return FALSE;
+    if (host->status != EMBED_ATTACHED || !owned_child(host)) return FALSE;
+    if (!PostMessageW(host->child, WM_MOUSEWHEEL,
+                      MAKEWPARAM(0, (WORD)(short)delta),
+                      MAKELPARAM((short)screen_x, (short)screen_y))) {
+        host->error = GetLastError();
+        return FALSE;
+    }
+    return TRUE;
+}
+
 void embed_poll(EmbedHost *host) {
     if (!host || !host->process) return;
     DWORD wait = WaitForSingleObject(host->process, 0);

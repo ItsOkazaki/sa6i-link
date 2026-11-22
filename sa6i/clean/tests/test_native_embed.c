@@ -21,6 +21,7 @@ static atomic_int hold_reads, read_waiting;
 static DWORD last_error, hash_kind;
 static int exe_reads, asar_reads, process_alive, child_exists, window_available;
 static int fail_hash, fail_launch, fail_parent, fail_post, fail_wait, fail_show, launch_count, close_messages;
+static int wheel_messages, wheel_delta, wheel_x, wheel_y;
 static int fail_temp, invalid_temp, fail_mkdir, force_collision, process_closed, layout_count, last_show, child_parented;
 static int show_requests, hide_requests, last_command_theme, last_command_software;
 static int container_exists, container_visible, container_destroyed, fail_container, fail_container_position;
@@ -33,6 +34,7 @@ static void reset_mock(void) {
     last_error = hash_kind = 0;
     exe_reads = asar_reads = process_alive = child_exists = window_available = 0;
     fail_hash = fail_launch = fail_parent = fail_post = fail_wait = fail_show = launch_count = close_messages = 0;
+    wheel_messages = wheel_delta = wheel_x = wheel_y = 0;
     fail_temp = invalid_temp = fail_mkdir = force_collision = process_closed = layout_count = last_show = child_parented = 0;
     show_requests = hide_requests = 0; last_command_theme = 0; last_command_software = 0;
     container_exists = container_visible = container_destroyed = fail_container = fail_container_position = 0;
@@ -169,7 +171,15 @@ HWND SetParent(HWND child, HWND parent) {
 void SetLastError(DWORD error) { last_error = error; }
 DWORD GetLastError(void) { return last_error; }
 BOOL PostMessageW(HWND w, unsigned int msg, uintptr_t wp, intptr_t lp) {
-    (void)wp; (void)lp; assert(w == CHILD && msg == WM_CLOSE); ++close_messages;
+    assert(w == CHILD);
+    if (msg == WM_MOUSEWHEEL) {
+        int16_t delta = (int16_t)((wp >> 16) & 0xffff);
+        int16_t x = (int16_t)(lp & 0xffff), y = (int16_t)((lp >> 16) & 0xffff);
+        wheel_messages++; wheel_delta = delta; wheel_x = x; wheel_y = y;
+        if (fail_post) { last_error = 5; return FALSE; }
+        return TRUE;
+    }
+    (void)wp; (void)lp; assert(msg == WM_CLOSE); ++close_messages;
     if (fail_post) { last_error = 5; return FALSE; }
     return TRUE;
 }
@@ -464,6 +474,28 @@ static void initial_theme_switches(void) {
     h = fresh(); h.initial_theme = 2; h.software_rendering = TRUE;
     assert(embed_start(&h, L"C:\\test") && last_command_theme == 2 && last_command_software);
 }
+static void wheel_is_forwarded_only_to_an_attached_child(void) {
+    EmbedHost h = fresh();
+    // Nothing attached yet: refuse instead of posting anywhere.
+    assert(!embed_forward_wheel(&h, 100, 200, 120) && wheel_messages == 0);
+    assert(embed_start(&h, L"C:\\test"));
+    child_exists = window_available = 1; embed_poll(&h);
+    assert(h.status == EMBED_ATTACHED);
+    assert(embed_forward_wheel(&h, 640, 480, -120));
+    assert(wheel_messages == 1 && wheel_delta == -120 && wheel_x == 640 && wheel_y == 480);
+    // Zero and out-of-range notches are ignored, and a failed post is reported.
+    assert(!embed_forward_wheel(&h, 640, 480, 0) && wheel_messages == 1);
+    assert(!embed_forward_wheel(&h, 640, 480, 40000) && wheel_messages == 1);
+    fail_post = 1;
+    assert(!embed_forward_wheel(&h, 640, 480, 120) && h.error == 5);
+    // The mock counts the attempted post, so the child saw two attempts.
+    assert(wheel_messages == 2);
+    fail_post = 0;
+    // A closing host must not forward either.
+    assert(!embed_request_close(&h) && h.status == EMBED_CLOSING);
+    assert(!embed_forward_wheel(&h, 640, 480, 120) && wheel_messages == 2);
+}
+
 int main(void) {
     initial_theme_switches(); normal(); atomic_viewport_reopen(); isolated_profile_creation(); timeout(); failure(); window_lost(); cancel_closing();
     cancel_preserves_discovery_timeout_and_exit_tracking(); close_while_discovering();
@@ -471,5 +503,6 @@ int main(void) {
     visibility_failure_is_reported_and_tracking_is_retained();
     container_creation_failure_keeps_tracking(); container_position_failure_hides_and_keeps_tracking();
     post_failure_can_cancel_and_retry();
+    wheel_is_forwarded_only_to_an_attached_child();
     puts("native backend simulation passed"); return 0;
 }

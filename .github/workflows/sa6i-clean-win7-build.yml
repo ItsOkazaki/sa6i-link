@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -159,6 +159,29 @@ jobs:
           )
           call "%~dp0Start Integrated Test.cmd"
           '@ | Set-Content -Encoding ASCII 'target/package/Nectarlink/Start Win7 Compatibility Test.cmd'
+      # Artifact storage is not reachable from the development workspace, so a
+      # one-commit branch carries the desktop build instead. It is force-pushed
+      # and must never be used for a release.
+      - name: Publish the desktop build to the throwaway bridge branch
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="target/package/Nectarlink/nectarlink-desktop.exe"
+          test -f "$src"
+          mkdir -p "$RUNNER_TEMP/bridge/ci-desktop"
+          cp "$src" "$RUNNER_TEMP/bridge/ci-desktop/nectarlink-desktop.exe"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/bridge/ci-desktop/SOURCE-COMMIT.txt"
+          sha256sum "$src" > "$RUNNER_TEMP/bridge/ci-desktop/SHA256SUMS.txt"
+          cd "$RUNNER_TEMP/bridge"
+          git init -q .
+          git config user.name "Sa6i build bridge"
+          git config user.email "sa6i-bridge@users.noreply.github.com"
+          git add ci-desktop
+          git commit -q -m "Desktop build for ${GITHUB_SHA:0:12}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-desktop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v7
         with:
           name: sa6i-clean-win7-integration-investigation

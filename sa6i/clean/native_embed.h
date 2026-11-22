@@ -55,6 +55,14 @@ BOOL embed_set_rect(EmbedHost *host, const RECT *rect);
 BOOL embed_set_viewport(EmbedHost *host, const RECT *rect, BOOL selected);
 BOOL embed_select(EmbedHost *host, BOOL selected);
 
+// Forwards one mouse-wheel notch to the attached child. The wheel goes to the
+// focused window, and a reparented foreign window does not have it, so the Qt
+// viewport forwards what it receives. screen_x/screen_y are physical screen
+// coordinates (WM_MOUSEWHEEL's lParam); delta is a wheel notch (120 per step).
+// Returns FALSE unless the child is verified and attached; the event is then
+// simply not forwarded, never delivered elsewhere.
+BOOL embed_forward_wheel(EmbedHost *host, int screen_x, int screen_y, int delta);
+
 // Starts only the exact restricted probe binary, once at a time. directory is
 // its absolute folder, containing the expected resources/app.asar. The input
 // is never modified. Each attempt creates a new temporary Electron user-data

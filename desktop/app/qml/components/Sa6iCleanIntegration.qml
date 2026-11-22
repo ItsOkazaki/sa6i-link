@@ -222,6 +222,7 @@ Item {
         anchors.bottom: parent.bottom
         active: root.cleanOpen && !root.externalOverlayOpen
         embedded: !!root.backend && root.backend.status === "attached" && root.viewportReady
+        backend: root.backend
         statusMessage: {
             if (root.initializationError.length) return root.initializationError
             if (!root.backend) return qsTr("Sa6i Clean is not connected.")

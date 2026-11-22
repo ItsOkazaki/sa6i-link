@@ -48,6 +48,11 @@ public:
     // Validates geometry and applies it with selection in one native request.
     bool setViewport(int left, int top, int right, int bottom, bool selected);
     Q_INVOKABLE bool setSelected(bool selected);
+    // Forwards one wheel notch to the attached cleaner. The child window does
+    // not own keyboard focus, so the wheel must be relayed from this viewport.
+    // Coordinates are physical screen pixels; delta follows Qt's angleDelta
+    // (120 per notch, negative = scroll down). False means not forwarded.
+    Q_INVOKABLE bool forwardWheel(int screenX, int screenY, int delta);
     Q_INVOKABLE void poll();
     Q_INVOKABLE bool requestClose();
     Q_INVOKABLE bool cancelClose();

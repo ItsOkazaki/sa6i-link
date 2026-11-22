@@ -260,6 +260,21 @@ bool QtEmbedAdapter::setSelected(bool selected) {
 #endif
 }
 
+bool QtEmbedAdapter::forwardWheel(int screenX, int screenY, int delta) {
+    if (!onOwnerThread()) return false;
+#if SA6I_HAVE_EMBED
+    // Only a verified, attached child is ever targeted; the native call repeats
+    // that check. A refused forward is dropped, never sent to another window.
+    if (!d->bound || d->worker || d->host.status != EMBED_ATTACHED) return false;
+    const bool ok = embed_forward_wheel(&d->host, screenX, screenY, delta) ? true : false;
+    updateAfterCall();
+    return ok;
+#else
+    Q_UNUSED(screenX); Q_UNUSED(screenY); Q_UNUSED(delta);
+    return false;
+#endif
+}
+
 void QtEmbedAdapter::poll() {
     if (!onOwnerThread()) return;
 #if SA6I_HAVE_EMBED

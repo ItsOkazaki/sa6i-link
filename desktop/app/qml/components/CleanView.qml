@@ -9,6 +9,8 @@ Item {
     // itself a native window.
     property bool active: false
     property bool embedded: false
+    // Supplied by the owner; receives wheel notches for the embedded window.
+    property var backend: null
     property string statusMessage: qsTr("Sa6i Clean is not connected.")
     readonly property alias viewport: viewport
 
@@ -26,6 +28,28 @@ Item {
         objectName: "cleanNativeViewport"
         anchors.fill: parent
         clip: true
+
+        // The cleaner runs in another process and does not hold keyboard focus,
+        // so Windows delivers the wheel here. Relay it to the embedded window in
+        // physical screen pixels; unforwarded events fall through to the host.
+        WheelHandler {
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            acceptedModifiers: Qt.NoModifier
+            enabled: root.active && root.embedded && !!root.backend
+            onWheel: (event) => {
+                if (!root.backend || event.angleDelta.y === 0) return
+                const point = viewport.mapToGlobal(event.x, event.y)
+                const win = viewport.Window.window
+                const dpr = win && win.screen ? win.screen.devicePixelRatio : 1
+                if (root.backend.forwardWheel(Math.round(point.x * dpr), Math.round(point.y * dpr),
+                                              event.angleDelta.y)) {
+                    event.accepted = true
+                    return
+                }
+                // Not attached (or closing): fall back to scrolling the host page.
+                event.accepted = false
+            }
+        }
 
         // Never display a fake cleaner UI when no native window is attached.
         Text {

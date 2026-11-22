@@ -10,6 +10,7 @@
 #define TRUE 1
 #define FALSE 0
 typedef int BOOL;
+typedef unsigned short WORD;
 typedef unsigned char BYTE;
 typedef uint32_t DWORD;
 typedef intptr_t LONG_PTR;
@@ -57,6 +58,9 @@ typedef struct { HANDLE hProcess; HANDLE hThread; DWORD dwProcessId, dwThreadId;
 #define WS_CLIPCHILDREN 0x02000000L
 #define GW_OWNER 4
 #define WM_CLOSE 16
+#define WM_MOUSEWHEEL 0x020A
+#define MAKEWPARAM(a, b) ((uintptr_t)(((WORD)(a)) | ((uintptr_t)((WORD)(b)) << 16)))
+#define MAKELPARAM(a, b) ((intptr_t)(((WORD)(a)) | ((uintptr_t)((WORD)(b)) << 16)))
 
 BOOL IsWindow(HWND);
 BOOL IsWindowVisible(HWND);
