@@ -17,6 +17,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import debrand_cleaner
+
 CLEANER_EXE_SHA = 'e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f'
 CLEANER_ASAR_SHA = 'b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f'
 
@@ -65,7 +67,7 @@ def patch_main(main):
     main.write_text(text, encoding='utf-8', newline='\n')
 
 
-def harden(exe_path, asar_path, output_dir):
+def harden(exe_path, asar_path, output_dir, debrand=False):
     exe_path, asar_path = Path(exe_path).resolve(), Path(asar_path).resolve()
     output_dir = Path(output_dir).absolute()
     if output_dir.exists():
@@ -79,6 +81,13 @@ def harden(exe_path, asar_path, output_dir):
         subprocess.run(['npx', '--yes', '@electron/asar@4.3.2', 'extract', str(asar_path), str(app)],
                        check=True, stdout=subprocess.DEVNULL)
         patch_main(app / 'dist-electron/main.js')
+        if debrand:
+            # The tip and feedback entries belong to the original author.
+            debranded = work / 'app-debranded'
+            debrand_cleaner.debrand(app, debranded)
+            if debrand_cleaner.leftovers(debranded):
+                raise ValueError('Debranding left the tip or feedback entry behind')
+            app = debranded
         new_asar = work / 'app.asar'
         subprocess.run(['npx', '--yes', '@electron/asar@4.3.2', 'pack', str(app), str(new_asar)],
                        check=True, stdout=subprocess.DEVNULL)
@@ -104,8 +113,10 @@ def main():
     parser.add_argument('exe', type=Path)
     parser.add_argument('asar', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--debrand', action='store_true',
+                        help='also remove the tip and feedback entries')
     args = parser.parse_args()
-    out = harden(args.exe, args.asar, args.output)
+    out = harden(args.exe, args.asar, args.output, debrand=args.debrand)
     print('Hardened cleaner written to', out)
     print('Executable SHA-256:', sha(out / args.exe.name))
     print('ASAR SHA-256:', sha(out / 'app.asar'))
