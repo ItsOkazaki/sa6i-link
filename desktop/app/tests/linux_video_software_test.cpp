@@ -54,17 +54,17 @@ int main()
     decoder.functions.frame_free(&planar);
 
     char error[256]{};
-    void* aac_enc = sa6i-link_video_aac_encoder_create(48000, 2, error, sizeof(error));
-    void* aac_dec = sa6i-link_video_aac_decoder_create(error, sizeof(error));
+    void* aac_enc = nectarlink_video_aac_encoder_create(48000, 2, error, sizeof(error));
+    void* aac_dec = nectarlink_video_aac_decoder_create(error, sizeof(error));
     assert(aac_enc && aac_dec);
     std::vector<int16_t> pcm(4096 * 2, 1000);
-    assert(sa6i-link_video_aac_encoder_send(aac_enc, pcm.data(), 4096, error, sizeof(error)) == 0);
-    assert(sa6i-link_video_aac_encoder_send(aac_enc, nullptr, 0, error, sizeof(error)) == 0);
+    assert(nectarlink_video_aac_encoder_send(aac_enc, pcm.data(), 4096, error, sizeof(error)) == 0);
+    assert(nectarlink_video_aac_encoder_send(aac_enc, nullptr, 0, error, sizeof(error)) == 0);
     const uint8_t* aac_bytes = nullptr;
     size_t aac_len = 0;
     int packets = 0;
     size_t total_decoded_frames = 0;
-    while (sa6i-link_video_aac_encoder_receive(aac_enc, &aac_bytes, &aac_len, error, sizeof(error)) == 1) {
+    while (nectarlink_video_aac_encoder_receive(aac_enc, &aac_bytes, &aac_len, error, sizeof(error)) == 1) {
         assert(aac_bytes && aac_len > 0);
         ++packets;
         const uint32_t full_len = static_cast<uint32_t>(7 + aac_len);
@@ -79,16 +79,16 @@ int main()
             0xFC,
         };
         adts.insert(adts.end(), aac_bytes, aac_bytes + aac_len);
-        assert(sa6i-link_video_aac_decoder_send(aac_dec, adts.data(), adts.size(), error, sizeof(error)) == 0);
+        assert(nectarlink_video_aac_decoder_send(aac_dec, adts.data(), adts.size(), error, sizeof(error)) == 0);
         const int16_t* dec_pcm = nullptr;
         size_t dec_frames = 0;
         int sr = 0, ch = 0;
-        while (sa6i-link_video_aac_decoder_receive(aac_dec, &dec_pcm, &dec_frames, &sr, &ch, error, sizeof(error)) == 1) {
+        while (nectarlink_video_aac_decoder_receive(aac_dec, &dec_pcm, &dec_frames, &sr, &ch, error, sizeof(error)) == 1) {
             assert(dec_pcm && dec_frames > 0 && sr == 48000 && ch == 2);
             total_decoded_frames += dec_frames;
         }
     }
     assert(packets > 0 && total_decoded_frames > 0);
-    sa6i-link_video_aac_encoder_destroy(aac_enc);
-    sa6i-link_video_aac_decoder_destroy(aac_dec);
+    nectarlink_video_aac_encoder_destroy(aac_enc);
+    nectarlink_video_aac_decoder_destroy(aac_dec);
 }

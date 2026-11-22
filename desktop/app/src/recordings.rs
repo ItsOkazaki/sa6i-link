@@ -550,19 +550,19 @@ fn demux_m4a_aac(bytes: &[u8]) -> Option<DemuxedM4a> {
 
 #[cfg(all(target_os = "linux", linux_ffmpeg_video))]
 unsafe extern "C" {
-    fn sa6i-link_video_aac_decoder_create(
+    fn nectarlink_video_aac_decoder_create(
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> *mut std::ffi::c_void;
-    fn sa6i-link_video_aac_decoder_destroy(decoder: *mut std::ffi::c_void);
-    fn sa6i-link_video_aac_decoder_send(
+    fn nectarlink_video_aac_decoder_destroy(decoder: *mut std::ffi::c_void);
+    fn nectarlink_video_aac_decoder_send(
         decoder: *mut std::ffi::c_void,
         bytes: *const u8,
         length: usize,
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> std::ffi::c_int;
-    fn sa6i-link_video_aac_decoder_receive(
+    fn nectarlink_video_aac_decoder_receive(
         decoder: *mut std::ffi::c_void,
         pcm: *mut *const i16,
         frames: *mut usize,
@@ -584,14 +584,14 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
 
     unsafe {
         let mut error = [0 as std::ffi::c_char; 256];
-        let dec = sa6i-link_video_aac_decoder_create(error.as_mut_ptr(), error.len());
+        let dec = nectarlink_video_aac_decoder_create(error.as_mut_ptr(), error.len());
         if dec.is_null() {
             return None;
         }
         struct Guard(*mut std::ffi::c_void);
         impl Drop for Guard {
             fn drop(&mut self) {
-                unsafe { sa6i-link_video_aac_decoder_destroy(self.0) };
+                unsafe { nectarlink_video_aac_decoder_destroy(self.0) };
             }
         }
         let guard = Guard(dec);
@@ -610,7 +610,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
                 let mut frames = 0usize;
                 let mut sr = 0 as std::ffi::c_int;
                 let mut ch = 0 as std::ffi::c_int;
-                let status = sa6i-link_video_aac_decoder_receive(
+                let status = nectarlink_video_aac_decoder_receive(
                     dec,
                     &mut pcm_ptr,
                     &mut frames,
@@ -651,7 +651,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
             adts_buf.extend_from_slice(&header);
             adts_buf.extend_from_slice(raw_frame);
 
-            if sa6i-link_video_aac_decoder_send(
+            if nectarlink_video_aac_decoder_send(
                 guard.0,
                 adts_buf.as_ptr(),
                 adts_buf.len(),
@@ -663,7 +663,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
             }
         }
         let _ =
-            sa6i-link_video_aac_decoder_send(guard.0, std::ptr::null(), 0, error.as_mut_ptr(), error.len());
+            nectarlink_video_aac_decoder_send(guard.0, std::ptr::null(), 0, error.as_mut_ptr(), error.len());
         drain_frames(guard.0, &mut sample_rate, &mut out_channels, &mut pcm_samples);
 
         if pcm_samples.is_empty() {
