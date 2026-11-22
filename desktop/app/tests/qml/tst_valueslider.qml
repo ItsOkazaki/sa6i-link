@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtTest
-import app.nectarlink
+import sa6i.link
 
 // A ValueSlider reports steps within its range, from the keyboard and a
 // click, and leaves its value to its owner.

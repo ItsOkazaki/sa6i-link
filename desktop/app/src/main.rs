@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! NectarLink for Windows.
+//! Sa6i Link for Windows.
 //!
-//! One process: Rust runs the core (`nectarlink-core`) and OS integration,
+//! One process: Rust runs the core (`sa6i-link-core`) and OS integration,
 //! Qt Quick draws the UI. Windows are created when opened and destroyed when
 //! closed; the app keeps running in the tray (docs/PLAN.md §5).
 
@@ -82,7 +82,7 @@ use std::{
 #[cfg(not(target_os = "linux"))]
 use cxx_qt_lib::QGuiApplication;
 use cxx_qt_lib::{QQmlApplicationEngine, QString, QUrl};
-use nectarlink_core::{
+use sa6i_link_core::{
     MediaAction, MediaError, MirrorInput, MirrorStart, Platform, PowerAction, StorageEntry, StorageError,
     StorageReadFile, StorageWriteDone,
 };
@@ -118,7 +118,7 @@ impl Platform for DesktopPlatform {
     fn power(&self, action: PowerAction) -> Result<(), String> {
         links::power(action)
     }
-    fn open_link(&self, _from: &nectarlink_core::DeviceId, url: &str) -> Result<(), String> {
+    fn open_link(&self, _from: &sa6i_link_core::DeviceId, url: &str) -> Result<(), String> {
         links::open_here(url)
     }
     fn media_command(
@@ -131,61 +131,61 @@ impl Platform for DesktopPlatform {
     }
     fn mirror_requested(
         &self,
-        peer: &nectarlink_core::DeviceId,
+        peer: &sa6i_link_core::DeviceId,
         options: &MirrorStart,
     ) -> Result<(), String> {
-        if options.session != nectarlink_core::MIRROR_SCREEN {
+        if options.session != sa6i_link_core::MIRROR_SCREEN {
             return Err("unsupported mirror session on PC".into());
         }
         pc_mirror::start(*peer, options.clone());
         Ok(())
     }
-    fn mirror_stop_requested(&self, peer: &nectarlink_core::DeviceId, session: u32) {
-        if session == nectarlink_core::MIRROR_SCREEN {
+    fn mirror_stop_requested(&self, peer: &sa6i_link_core::DeviceId, session: u32) {
+        if session == sa6i_link_core::MIRROR_SCREEN {
             pc_mirror::stop_for(peer);
         }
     }
-    fn mirror_keyframe_requested(&self, peer: &nectarlink_core::DeviceId, session: u32) {
-        if session == nectarlink_core::MIRROR_SCREEN {
+    fn mirror_keyframe_requested(&self, peer: &sa6i_link_core::DeviceId, session: u32) {
+        if session == sa6i_link_core::MIRROR_SCREEN {
             pc_mirror::request_keyframe(peer);
         }
     }
-    fn mirror_input(&self, peer: &nectarlink_core::DeviceId, session: u32, input: MirrorInput) {
+    fn mirror_input(&self, peer: &sa6i_link_core::DeviceId, session: u32, input: MirrorInput) {
         pc_mirror::handle_input(peer, session, input);
     }
     fn mirror_sink(
         &self,
-        peer: &nectarlink_core::DeviceId,
+        peer: &sa6i_link_core::DeviceId,
         session: u32,
-    ) -> Option<std::sync::Arc<dyn nectarlink_core::MirrorSink>> {
+    ) -> Option<std::sync::Arc<dyn sa6i_link_core::MirrorSink>> {
         mirror::sink(peer, session)
     }
     fn mic_sink(
         &self,
-        peer: &nectarlink_core::DeviceId,
-    ) -> Option<std::sync::Arc<dyn nectarlink_core::MicSink>> {
+        peer: &sa6i_link_core::DeviceId,
+    ) -> Option<std::sync::Arc<dyn sa6i_link_core::MicSink>> {
         phone_mic::sink(peer)
     }
     fn webcam_sink(
         &self,
-        peer: &nectarlink_core::DeviceId,
-    ) -> Option<std::sync::Arc<dyn nectarlink_core::WebcamSink>> {
+        peer: &sa6i_link_core::DeviceId,
+    ) -> Option<std::sync::Arc<dyn sa6i_link_core::WebcamSink>> {
         webcam::sink(peer)
     }
     fn remote_input(
         &self,
-        peer: &nectarlink_core::DeviceId,
-        input: nectarlink_core::RemoteInput,
+        peer: &sa6i_link_core::DeviceId,
+        input: sa6i_link_core::RemoteInput,
     ) -> Result<(), String> {
         remote::handle_input(peer, input);
         Ok(())
     }
-    fn deck_press(&self, peer: &nectarlink_core::DeviceId, tile: &str) -> Result<(), String> {
+    fn deck_press(&self, peer: &sa6i_link_core::DeviceId, tile: &str) -> Result<(), String> {
         deck::handle_press(peer, tile)
     }
     fn set_pc_audio(
         &self,
-        peer: &nectarlink_core::DeviceId,
+        peer: &sa6i_link_core::DeviceId,
         volume: Option<u8>,
         muted: Option<bool>,
     ) -> Result<(), String> {
@@ -219,7 +219,7 @@ impl Platform for DesktopPlatform {
 /// Command-line options (also used by shortcuts and autostart).
 #[derive(Debug, Default)]
 struct Options {
-    /// Where to keep data (default: %LOCALAPPDATA%\Nectarlink).
+    /// Where to keep data (default: %LOCALAPPDATA%\Sa6iLink).
     data_dir: Option<PathBuf>,
     /// Start in the tray without opening the window (autostart).
     minimized: bool,
@@ -236,9 +236,9 @@ struct Options {
     /// Quit the running app and undo what it set up in Windows (the
     /// uninstaller). Data is kept.
     uninstall: bool,
-    /// Elevated helper: register `nectarlink_vcam.dll` in `HKLM` and exit.
+    /// Elevated helper: register `sa6i_link_vcam.dll` in `HKLM` and exit.
     register_vcam: bool,
-    /// Elevated helper: unregister `nectarlink_vcam.dll` from `HKLM` and exit.
+    /// Elevated helper: unregister `sa6i_link_vcam.dll` from `HKLM` and exit.
     unregister_vcam: bool,
     /// Out-of-process Windows 11 Widget Board COM server (`--widget-provider`).
     widget_provider: bool,
@@ -362,7 +362,7 @@ fn parse_options_from<I: IntoIterator<Item = std::ffi::OsString>>(iter: I) -> Op
         // Sending doesn't need the window.
         options.minimized = true;
     } else if share_targets.is_empty() && !paths.is_empty() {
-        // Desktop entry `Exec=nectarlink-desktop %U` passes URLs or dropped files
+        // Desktop entry `Exec=sa6i-link %U` passes URLs or dropped files
         // as positional arguments without `--share`.
         share_targets = paths.into_iter().map(|p| p.to_string_lossy().into_owned()).collect();
     }
@@ -380,7 +380,7 @@ fn parse_options_from<I: IntoIterator<Item = std::ffi::OsString>>(iter: I) -> Op
 }
 
 fn default_data_dir() -> PathBuf {
-    dirs::data_local_dir().unwrap_or_else(std::env::temp_dir).join("Nectarlink")
+    dirs::data_local_dir().unwrap_or_else(std::env::temp_dir).join("Sa6iLink")
 }
 
 /// Network changes come in bursts; tell the core once things settle.
@@ -402,10 +402,10 @@ fn watch_network() {
     });
 }
 
-/// Phone notifications as Windows toasts, sent by "NectarLink" with the
+/// Phone notifications as Windows toasts, sent by "Sa6i Link" with the
 /// app's icon (written as a PNG, which Windows needs as a file).
 fn start_toasts() {
-    let icon = core_host::host().data_dir.join("cache").join("nectarlink.png");
+    let icon = core_host::host().data_dir.join("cache").join("sa6i-link.png");
     win::toast::start(icon, notifications::on_toast);
 }
 
@@ -439,7 +439,7 @@ fn run_setup_window(mode: setup::Mode) -> ExitCode {
             Ok(true) => return ExitCode::SUCCESS,
             Ok(false) => {}
             Err(e) => {
-                eprintln!("nectarlink: {e}");
+                eprintln!("sa6i-link: {e}");
                 return ExitCode::FAILURE;
             }
         }
@@ -451,7 +451,7 @@ fn run_setup_window(mode: setup::Mode) -> ExitCode {
     #[cfg(not(target_os = "linux"))]
     let mut app = QGuiApplication::new();
     if let Some(mut app) = app.as_mut() {
-        app.as_mut().set_application_name(&QString::from("NectarLink Setup"));
+        app.as_mut().set_application_name(&QString::from("Sa6i Link Setup"));
         app.as_mut().set_application_version(&QString::from(env!("CARGO_PKG_VERSION")));
     }
     // Before any QML loads, so every string is right on the first pass.
@@ -463,7 +463,7 @@ fn run_setup_window(mode: setup::Mode) -> ExitCode {
     bridge::native::ffi::apply_app_icon();
     let mut engine = QQmlApplicationEngine::new();
     if let Some(engine) = engine.as_mut() {
-        engine.load(&QUrl::from("qrc:/qt/qml/app/nectarlink/qml/setup/SetupWindow.qml"));
+        engine.load(&QUrl::from("qrc:/qt/qml/sa6i/link/qml/setup/SetupWindow.qml"));
     }
     let code = app.as_mut().map_or(1, |app| app.exec());
     drop(engine);
@@ -489,13 +489,13 @@ fn validate_clean_experiment_options(options: &Options) -> Result<(), &'static s
 fn main() -> ExitCode {
     let options = parse_options();
     if options.version {
-        println!("nectarlink-desktop {}", env!("CARGO_PKG_VERSION"));
+        println!("sa6i-link {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
     if cfg!(sa6i_clean_experiment)
         && let Err(error) = validate_clean_experiment_options(&options)
     {
-        eprintln!("nectarlink: {error}");
+        eprintln!("sa6i-link: {error}");
         return ExitCode::FAILURE;
     }
     if let Some(installer) = options.setup.clone().filter(|p| !p.as_os_str().is_empty()) {
@@ -516,7 +516,7 @@ fn main() -> ExitCode {
         return match win::vcam::register_hklm() {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
-                eprintln!("nectarlink: register-vcam failed: {e}");
+                eprintln!("sa6i-link: register-vcam failed: {e}");
                 ExitCode::FAILURE
             }
         };
@@ -525,19 +525,19 @@ fn main() -> ExitCode {
         return match win::vcam::unregister_hklm() {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
-                eprintln!("nectarlink: unregister-vcam failed: {e}");
+                eprintln!("sa6i-link: unregister-vcam failed: {e}");
                 ExitCode::FAILURE
             }
         };
     }
     // The check starts the whole app, so never on the user's own data.
     if options.ui_check && options.data_dir.is_none() {
-        eprintln!("nectarlink: --ui-check needs --data-dir");
+        eprintln!("sa6i-link: --ui-check needs --data-dir");
         return ExitCode::FAILURE;
     }
     let data_dir = options.data_dir.clone().unwrap_or_else(default_data_dir);
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
-        eprintln!("nectarlink: can't create {}: {e}", data_dir.display());
+        eprintln!("sa6i-link: can't create {}: {e}", data_dir.display());
         return ExitCode::FAILURE;
     }
     logging::init(&data_dir);
@@ -545,9 +545,9 @@ fn main() -> ExitCode {
     // Home and the other phone pages only load with a paired phone, and a
     // page that fails to load must fail the check.
     if options.ui_check
-        && let Err(e) = nectarlink_core::add_ui_check_phone(&data_dir)
+        && let Err(e) = sa6i_link_core::add_ui_check_phone(&data_dir)
     {
-        eprintln!("nectarlink: --ui-check: can't add the pretend phone: {e}");
+        eprintln!("sa6i-link: --ui-check: can't add the pretend phone: {e}");
         return ExitCode::FAILURE;
     }
     if options.widget_provider {
@@ -704,7 +704,7 @@ fn main() -> ExitCode {
     #[cfg(not(target_os = "linux"))]
     let mut app = QGuiApplication::new();
     if let Some(mut app) = app.as_mut() {
-        app.as_mut().set_application_name(&QString::from("Nectarlink"));
+        app.as_mut().set_application_name(&QString::from("Sa6iLink"));
         app.as_mut().set_application_version(&QString::from(env!("CARGO_PKG_VERSION")));
     }
     // Before any QML loads, so every string is right on the first pass.
@@ -734,7 +734,7 @@ fn main() -> ExitCode {
     let mut engine = QQmlApplicationEngine::new();
     if let Some(mut engine) = engine.as_mut() {
         bridge::native::ffi::register_qml_app_engine(engine.as_mut());
-        engine.load(&QUrl::from("qrc:/qt/qml/app/nectarlink/qml/App.qml"));
+        engine.load(&QUrl::from("qrc:/qt/qml/sa6i/link/qml/App.qml"));
     }
     if options.ui_check {
         std::thread::spawn(|| {
@@ -759,10 +759,10 @@ fn main() -> ExitCode {
     if options.ui_check {
         let problems = bridge::native::ffi::qml_problem_count();
         if problems > 0 {
-            eprintln!("nectarlink: --ui-check: {problems} QML warning(s) or error(s), see above");
+            eprintln!("sa6i-link: --ui-check: {problems} QML warning(s) or error(s), see above");
             return ExitCode::FAILURE;
         }
-        eprintln!("nectarlink: --ui-check: no QML warnings");
+        eprintln!("sa6i-link: --ui-check: no QML warnings");
     }
     ExitCode::from(u8::try_from(code).unwrap_or(1))
 }
@@ -792,11 +792,11 @@ mod tests {
     #[test]
     fn parse_options_recognizes_share_flag() {
         let opts = parse_options_from(
-            ["--data-dir", r"C:\Temp\nectarlink-test", "--share", r"C:\photo.jpg", "https://example.com"]
+            ["--data-dir", r"C:\Temp\sa6i-link-test", "--share", r"C:\photo.jpg", "https://example.com"]
                 .into_iter()
                 .map(OsString::from),
         );
-        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\nectarlink-test")));
+        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\sa6i-link-test")));
         assert!(opts.minimized);
         assert_eq!(
             opts.share,
@@ -811,27 +811,27 @@ mod tests {
     #[test]
     fn parse_options_recognizes_ui_check_flag() {
         let opts = parse_options_from(
-            ["--ui-check", "--data-dir", r"C:\Temp\nectarlink-test"].into_iter().map(OsString::from),
+            ["--ui-check", "--data-dir", r"C:\Temp\sa6i-link-test"].into_iter().map(OsString::from),
         );
         assert!(opts.ui_check);
         assert!(!opts.minimized);
-        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\nectarlink-test")));
+        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\sa6i-link-test")));
         assert!(!parse_options_from(["--minimized"].into_iter().map(OsString::from)).ui_check);
     }
 
     #[test]
     fn parse_options_recognizes_task_flag() {
         let find_opts = parse_options_from(
-            ["--data-dir", r"C:\Temp\nectarlink-test", "--task", "find-phone"]
+            ["--data-dir", r"C:\Temp\sa6i-link-test", "--task", "find-phone"]
                 .into_iter()
                 .map(OsString::from),
         );
-        assert_eq!(find_opts.data_dir, Some(PathBuf::from(r"C:\Temp\nectarlink-test")));
+        assert_eq!(find_opts.data_dir, Some(PathBuf::from(r"C:\Temp\sa6i-link-test")));
         assert_eq!(find_opts.task.as_deref(), Some("find-phone"));
         assert!(find_opts.minimized);
 
         let timeline_opts = parse_options_from(
-            ["--data-dir", r"C:\Temp\nectarlink-test", "--task", "open-timeline"]
+            ["--data-dir", r"C:\Temp\sa6i-link-test", "--task", "open-timeline"]
                 .into_iter()
                 .map(OsString::from),
         );
@@ -842,9 +842,9 @@ mod tests {
     #[test]
     fn parse_options_recognizes_widget_provider_flag() {
         let opts = parse_options_from(
-            ["--data-dir", r"C:\Temp\nectarlink-test", "--widget-provider"].into_iter().map(OsString::from),
+            ["--data-dir", r"C:\Temp\sa6i-link-test", "--widget-provider"].into_iter().map(OsString::from),
         );
-        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\nectarlink-test")));
+        assert_eq!(opts.data_dir, Some(PathBuf::from(r"C:\Temp\sa6i-link-test")));
         assert!(opts.widget_provider);
     }
 

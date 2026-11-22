@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Builds a Debian/Ubuntu .deb package for NectarLink Desktop:
-#   dist/nectarlink_<version>_<arch>.deb
+# Builds a Debian/Ubuntu .deb package for Sa6i Link Desktop:
+#   dist/sa6i-link_<version>_<arch>.deb
 
 set -euo pipefail
 
@@ -36,57 +36,57 @@ if [[ -z "${QMAKE:-}" ]]; then
     fi
 fi
 
-BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/nectarlink-desktop}"
+BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/sa6i-link}"
 if [[ ! -f "${BIN_PATH}" ]]; then
-    echo "Building nectarlink-desktop (release)..."
-    (cd "${REPO_ROOT}" && cargo build --release -p nectarlink-desktop)
+    echo "Building sa6i-link (release)..."
+    (cd "${REPO_ROOT}" && cargo build --release -p sa6i-link)
 fi
 
-STAGE_DIR="$(mktemp -d -t nectarlink-deb-XXXXXX)"
+STAGE_DIR="$(mktemp -d -t sa6i-link-deb-XXXXXX)"
 trap 'rm -rf "${STAGE_DIR}"' EXIT
 
-PKG_ROOT="${STAGE_DIR}/nectarlink_${VERSION}_${DEB_ARCH}"
+PKG_ROOT="${STAGE_DIR}/sa6i-link_${VERSION}_${DEB_ARCH}"
 mkdir -p \
     "${PKG_ROOT}/DEBIAN" \
     "${PKG_ROOT}/usr/bin" \
-    "${PKG_ROOT}/usr/lib/nectarlink" \
-    "${PKG_ROOT}/usr/share/nectarlink" \
+    "${PKG_ROOT}/usr/lib/sa6i-link" \
+    "${PKG_ROOT}/usr/share/sa6i-link" \
     "${PKG_ROOT}/usr/share/applications" \
     "${PKG_ROOT}/usr/share/metainfo" \
     "${PKG_ROOT}/usr/share/icons/hicolor/256x256/apps" \
     "${PKG_ROOT}/usr/share/icons/hicolor/512x512/apps" \
     "${PKG_ROOT}/usr/share/icons/hicolor/scalable/apps"
 
-install -m 0755 "${BIN_PATH}" "${PKG_ROOT}/usr/lib/nectarlink/nectarlink-desktop"
+install -m 0755 "${BIN_PATH}" "${PKG_ROOT}/usr/lib/sa6i-link/sa6i-link"
 for adapter in "$(dirname "${BIN_PATH}")"/libnectarlink-video-ffmpeg*.so; do
-    [[ ! -f "${adapter}" ]] || install -m 0755 "${adapter}" "${PKG_ROOT}/usr/lib/nectarlink/"
+    [[ ! -f "${adapter}" ]] || install -m 0755 "${adapter}" "${PKG_ROOT}/usr/lib/sa6i-link/"
 done
-cat > "${PKG_ROOT}/usr/bin/nectarlink-desktop" <<'EOF'
+cat > "${PKG_ROOT}/usr/bin/sa6i-link" <<'EOF'
 #!/usr/bin/env sh
-if [ -d /usr/lib/nectarlink/lib ]; then
-    export LD_LIBRARY_PATH="/usr/lib/nectarlink/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-    export QT_PLUGIN_PATH="/usr/lib/nectarlink/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
-    export QML2_IMPORT_PATH="/usr/lib/nectarlink/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
+if [ -d /usr/lib/sa6i-link/lib ]; then
+    export LD_LIBRARY_PATH="/usr/lib/sa6i-link/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    export QT_PLUGIN_PATH="/usr/lib/sa6i-link/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
+    export QML2_IMPORT_PATH="/usr/lib/sa6i-link/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
 fi
-exec /usr/lib/nectarlink/nectarlink-desktop "$@"
+exec /usr/lib/sa6i-link/sa6i-link "$@"
 EOF
-chmod 0755 "${PKG_ROOT}/usr/bin/nectarlink-desktop"
+chmod 0755 "${PKG_ROOT}/usr/bin/sa6i-link"
 
-for qm in "$(dirname "${BIN_PATH}")"/nectarlink_*.qm; do
+for qm in "$(dirname "${BIN_PATH}")"/sa6i-link_*.qm; do
     if [[ -f "${qm}" ]]; then
-        install -m 0644 "${qm}" "${PKG_ROOT}/usr/share/nectarlink/$(basename "${qm}")"
+        install -m 0644 "${qm}" "${PKG_ROOT}/usr/share/sa6i-link/$(basename "${qm}")"
     fi
 done
 
-install -m 0644 "${SCRIPT_DIR}/nectarlink.desktop" "${PKG_ROOT}/usr/share/applications/nectarlink.desktop"
-install -m 0644 "${SCRIPT_DIR}/org.nectarlink.desktop.metainfo.xml" "${PKG_ROOT}/usr/share/metainfo/org.nectarlink.desktop.metainfo.xml"
+install -m 0644 "${SCRIPT_DIR}/sa6i-link.desktop" "${PKG_ROOT}/usr/share/applications/sa6i-link.desktop"
+install -m 0644 "${SCRIPT_DIR}/org.sa6i-link.desktop.metainfo.xml" "${PKG_ROOT}/usr/share/metainfo/org.sa6i-link.desktop.metainfo.xml"
 
 if [[ -f "${REPO_ROOT}/assets/brand/icon-512.png" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${PKG_ROOT}/usr/share/icons/hicolor/512x512/apps/nectarlink.png"
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${PKG_ROOT}/usr/share/icons/hicolor/256x256/apps/nectarlink.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${PKG_ROOT}/usr/share/icons/hicolor/512x512/apps/sa6i-link.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${PKG_ROOT}/usr/share/icons/hicolor/256x256/apps/sa6i-link.png"
 fi
 if [[ -f "${REPO_ROOT}/assets/brand/icon.svg" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${PKG_ROOT}/usr/share/icons/hicolor/scalable/apps/nectarlink.svg"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${PKG_ROOT}/usr/share/icons/hicolor/scalable/apps/sa6i-link.svg"
 fi
 
 QT_DEPENDS=""
@@ -105,8 +105,8 @@ bundle_private_qt_if_needed() {
         return 0
     fi
 
-    echo "Bundling private Qt runtime from ${qt_libs} into /usr/lib/nectarlink..."
-    local dest="${PKG_ROOT}/usr/lib/nectarlink"
+    echo "Bundling private Qt runtime from ${qt_libs} into /usr/lib/sa6i-link..."
+    local dest="${PKG_ROOT}/usr/lib/sa6i-link"
     mkdir -p "${dest}/lib" "${dest}/plugins" "${dest}/qml"
 
     local pattern
@@ -188,7 +188,7 @@ fi
 INSTALLED_SIZE="$(du -sk "${PKG_ROOT}/usr" | awk '{print $1}')"
 
 cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
-Package: nectarlink
+Package: sa6i-link
 Version: ${PKG_VERSION}
 Section: net
 Priority: optional
@@ -197,10 +197,10 @@ Installed-Size: ${INSTALLED_SIZE}
 Depends: ${BASE_DEPENDS}${QT_DEPENDS}
 Recommends: fuse3, curl | wget, libavcodec62 | libavcodec61 | libavcodec60, libopenh264-8 | libopenh264-7 | libopenh264-6, gstreamer1.0-tools, gstreamer1.0-pipewire, gstreamer1.0-plugins-base, pulseaudio-utils, pipewire-bin, libxtst6, wl-clipboard, xclip, xdg-utils, bluez, pkexec | policykit-1
 Suggests: v4l2loopback-dkms, ffmpeg, network-manager
-Maintainer: thtbee <https://github.com/thtbee/nectarlink>
-Homepage: https://github.com/thtbee/nectarlink
+Maintainer: thtbee <https://github.com/ItsOkazaki/sa6i-link>
+Homepage: https://github.com/ItsOkazaki/sa6i-link
 Description: Connect your Android phone and Linux PC over LAN
- NectarLink links your Android phone and Linux desktop over your local
+ Sa6i Link links your Android phone and Linux desktop over your local
  network with end-to-end encryption, clipboard sync, notification
  mirroring, file transfer, screen/camera/audio streaming, and SMS/calls.
 EOF
@@ -233,7 +233,7 @@ chmod 0755 "${PKG_ROOT}/DEBIAN/postrm"
 
 OUT_DIR="${OUT_DIR:-${REPO_ROOT}/dist}"
 mkdir -p "${OUT_DIR}"
-OUT_DEB="${OUT_DIR}/nectarlink_${VERSION}_${DEB_ARCH}.deb"
+OUT_DEB="${OUT_DIR}/sa6i-link_${VERSION}_${DEB_ARCH}.deb"
 
 dpkg-deb --root-owner-group --build "${PKG_ROOT}" "${OUT_DEB}"
 echo "Built ${OUT_DEB}"

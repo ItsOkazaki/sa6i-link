@@ -34,7 +34,7 @@ if (-not (Test-Path -LiteralPath $AppDir -PathType Container)) {
     Write-Host 'The selected preview folder was not found.'
     exit 1
 }
-Check-File 'Updated desktop' 'nectarlink-desktop.exe' '9f6ed53b2b62bb07a930e4216222400668ba2fe862e95430950dfef8aee2d30b'
+Check-File 'Updated desktop' 'sa6i-link.exe' '9f6ed53b2b62bb07a930e4216222400668ba2fe862e95430950dfef8aee2d30b'
 Check-File 'Cleaner executable' 'Sa6i Clean\Sa6i Clean Integration.exe' '435923fe5a7404feef6bdf242b444dda5def1a05d68a720038e41294086dbb4e'
 Check-File 'Cleaner app.asar' 'Sa6i Clean\resources\app.asar' '62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a'
 Write-Host ''

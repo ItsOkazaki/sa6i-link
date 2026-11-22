@@ -1,11 +1,11 @@
 [workspace]
 resolver = "3"
 members = [
-    "core/nectarlink-adb",
-    "core/nectarlink-protocol",
-    "core/nectarlink-core",
-    "core/nectarlink-cli",
-    "core/nectarlink-ffi",
+    "core/sa6i-link-adb",
+    "core/sa6i-link-protocol",
+    "core/sa6i-link-core",
+    "core/sa6i-link-cli",
+    "core/sa6i-link-ffi",
     "desktop/app",
     "desktop/vcam",
     "tools/xtask",
@@ -18,8 +18,8 @@ exclude = ["third_party"]
 version = "0.1.5"
 edition = "2024"
 rust-version = "1.97"
-authors = ["The NectarLink contributors"]
-repository = "https://github.com/thtbee/nectarlink"
+authors = ["The Sa6i Link contributors"]
+repository = "https://github.com/ItsOkazaki/sa6i-link"
 
 # Each release's name, from a bee's life (0.1 Pollen, …); the release
 # workflow puts it in the release's title.
@@ -27,10 +27,10 @@ repository = "https://github.com/thtbee/nectarlink"
 name = "Pollen"
 
 [workspace.dependencies]
-nectarlink-adb = { path = "core/nectarlink-adb", version = "0.1.5" }
-nectarlink-protocol = { path = "core/nectarlink-protocol", version = "0.1.5" }
-nectarlink-core = { path = "core/nectarlink-core", version = "0.1.5" }
-nectarlink-vcam = { path = "desktop/vcam", version = "0.1.5" }
+sa6i-link-adb = { path = "core/sa6i-link-adb", version = "0.1.5" }
+sa6i-link-protocol = { path = "core/sa6i-link-protocol", version = "0.1.5" }
+sa6i-link-core = { path = "core/sa6i-link-core", version = "0.1.5" }
+sa6i-vcam = { path = "desktop/vcam", version = "0.1.5" }
 
 anyhow = "1"
 ciborium = "0.2"
@@ -102,6 +102,6 @@ strip = "symbols"
 inherits = "release"
 strip = "debuginfo"
 
-# iroh's mDNS with one fix, until upstream has it: third_party/iroh-mdns-address-lookup/NECTARLINK.md.
+# iroh's mDNS with one fix, until upstream has it: third_party/iroh-mdns-address-lookup/SA6I.md.
 [patch.crates-io]
 iroh-mdns-address-lookup = { path = "third_party/iroh-mdns-address-lookup" }

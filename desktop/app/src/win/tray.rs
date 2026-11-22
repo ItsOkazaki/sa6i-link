@@ -202,7 +202,7 @@ unsafe fn find_top_external_window(self_pid: u32) -> Option<(isize, String, bool
 }
 
 /// Records the current foreground window if it belongs to an external
-/// user-facing application (not NectarLink itself and not the Windows shell tray).
+/// user-facing application (not Sa6i Link itself and not the Windows shell tray).
 pub fn record_foreground_window() {
     // SAFETY: Standard Win32 queries on the foreground and Z-order HWNDs.
     unsafe {
@@ -497,7 +497,7 @@ impl Tray {
                 cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
                 lpfnWndProc: Some(window_proc),
                 hInstance: instance.into(),
-                lpszClassName: w!("Nectarlink.TrayWindow"),
+                lpszClassName: w!("Sa6iLink.TrayWindow"),
                 ..Default::default()
             };
             // Registering twice (a second Tray) fails harmlessly.
@@ -507,8 +507,8 @@ impl Tray {
             // power and setting broadcasts.
             let hwnd = CreateWindowExW(
                 WS_EX_TOOLWINDOW | WINDOW_EX_STYLE(0),
-                w!("Nectarlink.TrayWindow"),
-                w!("Nectarlink"),
+                w!("Sa6iLink.TrayWindow"),
+                w!("Sa6iLink"),
                 WS_POPUP,
                 0,
                 0,

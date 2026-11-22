@@ -1,6 +1,6 @@
 [package]
-name = "nectarlink-vcam"
-description = "NectarLink virtual camera Media Foundation media source (Windows 11)"
+name = "sa6i-vcam"
+description = "Sa6i Link virtual camera Media Foundation media source (Windows 11)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,7 @@ license = "GPL-3.0-or-later"
 publish = false
 
 [lib]
-name = "nectarlink_vcam"
+name = "sa6i_link_vcam"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

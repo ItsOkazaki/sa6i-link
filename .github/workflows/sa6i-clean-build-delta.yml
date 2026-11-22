@@ -40,9 +40,9 @@ jobs:
               return {p.relative_to(root).as_posix(): p for p in root.rglob('*') if p.is_file()}
           a, b = files(before), files(after)
           def sha(p): return sha256(p.read_bytes()).hexdigest()
-          if sha(a['nectarlink-desktop.exe']) != 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b':
+          if sha(a['sa6i-link.exe']) != 'a5bacb31932e8aa62583dbeb1397a50a7f49a98fb0bf53127c6f2ad28878179b':
               raise SystemExit('Unexpected baseline executable')
-          if sha(b['nectarlink-desktop.exe']) != '721d78f06554ca26c825de46f89ea1fc7294426d1a581e8312d2a49d635ef92f':
+          if sha(b['sa6i-link.exe']) != '721d78f06554ca26c825de46f89ea1fc7294426d1a581e8312d2a49d635ef92f':
               raise SystemExit('Unexpected tested desktop executable')
           metadata = {'before': {k: sha(p) for k, p in a.items()}, 'after': {k: sha(p) for k, p in b.items()}, 'changes': {}}
           with zipfile.ZipFile('delta.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as out:
@@ -63,7 +63,7 @@ jobs:
               out.writestr('manifest.json', json.dumps(metadata, sort_keys=True))
           data = Path('delta.zip').read_bytes()
           print(f'::notice::SA6I-DELTA-SHA256:{sha256(data).hexdigest()}')
-          print(f'::notice::SA6I-NEW-DESKTOP-SHA256:{metadata["after"]["nectarlink-desktop.exe"]}')
+          print(f'::notice::SA6I-NEW-DESKTOP-SHA256:{metadata["after"]["sa6i-link.exe"]}')
           print(f'::notice::SA6I-DELTA-SIZE:{len(data)}')
           if len(data) * 4 // 3 > 480 * 3900 - 8: raise SystemExit('Delta exceeds annotation transfer capacity')
           '@ | python -

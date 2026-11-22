@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Builds a portable Linux tarball for NectarLink Desktop:
-#   dist/Nectarlink-<version>-linux-<arch>.tar.gz
+# Builds a portable Linux tarball for Sa6i Link Desktop:
+#   dist/Sa6iLink-<version>-linux-<arch>.tar.gz
 # including install.sh and uninstall.sh helper scripts.
 
 set -euo pipefail
@@ -27,38 +27,38 @@ if [[ -z "${QMAKE:-}" ]]; then
     fi
 fi
 
-BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/nectarlink-desktop}"
+BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/sa6i-link}"
 if [[ ! -f "${BIN_PATH}" ]]; then
-    echo "Building nectarlink-desktop (release)..."
-    (cd "${REPO_ROOT}" && cargo build --release -p nectarlink-desktop)
+    echo "Building sa6i-link (release)..."
+    (cd "${REPO_ROOT}" && cargo build --release -p sa6i-link)
 fi
 
-STAGE_DIR="$(mktemp -d -t nectarlink-tar-XXXXXX)"
+STAGE_DIR="$(mktemp -d -t sa6i-link-tar-XXXXXX)"
 trap 'rm -rf "${STAGE_DIR}"' EXIT
 
-BUNDLE_NAME="Nectarlink-${VERSION}-linux-${ARCH}"
+BUNDLE_NAME="Sa6iLink-${VERSION}-linux-${ARCH}"
 BUNDLE_DIR="${STAGE_DIR}/${BUNDLE_NAME}"
-mkdir -p "${BUNDLE_DIR}/share/applications" "${BUNDLE_DIR}/share/metainfo" "${BUNDLE_DIR}/share/icons" "${BUNDLE_DIR}/share/nectarlink"
+mkdir -p "${BUNDLE_DIR}/share/applications" "${BUNDLE_DIR}/share/metainfo" "${BUNDLE_DIR}/share/icons" "${BUNDLE_DIR}/share/sa6i-link"
 
-install -m 0755 "${BIN_PATH}" "${BUNDLE_DIR}/nectarlink-desktop"
+install -m 0755 "${BIN_PATH}" "${BUNDLE_DIR}/sa6i-link"
 for adapter in "$(dirname "${BIN_PATH}")"/libnectarlink-video-ffmpeg*.so; do
     [[ ! -f "${adapter}" ]] || install -m 0755 "${adapter}" "${BUNDLE_DIR}/"
 done
 printf '%s\n' "${VERSION}" > "${BUNDLE_DIR}/VERSION"
-for qm in "$(dirname "${BIN_PATH}")"/nectarlink_*.qm; do
+for qm in "$(dirname "${BIN_PATH}")"/sa6i-link_*.qm; do
     if [[ -f "${qm}" ]]; then
         install -m 0644 "${qm}" "${BUNDLE_DIR}/$(basename "${qm}")"
-        install -m 0644 "${qm}" "${BUNDLE_DIR}/share/nectarlink/$(basename "${qm}")"
+        install -m 0644 "${qm}" "${BUNDLE_DIR}/share/sa6i-link/$(basename "${qm}")"
     fi
 done
-install -m 0644 "${SCRIPT_DIR}/nectarlink.desktop" "${BUNDLE_DIR}/share/applications/nectarlink.desktop"
-install -m 0644 "${SCRIPT_DIR}/org.nectarlink.desktop.metainfo.xml" "${BUNDLE_DIR}/share/metainfo/org.nectarlink.desktop.metainfo.xml"
+install -m 0644 "${SCRIPT_DIR}/sa6i-link.desktop" "${BUNDLE_DIR}/share/applications/sa6i-link.desktop"
+install -m 0644 "${SCRIPT_DIR}/org.sa6i-link.desktop.metainfo.xml" "${BUNDLE_DIR}/share/metainfo/org.sa6i-link.desktop.metainfo.xml"
 
 if [[ -f "${REPO_ROOT}/assets/brand/icon.svg" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${BUNDLE_DIR}/share/icons/nectarlink.svg"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${BUNDLE_DIR}/share/icons/sa6i-link.svg"
 fi
 if [[ -f "${REPO_ROOT}/assets/brand/icon-512.png" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${BUNDLE_DIR}/share/icons/nectarlink.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${BUNDLE_DIR}/share/icons/sa6i-link.png"
 fi
 
 bundle_private_qt_if_needed() {
@@ -150,15 +150,15 @@ set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-    PREFIX="/opt/nectarlink"
-    BIN_LINK="/usr/local/bin/nectarlink-desktop"
+    PREFIX="/opt/sa6i-link"
+    BIN_LINK="/usr/local/bin/sa6i-link"
     APPS_DIR="/usr/share/applications"
     META_DIR="/usr/share/metainfo"
     ICON_DIR="/usr/share/icons/hicolor/scalable/apps"
     PNG_ICON_DIR="/usr/share/icons/hicolor/512x512/apps"
 else
-    PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}/nectarlink-app"
-    BIN_LINK="${HOME}/.local/bin/nectarlink-desktop"
+    PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}/sa6i-link-app"
+    BIN_LINK="${HOME}/.local/bin/sa6i-link"
     APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
     META_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/metainfo"
     ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps"
@@ -166,7 +166,7 @@ else
 fi
 
 mkdir -p "${PREFIX}" "$(dirname "${BIN_LINK}")" "${APPS_DIR}" "${META_DIR}" "${ICON_DIR}" "${PNG_ICON_DIR}"
-install -m 0755 "${SELF_DIR}/nectarlink-desktop" "${PREFIX}/nectarlink-desktop"
+install -m 0755 "${SELF_DIR}/sa6i-link" "${PREFIX}/sa6i-link"
 for adapter in "${SELF_DIR}"/libnectarlink-video-ffmpeg*.so; do
     [[ ! -f "${adapter}" ]] || install -m 0755 "${adapter}" "${PREFIX}/"
 done
@@ -180,7 +180,7 @@ for dir in lib plugins qml; do
         cp -a --no-preserve=ownership "${SELF_DIR}/${dir}" "${PREFIX}/${dir}"
     fi
 done
-for qm in "${SELF_DIR}"/nectarlink_*.qm; do
+for qm in "${SELF_DIR}"/sa6i-link_*.qm; do
     [[ -f "${qm}" ]] && install -m 0644 "${qm}" "${PREFIX}/$(basename "${qm}")"
 done
 if [[ -d "${PREFIX}/lib" ]]; then
@@ -192,21 +192,21 @@ if [[ -d "${PREFIX}/lib" ]]; then
 export LD_LIBRARY_PATH="${PREFIX}/lib\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}"
 export QT_PLUGIN_PATH="${PREFIX}/plugins\${QT_PLUGIN_PATH:+:\${QT_PLUGIN_PATH}}"
 export QML2_IMPORT_PATH="${PREFIX}/qml\${QML2_IMPORT_PATH:+:\${QML2_IMPORT_PATH}}"
-exec "${PREFIX}/nectarlink-desktop" "\$@"
+exec "${PREFIX}/sa6i-link" "\$@"
 WRAPEOF
     chmod 0755 "${BIN_LINK}"
 else
-    ln -sf "${PREFIX}/nectarlink-desktop" "${BIN_LINK}"
+    ln -sf "${PREFIX}/sa6i-link" "${BIN_LINK}"
 fi
-install -m 0644 "${SELF_DIR}/share/applications/nectarlink.desktop" "${APPS_DIR}/nectarlink.desktop"
-install -m 0644 "${SELF_DIR}/share/metainfo/org.nectarlink.desktop.metainfo.xml" "${META_DIR}/org.nectarlink.desktop.metainfo.xml"
-[[ -f "${SELF_DIR}/share/icons/nectarlink.svg" ]] && install -m 0644 "${SELF_DIR}/share/icons/nectarlink.svg" "${ICON_DIR}/nectarlink.svg"
-[[ -f "${SELF_DIR}/share/icons/nectarlink.png" ]] && install -m 0644 "${SELF_DIR}/share/icons/nectarlink.png" "${PNG_ICON_DIR}/nectarlink.png"
+install -m 0644 "${SELF_DIR}/share/applications/sa6i-link.desktop" "${APPS_DIR}/sa6i-link.desktop"
+install -m 0644 "${SELF_DIR}/share/metainfo/org.sa6i-link.desktop.metainfo.xml" "${META_DIR}/org.sa6i-link.desktop.metainfo.xml"
+[[ -f "${SELF_DIR}/share/icons/sa6i-link.svg" ]] && install -m 0644 "${SELF_DIR}/share/icons/sa6i-link.svg" "${ICON_DIR}/sa6i-link.svg"
+[[ -f "${SELF_DIR}/share/icons/sa6i-link.png" ]] && install -m 0644 "${SELF_DIR}/share/icons/sa6i-link.png" "${PNG_ICON_DIR}/sa6i-link.png"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q "${APPS_DIR}" || true
 fi
-echo "Installed NectarLink to ${PREFIX} (${BIN_LINK})"
+echo "Installed Sa6i Link to ${PREFIX} (${BIN_LINK})"
 EOF
 chmod 0755 "${BUNDLE_DIR}/install.sh"
 
@@ -215,22 +215,22 @@ cat > "${BUNDLE_DIR}/uninstall.sh" <<'EOF'
 set -euo pipefail
 
 if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-    rm -rf /opt/nectarlink
-    rm -f /usr/local/bin/nectarlink-desktop
-    rm -f /usr/share/applications/nectarlink.desktop
-    rm -f /usr/share/metainfo/org.nectarlink.desktop.metainfo.xml
-    rm -f /usr/share/icons/hicolor/scalable/apps/nectarlink.svg
-    rm -f /usr/share/icons/hicolor/512x512/apps/nectarlink.png
+    rm -rf /opt/sa6i-link
+    rm -f /usr/local/bin/sa6i-link
+    rm -f /usr/share/applications/sa6i-link.desktop
+    rm -f /usr/share/metainfo/org.sa6i-link.desktop.metainfo.xml
+    rm -f /usr/share/icons/hicolor/scalable/apps/sa6i-link.svg
+    rm -f /usr/share/icons/hicolor/512x512/apps/sa6i-link.png
 else
-    PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}/nectarlink-app"
+    PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}/sa6i-link-app"
     rm -rf "${PREFIX}"
-    rm -f "${HOME}/.local/bin/nectarlink-desktop"
-    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/nectarlink.desktop"
-    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/metainfo/org.nectarlink.desktop.metainfo.xml"
-    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/nectarlink.svg"
-    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps/nectarlink.png"
+    rm -f "${HOME}/.local/bin/sa6i-link"
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/sa6i-link.desktop"
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/metainfo/org.sa6i-link.desktop.metainfo.xml"
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/sa6i-link.svg"
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps/sa6i-link.png"
 fi
-echo "Uninstalled NectarLink."
+echo "Uninstalled Sa6i Link."
 EOF
 chmod 0755 "${BUNDLE_DIR}/uninstall.sh"
 

@@ -18,7 +18,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use nectarlink_core::{
+use sa6i_link_core::{
     DeviceId, Error, MIRROR_SCREEN, MirrorAudioConfig, MirrorConfig, MirrorSink, MirrorStart, NodeEvent,
 };
 
@@ -431,7 +431,7 @@ pub fn screenshot_clipboard(window: Window) {
     }
 }
 
-/// Saves the current mirror frame for `window` to `Downloads\Nectarlink` as a PNG file.
+/// Saves the current mirror frame for `window` to `Downloads\Sa6iLink` as a PNG file.
 pub fn screenshot_file(window: Window) {
     let Some(bitmap) = latest_bitmap(&window) else {
         set_notice(window, "Wait for the screen to appear first");
@@ -450,7 +450,7 @@ pub fn screenshot_file(window: Window) {
     let base_name = local_timestamp_filename("Screenshot", "png");
     let dir = core_host::downloads_dir();
     if let Err(e) = std::fs::create_dir_all(&dir) {
-        let subdir = if cfg!(windows) { "Downloads\\Nectarlink" } else { "Downloads/Nectarlink" };
+        let subdir = if cfg!(windows) { "Downloads\\Sa6iLink" } else { "Downloads/Sa6iLink" };
         tracing::warn!(error = %e, "can't create {subdir}");
         set_notice(window, "Couldn't save screenshot");
         show_message(tr!("Mirror", "The screenshot couldn't be saved."));
@@ -466,7 +466,7 @@ pub fn screenshot_file(window: Window) {
     let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or(&base_name).to_owned();
     if let Some(node) = core_host::node() {
         node.record_timeline(
-            nectarlink_core::TimelineKind::Photo,
+            sa6i_link_core::TimelineKind::Photo,
             window.device,
             true,
             file_name.clone(),
@@ -480,16 +480,16 @@ pub fn screenshot_file(window: Window) {
     let device_name =
         core_host::host().hub.read(|s| s.name_of(&window.device)).unwrap_or_else(|| "your phone".into());
     let toast_body = if cfg!(windows) {
-        tr!("Mirror", "Screenshot from %1, saved in Downloads\\Nectarlink", device_name)
+        tr!("Mirror", "Screenshot from %1, saved in Downloads\\Sa6iLink", device_name)
     } else {
-        tr!("Mirror", "Screenshot from %1, saved in Downloads/Nectarlink", device_name)
+        tr!("Mirror", "Screenshot from %1, saved in Downloads/Sa6iLink", device_name)
     };
     toast::show(Toast {
         device: TOAST_GROUP.into(),
         key: path.to_string_lossy().into_owned(),
         title: file_name.clone(),
         body: toast_body,
-        attribution: "NectarLink".into(),
+        attribution: "Sa6i Link".into(),
         icon: None,
         image: Some(path),
         actions: vec![(ACTION_OPEN.into(), "Open".into()), (ACTION_SHOW.into(), "Show in folder".into())],
@@ -500,9 +500,9 @@ pub fn screenshot_file(window: Window) {
     });
     set_notice(window, tr!("Mirror", "Saved %1", file_name));
     let saved_msg = if cfg!(windows) {
-        tr!("Mirror", "Saved %1 to Downloads\\Nectarlink.", file_name)
+        tr!("Mirror", "Saved %1 to Downloads\\Sa6iLink.", file_name)
     } else {
-        tr!("Mirror", "Saved %1 to Downloads/Nectarlink.", file_name)
+        tr!("Mirror", "Saved %1 to Downloads/Sa6iLink.", file_name)
     };
     show_message(saved_msg);
 }
@@ -544,7 +544,7 @@ pub fn toggle_recording(window: Window) {
     let base_name = local_timestamp_filename("Mirror", "mp4");
     let dir = core_host::downloads_dir();
     if let Err(e) = std::fs::create_dir_all(&dir) {
-        let subdir = if cfg!(windows) { "Downloads\\Nectarlink" } else { "Downloads/Nectarlink" };
+        let subdir = if cfg!(windows) { "Downloads\\Sa6iLink" } else { "Downloads/Sa6iLink" };
         tracing::warn!(error = %e, "can't create {subdir}");
         set_notice(window, "Couldn't start recording");
         show_message(tr!("Mirror", "Couldn't start recording."));
@@ -617,7 +617,7 @@ pub fn stop_recording(window: Window) {
                 let size_bytes = std::fs::metadata(&path).map_or(0, |m| m.len());
                 if let Some(node) = core_host::node() {
                     node.record_timeline(
-                        nectarlink_core::TimelineKind::Recording,
+                        sa6i_link_core::TimelineKind::Recording,
                         window.device,
                         true,
                         file_name.clone(),
@@ -633,16 +633,16 @@ pub fn stop_recording(window: Window) {
                     .read(|s| s.name_of(&window.device))
                     .unwrap_or_else(|| "your phone".into());
                 let toast_body = if cfg!(windows) {
-                    tr!("Mirror", "Recording from %1, saved in Downloads\\Nectarlink", device_name)
+                    tr!("Mirror", "Recording from %1, saved in Downloads\\Sa6iLink", device_name)
                 } else {
-                    tr!("Mirror", "Recording from %1, saved in Downloads/Nectarlink", device_name)
+                    tr!("Mirror", "Recording from %1, saved in Downloads/Sa6iLink", device_name)
                 };
                 toast::show(Toast {
                     device: TOAST_GROUP.into(),
                     key: path.to_string_lossy().into_owned(),
                     title: file_name.clone(),
                     body: toast_body,
-                    attribution: "NectarLink".into(),
+                    attribution: "Sa6i Link".into(),
                     icon: None,
                     image: None,
                     actions: vec![
@@ -656,9 +656,9 @@ pub fn stop_recording(window: Window) {
                 });
                 set_notice(window, tr!("Mirror", "Saved %1", file_name));
                 let saved_msg = if cfg!(windows) {
-                    tr!("Mirror", "Saved %1 to Downloads\\Nectarlink.", file_name)
+                    tr!("Mirror", "Saved %1 to Downloads\\Sa6iLink.", file_name)
                 } else {
-                    tr!("Mirror", "Saved %1 to Downloads/Nectarlink.", file_name)
+                    tr!("Mirror", "Saved %1 to Downloads/Sa6iLink.", file_name)
                 };
                 show_message(saved_msg);
             }
@@ -819,10 +819,10 @@ pub fn set_remote_keyboard(device: Option<DeviceId>) {
         return;
     }
     if let Some(old) = prev {
-        input(Window::screen(old), nectarlink_core::MirrorInput::Key { key: "keyboard_off".into() });
+        input(Window::screen(old), sa6i_link_core::MirrorInput::Key { key: "keyboard_off".into() });
     }
     if let Some(new) = device {
-        input(Window::screen(new), nectarlink_core::MirrorInput::Key { key: "keyboard_on".into() });
+        input(Window::screen(new), sa6i_link_core::MirrorInput::Key { key: "keyboard_on".into() });
     }
     core_host::host().hub.changed(Changes::MIRROR);
 }
@@ -840,7 +840,7 @@ pub fn toggle_remote_keyboard(device: DeviceId) {
 /// to `device` while remote keyboard mode is active.
 pub fn keyboard_press(device: DeviceId, key_name: String) {
     if keyboard_device() == Some(device) {
-        input(Window::screen(device), nectarlink_core::MirrorInput::Key { key: key_name });
+        input(Window::screen(device), sa6i_link_core::MirrorInput::Key { key: key_name });
     }
 }
 
@@ -852,13 +852,13 @@ pub fn keyboard_text(device: DeviceId, text: String) {
     let window = Window::screen(device);
     let mut piece = String::new();
     for c in text.chars() {
-        if piece.len() + c.len_utf8() > nectarlink_core::MIRROR_MAX_TEXT_BYTES {
-            input(window, nectarlink_core::MirrorInput::Text { text: std::mem::take(&mut piece) });
+        if piece.len() + c.len_utf8() > sa6i_link_core::MIRROR_MAX_TEXT_BYTES {
+            input(window, sa6i_link_core::MirrorInput::Text { text: std::mem::take(&mut piece) });
         }
         piece.push(c);
     }
     if !piece.is_empty() {
-        input(window, nectarlink_core::MirrorInput::Text { text: piece });
+        input(window, sa6i_link_core::MirrorInput::Text { text: piece });
     }
 }
 
@@ -1005,12 +1005,12 @@ fn request(window: Window, mut options: MirrorStart) {
                 Error::Denied => tr!("Mirror", "Mirroring is turned off for this phone."),
                 Error::Unsupported if app => tr!(
                     "Mirror",
-                    "Set up Wireless debugging in NectarLink on the phone to open its apps here."
+                    "Set up Wireless debugging in Sa6i Link on the phone to open its apps here."
                 ),
                 Error::Unsupported => {
                     tr!(
                         "Mirror",
-                        "This phone's app doesn't share its screen yet. Update NectarLink on the phone."
+                        "This phone's app doesn't share its screen yet. Update Sa6i Link on the phone."
                     )
                 }
                 Error::Offline | Error::NotPaired => tr!("Mirror", "The phone isn't connected."),
@@ -1032,7 +1032,7 @@ fn request(window: Window, mut options: MirrorStart) {
                     window,
                     Phase::Ended(Some(tr!(
                         "Mirror",
-                        "The app didn't open on the phone. Try again, or open NectarLink on the phone to check Wireless debugging."
+                        "The app didn't open on the phone. Try again, or open Sa6i Link on the phone to check Wireless debugging."
                     ))),
                 );
             }
@@ -1126,7 +1126,7 @@ pub fn on_event(event: &NodeEvent) {
             }
         }
         // A phone that went away takes its app list with it.
-        NodeEvent::LinkChanged { device, link: nectarlink_core::LinkState::Offline { .. } } => {
+        NodeEvent::LinkChanged { device, link: sa6i_link_core::LinkState::Offline { .. } } => {
             let cleared_kb = state(|s| {
                 s.apps.remove(device);
                 s.screen_off.remove(device);
@@ -1217,7 +1217,7 @@ pub fn load_apps(device: DeviceId) {
             }
             Err(Error::Unsupported) => Apps::Failed(tr!(
                 "Mirror",
-                "Set up Wireless debugging in NectarLink on the phone to open its apps here."
+                "Set up Wireless debugging in Sa6i Link on the phone to open its apps here."
             )),
             Err(e) => Apps::Failed(describe(&e)),
         };
@@ -1242,7 +1242,7 @@ fn saved_apps(data_dir: &Path, device: &DeviceId) -> Option<Vec<App>> {
     let saved: Vec<SavedApp> = serde_json::from_slice(&bytes).ok()?;
     let apps: Vec<App> = saved
         .into_iter()
-        .filter(|a| nectarlink_core::is_package_name(&a.pkg))
+        .filter(|a| sa6i_link_core::is_package_name(&a.pkg))
         .map(|a| App { icon: crate::icons::existing(data_dir, &a.pkg), pkg: a.pkg, label: a.label })
         .collect();
     (!apps.is_empty()).then_some(apps)
@@ -1272,9 +1272,9 @@ pub fn palette_apps(device: DeviceId) -> Vec<(String, String)> {
         let online = s
             .devices
             .iter()
-            .any(|d| d.id == device && matches!(d.link, nectarlink_core::LinkState::Online { .. }));
+            .any(|d| d.id == device && matches!(d.link, sa6i_link_core::LinkState::Online { .. }));
         let avail = s.matrices.get(&device).and_then(|m| m.state("mirroring.app_windows"))
-            == Some(nectarlink_core::FeatureState::Available);
+            == Some(sa6i_link_core::FeatureState::Available);
         (s.app_names.clone(), online && avail)
     });
 
@@ -1327,13 +1327,13 @@ pub fn palette_apps(device: DeviceId) -> Vec<(String, String)> {
 
 /// The PC's mouse, keyboard, and gamepad on a mirrored screen or app window,
 /// sent in order.
-pub fn input(window: Window, input: nectarlink_core::MirrorInput) {
+pub fn input(window: Window, input: sa6i_link_core::MirrorInput) {
     static QUEUE: std::sync::OnceLock<
-        tokio::sync::mpsc::UnboundedSender<(Window, nectarlink_core::MirrorInput)>,
+        tokio::sync::mpsc::UnboundedSender<(Window, sa6i_link_core::MirrorInput)>,
     > = std::sync::OnceLock::new();
     let queue = QUEUE.get_or_init(|| {
         let (queue, mut inputs) =
-            tokio::sync::mpsc::unbounded_channel::<(Window, nectarlink_core::MirrorInput)>();
+            tokio::sync::mpsc::unbounded_channel::<(Window, sa6i_link_core::MirrorInput)>();
         core_host::spawn(async move {
             while let Some((window, input)) = inputs.recv().await {
                 if let Some(node) = core_host::node()
@@ -1422,10 +1422,10 @@ pub fn drop_files(raw_urls: &[String]) {
 /// Requests remote input control from the phone for `key` and shows a guidance banner.
 pub fn request_control(key: &str) {
     let Some(window) = Window::parse(key) else { return };
-    set_notice(window, "On your phone, tap Allow / turn on Control from your PC in NectarLink");
+    set_notice(window, "On your phone, tap Allow / turn on Control from your PC in Sa6i Link");
     input(
         window,
-        nectarlink_core::MirrorInput::Touch { action: nectarlink_core::TouchAction::Up, x: 0.5, y: 0.5 },
+        sa6i_link_core::MirrorInput::Touch { action: sa6i_link_core::TouchAction::Up, x: 0.5, y: 0.5 },
     );
 }
 
@@ -1458,7 +1458,7 @@ pub fn sync_clipboard_for_device(device: DeviceId) {
     let Some(node) = core_host::node() else { return };
     let can_send = core_host::host().hub.read(|s| {
         s.matrices.get(&device).and_then(|m| m.state("clipboard.pc_to_phone"))
-            == Some(nectarlink_core::FeatureState::Available)
+            == Some(sa6i_link_core::FeatureState::Available)
     });
     if !can_send {
         return;
@@ -1505,7 +1505,7 @@ pub const RIGHT_THUMB_DEADZONE: i16 = 8689;
 #[allow(dead_code)]
 pub const TRIGGER_THRESHOLD: u8 = 30;
 
-/// Normalized controller snapshot forwarded via [`nectarlink_core::MirrorInput::Gamepad`].
+/// Normalized controller snapshot forwarded via [`sa6i_link_core::MirrorInput::Gamepad`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct GamepadState {
     pub buttons: u16,
@@ -1518,9 +1518,9 @@ pub struct GamepadState {
 }
 
 impl GamepadState {
-    /// Converts this controller snapshot into a [`nectarlink_core::MirrorInput::Gamepad`] message.
-    pub fn to_mirror_input(self) -> nectarlink_core::MirrorInput {
-        nectarlink_core::MirrorInput::Gamepad {
+    /// Converts this controller snapshot into a [`sa6i_link_core::MirrorInput::Gamepad`] message.
+    pub fn to_mirror_input(self) -> sa6i_link_core::MirrorInput {
+        sa6i_link_core::MirrorInput::Gamepad {
             buttons: self.buttons,
             lx: self.lx,
             ly: self.ly,
@@ -1538,7 +1538,7 @@ fn deadzone_axis(val: i16, deadzone: i16) -> i16 {
 }
 
 /// Applies stick deadzones and trigger thresholds so idle controller noise does
-/// not generate redundant [`nectarlink_core::MirrorInput::Gamepad`] frames.
+/// not generate redundant [`sa6i_link_core::MirrorInput::Gamepad`] frames.
 #[allow(dead_code)]
 pub fn normalize_gamepad_state(raw: GamepadState) -> GamepadState {
     GamepadState {
@@ -2229,7 +2229,7 @@ mod tests {
         });
         assert_eq!(
             active.to_mirror_input(),
-            nectarlink_core::MirrorInput::Gamepad {
+            sa6i_link_core::MirrorInput::Gamepad {
                 buttons: 0x1001,
                 lx: 16_000,
                 ly: -24_000,
@@ -2247,7 +2247,7 @@ mod tests {
         let file_a = dir.path().join("alpha.txt");
         std::fs::write(&file_a, b"hello").unwrap();
         let file_url = format!("file:///{}", file_a.to_string_lossy().replace('\\', "/"));
-        let dev = nectarlink_core::DeviceId([0x11; 32]);
+        let dev = sa6i_link_core::DeviceId([0x11; 32]);
         let key = format!("{dev}/0");
 
         let (win, paths) = parse_dropped_file_urls(&[key, file_url]);
@@ -2258,7 +2258,7 @@ mod tests {
     #[test]
     fn a_phones_apps_are_kept_for_the_next_run_with_their_icons() {
         let dir = tempfile::tempdir().unwrap();
-        let phone = nectarlink_core::DeviceId([0x22; 32]);
+        let phone = sa6i_link_core::DeviceId([0x22; 32]);
         assert!(saved_apps(dir.path(), &phone).is_none(), "nothing saved yet");
 
         let png = b"\x89PNG\r\n\x1a\nicon";
@@ -2271,7 +2271,7 @@ mod tests {
         assert_eq!(saved_apps(dir.path(), &phone), Some(apps));
 
         // Another phone has its own list; a damaged file is no list.
-        assert!(saved_apps(dir.path(), &nectarlink_core::DeviceId([0x33; 32])).is_none());
+        assert!(saved_apps(dir.path(), &sa6i_link_core::DeviceId([0x33; 32])).is_none());
         std::fs::write(saved_apps_path(dir.path(), &phone), b"{not json").unwrap();
         assert!(saved_apps(dir.path(), &phone).is_none());
     }

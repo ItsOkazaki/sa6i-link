@@ -13,7 +13,7 @@ QML_SHA = '17be867297035f63edb19f5c60bd9ffdaa9ea4a668bc1e1d877d959c6b6307a4'
 EXE_NAME = 'Sa6i.Link/Sa6i-Link/Sa6i Link App.exe'
 OFFSET = 0x1D53D2D
 CAPACITY = 9317
-FALLBACK = '/qt/qml/app/nectarlink/qml/NainWindow.qml'.encode('utf-16le')
+FALLBACK = '/qt/qml/app/sa6i-link/qml/NainWindow.qml'.encode('utf-16le')
 
 
 def checksum(value):

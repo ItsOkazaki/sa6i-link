@@ -68,8 +68,8 @@ def patch_resource_table(data):
         text = bytes(data[cursor:cursor + byte_length]).decode('utf-8')
         if data[cursor + byte_length] != 0 or len(text.encode('utf-16-le')) // 2 != utf16_length:
             raise ValueError('Unexpected global string encoding')
-        if 'Download/Nectarlink' in text or 'التنزيل/Nectarlink' in text:
-            text = text.replace('Nectarlink', 'Sa6i Link')
+        if 'Download/Sa6iLink' in text or 'التنزيل/Sa6iLink' in text:
+            text = text.replace('Sa6iLink', 'Sa6i Link')
             modified += 1
         raw = text.encode('utf-8')
         offsets.append(len(entries))
@@ -99,13 +99,13 @@ def patch_decoded(decoded):
 
     # R8 inlined the original `enabled` property. Disable the actual entry
     # points and hide the old controls rather than relying on a source flag.
-    updater = smali / 'app/nectarlink/android/update/AppUpdater.smali'
-    replace_method(updater, '.method public final latest()Lapp/nectarlink/android/update/AppUpdater$Update;', '    .locals 1\n    const/4 v0, 0x0\n    return-object v0')
+    updater = smali / 'app/sa6i-link/android/update/AppUpdater.smali'
+    replace_method(updater, '.method public final latest()Lapp/sa6i-link/android/update/AppUpdater$Update;', '    .locals 1\n    const/4 v0, 0x0\n    return-object v0')
     replace_method(updater, '.method public final check(Lkotlin/coroutines/jvm/internal/ContinuationImpl;)Ljava/lang/Object;', '    .locals 1\n    sget-object v0, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;\n    return-object v0')
     for name in ('checkIfDue', 'update', 'updateIfDue', 'installIfAutomatic'):
         replace_method(updater, f'.method public final {name}(Lkotlin/coroutines/jvm/internal/ContinuationImpl;)Ljava/lang/Object;', '    .locals 1\n    sget-object v0, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;\n    return-object v0')
-    ui = smali / 'app/nectarlink/android/update/UpdateCardKt.smali'
-    for header in ('.method public static final CheckForUpdates(Lapp/nectarlink/android/update/AppUpdater;Landroidx/compose/runtime/GapComposer;I)V', '.method public static final UpdateCard(Lapp/nectarlink/android/update/AppUpdater;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/GapComposer;I)V'):
+    ui = smali / 'app/sa6i-link/android/update/UpdateCardKt.smali'
+    for header in ('.method public static final CheckForUpdates(Lapp/sa6i-link/android/update/AppUpdater;Landroidx/compose/runtime/GapComposer;I)V', '.method public static final UpdateCard(Lapp/sa6i-link/android/update/AppUpdater;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/GapComposer;I)V'):
         replace_method(ui, header, '    .locals 0\n    return-void')
 
     # Only the two specific file-publishing methods get new output paths.
@@ -117,15 +117,15 @@ def patch_decoded(decoded):
         if len(matches) != 1:
             raise ValueError('Unexpected storage method: ' + name)
         method = matches[0].group(1)
-        if method.count('"Nectarlink"') != 1:
+        if method.count('"Sa6iLink"') != 1:
             raise ValueError('Unexpected storage string in ' + name)
-        text = text[:matches[0].start()] + method.replace('"Nectarlink"', '"Sa6i Link"') + text[matches[0].end():]
+        text = text[:matches[0].start()] + method.replace('"Sa6iLink"', '"Sa6i Link"') + text[matches[0].end():]
     storage.write_text(text, encoding='utf-8')
 
     paths = decoded / 'res/xml/file_paths.xml'
     text = paths.read_text(encoding='utf-8')
-    old = '<external-files-path name="received" path="Download/Nectarlink/" />'
-    new = '<external-files-path name="received" path="Download/Sa6i Link/" />\n    <external-files-path name="received_legacy" path="Download/Nectarlink/" />'
+    old = '<external-files-path name="received" path="Download/Sa6iLink/" />'
+    new = '<external-files-path name="received" path="Download/Sa6i Link/" />\n    <external-files-path name="received_legacy" path="Download/Sa6iLink/" />'
     if text.count(old) != 1:
         raise ValueError('Unexpected FileProvider paths')
     paths.write_text(text.replace(old, new), encoding='utf-8')
@@ -136,9 +136,9 @@ def patch_decoded(decoded):
         for key in ('transfer_received_from', 'guide_files_privacy'):
             pattern = re.compile(r'(<string name="' + key + r'">)(.*?)(</string>)')
             def update(match):
-                if match.group(2).count('Nectarlink') != 1:
+                if match.group(2).count('Sa6iLink') != 1:
                     raise ValueError('Unexpected download guidance in ' + str(path))
-                return match.group(1) + match.group(2).replace('Nectarlink', 'Sa6i Link') + match.group(3)
+                return match.group(1) + match.group(2).replace('Sa6iLink', 'Sa6i Link') + match.group(3)
             text, count = pattern.subn(update, text)
             if count != 1:
                 raise ValueError('Missing download guidance: ' + str(path) + ' ' + key)

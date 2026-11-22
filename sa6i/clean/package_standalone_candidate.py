@@ -22,7 +22,7 @@ CLEAN_EXE_SHA = 'e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3
 CLEAN_ASAR_SHA = 'b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f'
 SHIM_SHA = 'e4bb7c947223b56284ff05548434a0bb178faa147ce5157a94c771e3b11b276b'
 # Old launchers would select obsolete flags or profiles; do not ship them.
-REPLACED = {'nectarlink-desktop.exe', 'nectarlink_vcam.dll',
+REPLACED = {'sa6i-link.exe', 'sa6i_link_vcam.dll',
             'Start Integrated Test.cmd', 'Start Win7 Compatibility Test.cmd',
             'READ FIRST - EXPERIMENT.txt', 'INTEGRATION-BUILD-ONLY.txt'}
 README = '''SA6I LINK INTEGRATED CANDIDATE - EXPERIMENTAL, NOT A FINAL RELEASE
@@ -36,7 +36,7 @@ exercised, and Windows 10/11 behaviour is unverified.
 
 Extract to a NEW folder, never over an existing installation or preview. Run
 Start Sa6i Link Candidate.cmd. Windows 7 may need VxKex enabled separately
-for nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean Integration.exe.
+for sa6i-link.exe and Sa6i Clean\\Sa6i Clean Integration.exe.
 Existing pairings and settings do not automatically transfer; this launcher
 uses its own test app data directory. A separate profile is NOT a sandbox.
 
@@ -80,8 +80,8 @@ def build(base, speed, output):
                              ('Sa6i Clean/resources/app.asar', CLEAN_ASAR_SHA),
                              ('cldapi.dll', SHIM_SHA)):
             require_digest(base_index, path, digest)
-        require_digest(speed_index, 'nectarlink-desktop.exe', DESKTOP_SHA)
-        require_digest(speed_index, 'nectarlink_vcam.dll', VCAM_SHA)
+        require_digest(speed_index, 'sa6i-link.exe', DESKTOP_SHA)
+        require_digest(speed_index, 'sa6i_link_vcam.dll', VCAM_SHA)
         if not all(name.casefold() in base_index for name in REPLACED):
             raise ValueError('Base archive is missing an expected replaced file')
         launcher = sz.read('Start Reopen Speed Test.cmd')
@@ -95,7 +95,7 @@ def build(base, speed, output):
                                 secrets.token_hex(12).encode('ascii') + b'"\r\n')
         launcher = b''.join(lines)
         expected = {key: v for key, v in base_index.items() if v[0] not in REPLACED}
-        for name in ('nectarlink-desktop.exe', 'nectarlink_vcam.dll'):
+        for name in ('sa6i-link.exe', 'sa6i_link_vcam.dll'):
             expected[name.casefold()] = speed_index[name.casefold()]
         output.parent.mkdir(parents=True, exist_ok=True)
         # Exclusive creation refuses replacement even if another process races.
@@ -116,7 +116,7 @@ def build(base, speed, output):
                         continue
                     with bz.open(info) as src, out.open(OUT_ROOT + relative, 'w') as dst:
                         shutil.copyfileobj(src, dst, 1024 * 1024)
-                for name in ('nectarlink-desktop.exe', 'nectarlink_vcam.dll'):
+                for name in ('sa6i-link.exe', 'sa6i_link_vcam.dll'):
                     with sz.open(name) as src, out.open(OUT_ROOT + name, 'w') as dst:
                         shutil.copyfileobj(src, dst, 1024 * 1024)
                 out.writestr(OUT_ROOT + 'Start Sa6i Link Candidate.cmd', launcher)

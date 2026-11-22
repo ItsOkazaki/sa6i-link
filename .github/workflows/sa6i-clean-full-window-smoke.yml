@@ -62,9 +62,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Fixture compile failed' }
           [System.IO.File]::WriteAllText((Join-Path $fixture 'resources/app.asar'), 'inert fixture; not a real ASAR')
           # This artifact comes from the build prerequisite in this run.
-          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/sa6i-link.exe).Hash.ToLowerInvariant()
           Write-Host "::notice::Same-run desktop SHA256 $desktopSha"
-          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
+          python sa6i/clean/tests/prepare_synthetic_desktop.py app/sa6i-link.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           ./sa6i/clean/tests/full_window_smoke.ps1 -AppDir app -FixtureDir $fixture -IntegratedHeader -ClippingContainer -HeaderClearance -Scale ${{ matrix.scale }}
   electron-ui:
@@ -103,9 +103,9 @@ jobs:
           npx --yes @electron/asar@4.3.2 pack sa6i/clean/tests/synthetic_electron (Join-Path $fixture 'resources/app.asar')
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic ASAR creation failed' }
           # This artifact comes from the build prerequisite in this run.
-          $desktopSha = (Get-FileHash -Algorithm SHA256 app/nectarlink-desktop.exe).Hash.ToLowerInvariant()
+          $desktopSha = (Get-FileHash -Algorithm SHA256 app/sa6i-link.exe).Hash.ToLowerInvariant()
           Write-Host "::notice::Same-run desktop SHA256 $desktopSha"
-          python sa6i/clean/tests/prepare_synthetic_desktop.py app/nectarlink-desktop.exe $fixture --desktop-sha $desktopSha --themed-pins
+          python sa6i/clean/tests/prepare_synthetic_desktop.py app/sa6i-link.exe $fixture --desktop-sha $desktopSha --themed-pins
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic desktop patch failed' }
           $flags = @{}
           if ('${{ matrix.software }}' -eq '1') { $flags.ExpectSoftwareFlag = $true }

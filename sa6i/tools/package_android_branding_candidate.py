@@ -26,11 +26,11 @@ INPUT_SHA = '86913c1ab9ac5f1aac060b966708a0fc4442fd56e02df7cbc2dc4a4a1d92b5b1'
 APKTOOL_SHA = '7956eb04194300ce0d0a84ad18771eebc94b89fb8d1ddcce8ea4c056818646f4'
 SIGNER_SHA = 'eefdd6aed9db9fb849e4c98a50d8741e19d1b674ba6547220bcb9c3ed152123a'
 CHANGES = {
-    'androidx/activity/EdgeToEdge$$ExternalSyntheticLambda0.smali': [('NectarLink PC media', 'Sa6i Link PC media')],
-    'app/nectarlink/android/elevated/InputServer$Injector.smali': [('NectarLink Virtual Keyboard', 'Sa6i Link Virtual Keyboard'), ('NectarLink Virtual Gamepad', 'Sa6i Link Virtual Gamepad')],
-    'app/nectarlink/android/core/Core.smali': [('Phone speaker (NectarLink)', 'Phone speaker (Sa6i Link)')],
-    'app/nectarlink/android/core/Core$onTransfer$2.smali': [('NectarLink file', 'Sa6i Link file')],
-    'app/nectarlink/android/core/Core$joinWithLink$1.smali': [('not a NectarLink code', 'not a Sa6i Link code')],
+    'androidx/activity/EdgeToEdge$$ExternalSyntheticLambda0.smali': [('Sa6i Link PC media', 'Sa6i Link PC media')],
+    'app/sa6i-link/android/elevated/InputServer$Injector.smali': [('Sa6i Link Virtual Keyboard', 'Sa6i Link Virtual Keyboard'), ('Sa6i Link Virtual Gamepad', 'Sa6i Link Virtual Gamepad')],
+    'app/sa6i-link/android/core/Core.smali': [('Phone speaker (Sa6i Link)', 'Phone speaker (Sa6i Link)')],
+    'app/sa6i-link/android/core/Core$onTransfer$2.smali': [('Sa6i Link file', 'Sa6i Link file')],
+    'app/sa6i-link/android/core/Core$joinWithLink$1.smali': [('not a Sa6i Link code', 'not a Sa6i Link code')],
 }
 OLD_SIGNATURES = {'META-INF/SA6ITEST.SF', 'META-INF/SA6ITEST.RSA', 'META-INF/MANIFEST.MF'}
 

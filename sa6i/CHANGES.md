@@ -9,20 +9,20 @@ source changes are not part of the downloadable v8 binary.
 
 | # | File | Change | Source artefact |
 |---|---|---|---|
-| 1 | `desktop/app/i18n/nectarlink_ar.ts` | **new** — 1,876-message reviewed Arabic Qt catalogue, 0 unfinished, 0 empty | `source/nectarlink_ar-reviewed.ts` |
+| 1 | `desktop/app/i18n/sa6i-link_ar.ts` | **new** — 1,876-message reviewed Arabic Qt catalogue, 0 unfinished, 0 empty | `source/sa6i-link_ar-reviewed.ts` |
 | 2 | `desktop/app/src/i18n.rs` | `LANGUAGES` gains `("ar", "العربية")`; test asserts `is_known("ar")` | `source/patch-v6-arabic-test.py` (binary patch of the Rust language table) |
 | 3 | `desktop/app/qml/pages/FeaturesGuidePage.qml` | **replaced** by the Sa6i Link local guide; follows `Preferences.language`, no separate Arabic switch | `source/LocalGuide-checked.qml` (the reviewed variant, via `patch-guide-reviewed.py`) |
 | 4 | `android/app/src/main/res/values-ar/strings.xml` | **new** — merged 1,214 strings + 7 plural resources (42 forms) into one file | `source/android-ar/strings.xml` + `source/android-ar/plurals.xml` |
 | 5 | `android/app/src/main/res/xml/locales_config.xml` | added `<locale android:name="ar" />` | `source/android-ar/locales_config.xml` |
-| 6 | `android/app/src/main/kotlin/app/nectarlink/android/ui/AppLanguage.kt` | added `"ar" to "العربية"` and `ar`/`ar-*` normalisation | `source/android-ar/AppLanguage.smali` (patched APK) |
-| 7 | `android/app/src/test/kotlin/app/nectarlink/android/ui/LocalesTest.kt` | added `normalize("ar")`, `normalize("ar-EG")` assertions | — |
+| 6 | `android/app/src/main/kotlin/app/sa6i-link/android/ui/AppLanguage.kt` | added `"ar" to "العربية"` and `ar`/`ar-*` normalisation | `source/android-ar/AppLanguage.smali` (patched APK) |
+| 7 | `android/app/src/test/kotlin/app/sa6i-link/android/ui/LocalesTest.kt` | added `normalize("ar")`, `normalize("ar-EG")` assertions | — |
 
 ## Why each one is enough
 
 - `desktop/app/build.rs` (`offered_languages()`) and `scripts/package.ps1`
   parse `i18n::LANGUAGES` out of `i18n.rs`, so adding `ar` automatically makes
-  `lrelease` compile `nectarlink_ar.qm` for source and installer builds.
-  `app_helpers.cpp` loads `nectarlink_<locale>.qm` plus `qtbase_<locale>.qm`
+  `lrelease` compile `sa6i-link_ar.qm` for source and installer builds.
+  `app_helpers.cpp` loads `sa6i-link_<locale>.qm` plus `qtbase_<locale>.qm`
   from `translations/`, which the v8 baseline supplies.
 - The reviewed catalogue has no `type="unfinished"` entries. The source build
   and its tests still need to be run in a suitable build environment.
@@ -43,7 +43,7 @@ source changes are not part of the downloadable v8 binary.
 ## ⚠️ Do not rebrand the source strings casually
 
 Qt looks translations up by the **English source text**. The reviewed
-`nectarlink_ar.ts` is keyed to `v0.1.5`'s original `qsTr("NectarLink …")`
+`sa6i-link_ar.ts` is keyed to `v0.1.5`'s original `qsTr("Sa6i Link …")`
 strings. Replacing those source strings with `"Sa6i Link …"` (as
 `rebuild_test_patch.py` does inside the compiled EXE) would silently orphan
 every Arabic translation whose source contains the old brand name.
@@ -52,7 +52,7 @@ So the imported source still contains upstream's English text, and the Sa6i
 branding lives in the v8 binary patch chain. A source-level rebrand is a
 separate task: rebrand first, then regenerate the template with
 `cargo xtask strings` / `lupdate`, re-map all 1,876 translations (including the
-`NectarLink` ones), and re-run the Arabic checks. Changing `app_name` in
+`Sa6i Link` ones), and re-run the Arabic checks. Changing `app_name` in
 Android resources is safe (keys are resource names, not text) — the Arabic
 `values-ar` already uses `Sa6i Link` there.
 
@@ -61,7 +61,7 @@ Android resources is safe (keys are resource names, not text) — the Arabic
 `baseline/windows-arabic-v8/source/patch-*.py` are version-locked to the exact
 official v0.1.5 x64 EXE (hard-coded SHA-256 checks and resource offsets):
 
-- `rebuild_test_patch.py` — Windows 7 loader shims, `NectarLink` → `Sa6i Link`
+- `rebuild_test_patch.py` — Windows 7 loader shims, `Sa6i Link` → `Sa6i Link`
   in visible `qsTr()` strings, logo/welcome images
 - `patch-ui-v3.py` / `patch-ui-v4.py` — "Sa6i Link" title, transparent mark,
   new monospace font
@@ -77,7 +77,7 @@ machine; it was intentionally not attempted here.
 ## Static validation performed
 
 ```
-XML parse:              nectarlink_ar.ts, values-ar/strings.xml, locales_config.xml  OK
+XML parse:              sa6i-link_ar.ts, values-ar/strings.xml, locales_config.xml  OK
 Catalogue:              1876 messages, 0 unfinished, 0 empty; v0.1.5 template = 1876
 build.rs parser:        ['en','de','zh_CN','tr','ar']  (ar present)
 package.ps1 regex:      ['en','de','zh_CN','tr','ar']  (ar present)

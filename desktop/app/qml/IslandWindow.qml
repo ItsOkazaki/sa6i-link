@@ -2,7 +2,7 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Shapes
-import app.nectarlink
+import sa6i.link
 
 // Dynamic Island-style floating pill anchored at the top-center of the primary
 // monitor (340×40px compact, expanding smoothly to 380×88px on hover or incoming call).
@@ -13,7 +13,7 @@ import app.nectarlink
 Window {
     id: islandWin
 
-    title: qsTr("Nectar Island")
+    title: qsTr("Sa6i Island")
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
 
@@ -70,7 +70,7 @@ Window {
         target: NotificationList
         function onCountChanged() {
             const cur = NotificationList.count
-            if (cur > islandWin.lastNotificationCount && Preferences.nectarIslandNotifications) {
+            if (cur > islandWin.lastNotificationCount && Preferences.sa6iIslandNotifications) {
                 islandWin.notificationToastActive = true
                 notificationToastTimer.restart()
             } else if (cur === 0) {
@@ -127,7 +127,7 @@ Window {
         for (let i = 0; i < count; i++) {
             const item = mediaRepeater.itemAt(i)
             if (!item) continue
-            // Only surface phone media in Nectar Island (never PC-local media, which is already on the PC)
+            // Only surface phone media in Sa6i Island (never PC-local media, which is already on the PC)
             if (item.deviceId === "local") continue
             if (item.playing) {
                 if (!best || !best.playing) {
@@ -195,16 +195,16 @@ Window {
 
     readonly property bool hasMediaCandidate: mediaPlaying && mediaDeviceId !== "local" && mediaTitle.length > 0
     readonly property string mode: {
-        if (Preferences.nectarIslandCalls && PhoneCall.active) return "call"
-        if (Preferences.nectarIslandTransfers && (TransferList.active > 0 || transferJustFinished)) return "transfer"
-        if (Preferences.nectarIslandMedia && hasMediaCandidate) return "media"
-        if (Preferences.nectarIslandNotifications && notificationToastActive && NotificationList.count > 0) return "notification"
-        if (Preferences.nectarIslandTransfers && TransferList.waitingCount > 0) return "waiting"
+        if (Preferences.sa6iIslandCalls && PhoneCall.active) return "call"
+        if (Preferences.sa6iIslandTransfers && (TransferList.active > 0 || transferJustFinished)) return "transfer"
+        if (Preferences.sa6iIslandMedia && hasMediaCandidate) return "media"
+        if (Preferences.sa6iIslandNotifications && notificationToastActive && NotificationList.count > 0) return "notification"
+        if (Preferences.sa6iIslandTransfers && TransferList.waitingCount > 0) return "waiting"
         return "idle"
     }
 
     readonly property bool hasActivity: mode !== "idle"
-    visible: Preferences.nectarIsland && hasActivity
+    visible: Preferences.sa6iIsland && hasActivity
 
     onVisibleChanged: {
         if (visible) {
@@ -224,14 +224,14 @@ Window {
 
     Connections {
         target: Preferences
-        function onNectarIslandChanged() {
-            if (Preferences.nectarIsland) {
+        function onSa6iIslandChanged() {
+            if (Preferences.sa6iIsland) {
                 Qt.callLater(() => AppController.styleShelfWindow())
             }
         }
     }
 
-    readonly property bool expanded: pillHover.hovered || (Preferences.nectarIslandCalls && PhoneCall.active && PhoneCall.ringing)
+    readonly property bool expanded: pillHover.hovered || (Preferences.sa6iIslandCalls && PhoneCall.active && PhoneCall.ringing)
     readonly property real pillWidth: expanded ? 380 : 340
     readonly property real pillHeight: expanded ? 88 : 40
     width: 400
@@ -256,8 +256,8 @@ Window {
         if (mode === "waiting")
             return qsTr("%1 waiting").arg(TransferList.waitingCount)
         return DeviceList.count > 0
-            ? qsTr("Nectar Island · %1").arg(DeviceList.deviceNameAt(0))
-            : qsTr("Nectar Island · Ready")
+            ? qsTr("Sa6i Island · %1").arg(DeviceList.deviceNameAt(0))
+            : qsTr("Sa6i Island · Ready")
     }
 
     readonly property string secondaryLabel: {
@@ -286,7 +286,7 @@ Window {
                 : base
         }
         if (mode === "notification")
-            return qsTr("Click to view in NectarLink").replace(/NectarLink/g, "Sa6i Link")
+            return qsTr("Click to view in Sa6i Link")
         if (mode === "waiting") {
             return DeviceList.count > 0
                 ? qsTr("Will send when %1 is back").arg(DeviceList.deviceNameAt(0))
@@ -302,7 +302,7 @@ Window {
         // Hidden repeaters inside Item scope so QtQuick instantiates delegates cleanly
         Repeater {
             id: mediaRepeater
-            model: Preferences.nectarIsland ? MediaList : null
+            model: Preferences.sa6iIsland ? MediaList : null
             onItemAdded: islandWin.recomputeMedia()
             onItemRemoved: islandWin.recomputeMedia()
             delegate: Item {
@@ -337,7 +337,7 @@ Window {
 
         Repeater {
             id: transferRepeater
-            model: Preferences.nectarIsland ? TransferList : null
+            model: Preferences.sa6iIsland ? TransferList : null
             onItemAdded: islandWin.recomputeTransfer()
             onItemRemoved: islandWin.recomputeTransfer()
             delegate: Item {

@@ -755,7 +755,7 @@ struct AacDecoder
 };
 } // namespace
 
-extern "C" void* nectarlink_video_encoder_create(bool hevc, int width, int height, int fps, int bitrate,
+extern "C" void* sa6i-link_video_encoder_create(bool hevc, int width, int height, int fps, int bitrate,
                                                char* error, size_t capacity)
 {
     try {
@@ -768,8 +768,8 @@ extern "C" void* nectarlink_video_encoder_create(bool hevc, int width, int heigh
     }
 }
 
-extern "C" void nectarlink_video_encoder_destroy(void* encoder) { delete static_cast<EncoderSelection*>(encoder); }
-extern "C" bool nectarlink_video_encoder_next_device(void* pointer, char* error, size_t capacity)
+extern "C" void sa6i-link_video_encoder_destroy(void* encoder) { delete static_cast<EncoderSelection*>(encoder); }
+extern "C" bool sa6i-link_video_encoder_next_device(void* pointer, char* error, size_t capacity)
 {
     try {
         static_cast<EncoderSelection*>(pointer)->select_next();
@@ -779,13 +779,13 @@ extern "C" bool nectarlink_video_encoder_next_device(void* pointer, char* error,
         return false;
     }
 }
-extern "C" const char* nectarlink_video_encoder_backend(const void* encoder)
+extern "C" const char* sa6i-link_video_encoder_backend(const void* encoder)
 {
     const auto& selected = *static_cast<const EncoderSelection*>(encoder);
     return selected.current ? selected.current->context->codec->name : "unavailable";
 }
 
-extern "C" int nectarlink_video_encoder_send(void* encoder, const uint8_t* bytes, size_t length, int64_t time_us,
+extern "C" int sa6i-link_video_encoder_send(void* encoder, const uint8_t* bytes, size_t length, int64_t time_us,
                                            char* error, size_t capacity)
 {
     try {
@@ -797,7 +797,7 @@ extern "C" int nectarlink_video_encoder_send(void* encoder, const uint8_t* bytes
     }
 }
 
-extern "C" int nectarlink_video_encoder_receive(void* pointer, const uint8_t** bytes, size_t* length, bool* keyframe,
+extern "C" int sa6i-link_video_encoder_receive(void* pointer, const uint8_t** bytes, size_t* length, bool* keyframe,
                                               char* error, size_t capacity)
 {
     try {
@@ -816,13 +816,13 @@ extern "C" int nectarlink_video_encoder_receive(void* pointer, const uint8_t** b
     }
 }
 
-extern "C" void nectarlink_video_encoder_request_keyframe(void* pointer)
+extern "C" void sa6i-link_video_encoder_request_keyframe(void* pointer)
 {
     auto& selected = *static_cast<EncoderSelection*>(pointer);
     if (selected.current) selected.current->keyframe_requested = true;
 }
 
-extern "C" bool nectarlink_video_encoder_set_bitrate(void* pointer, int bitrate)
+extern "C" bool sa6i-link_video_encoder_set_bitrate(void* pointer, int bitrate)
 {
     auto& selected = *static_cast<EncoderSelection*>(pointer);
     if (!selected.current) return false;
@@ -843,7 +843,7 @@ extern "C" bool nectarlink_video_encoder_set_bitrate(void* pointer, int bitrate)
     return changed;
 }
 
-extern "C" void* nectarlink_video_decoder_create(bool hevc, char* error, size_t capacity)
+extern "C" void* sa6i-link_video_decoder_create(bool hevc, char* error, size_t capacity)
 {
     try {
         return new DecoderSelection(hevc);
@@ -853,9 +853,9 @@ extern "C" void* nectarlink_video_decoder_create(bool hevc, char* error, size_t 
     }
 }
 
-extern "C" void nectarlink_video_decoder_destroy(void* decoder) { delete static_cast<DecoderSelection*>(decoder); }
+extern "C" void sa6i-link_video_decoder_destroy(void* decoder) { delete static_cast<DecoderSelection*>(decoder); }
 
-extern "C" bool nectarlink_video_decoder_next_device(void* pointer, char* error, size_t capacity)
+extern "C" bool sa6i-link_video_decoder_next_device(void* pointer, char* error, size_t capacity)
 {
     try {
         static_cast<DecoderSelection*>(pointer)->select_next(true);
@@ -866,7 +866,7 @@ extern "C" bool nectarlink_video_decoder_next_device(void* pointer, char* error,
     }
 }
 
-extern "C" const char* nectarlink_video_decoder_backend(const void* pointer)
+extern "C" const char* sa6i-link_video_decoder_backend(const void* pointer)
 {
     const auto& selected = *static_cast<const DecoderSelection*>(pointer);
     if (!selected.current) return "unavailable";
@@ -877,7 +877,7 @@ extern "C" const char* nectarlink_video_decoder_backend(const void* pointer)
     return name ? name : "unknown";
 }
 
-extern "C" int nectarlink_video_decoder_send(void* pointer, const uint8_t* bytes, size_t length,
+extern "C" int sa6i-link_video_decoder_send(void* pointer, const uint8_t* bytes, size_t length,
                                            char* error, size_t capacity)
 {
     try {
@@ -896,7 +896,7 @@ extern "C" int nectarlink_video_decoder_send(void* pointer, const uint8_t* bytes
     }
 }
 
-extern "C" int nectarlink_video_decoder_receive(void* pointer, NectarlinkDecodedNv12* frame,
+extern "C" int sa6i-link_video_decoder_receive(void* pointer, NectarlinkDecodedNv12* frame,
                                               char* error, size_t capacity)
 {
     try {
@@ -923,7 +923,7 @@ extern "C" int nectarlink_video_decoder_receive(void* pointer, NectarlinkDecoded
     }
 }
 
-extern "C" void nectarlink_video_decoder_flush(void* pointer)
+extern "C" void sa6i-link_video_decoder_flush(void* pointer)
 {
     auto& selected = *static_cast<DecoderSelection*>(pointer);
     if (!selected.current) return;
@@ -934,7 +934,7 @@ extern "C" void nectarlink_video_decoder_flush(void* pointer)
     decoder.functions.packet_unref(decoder.packet);
 }
 
-extern "C" void* nectarlink_video_aac_encoder_create(int sample_rate, int channels, char* error, size_t capacity)
+extern "C" void* sa6i-link_video_aac_encoder_create(int sample_rate, int channels, char* error, size_t capacity)
 {
     try {
         return new AacEncoder(sample_rate, channels);
@@ -944,12 +944,12 @@ extern "C" void* nectarlink_video_aac_encoder_create(int sample_rate, int channe
     }
 }
 
-extern "C" void nectarlink_video_aac_encoder_destroy(void* encoder)
+extern "C" void sa6i-link_video_aac_encoder_destroy(void* encoder)
 {
     delete static_cast<AacEncoder*>(encoder);
 }
 
-extern "C" int nectarlink_video_aac_encoder_send(void* encoder, const int16_t* pcm, size_t frames,
+extern "C" int sa6i-link_video_aac_encoder_send(void* encoder, const int16_t* pcm, size_t frames,
                                                  char* error, size_t capacity)
 {
     try {
@@ -961,7 +961,7 @@ extern "C" int nectarlink_video_aac_encoder_send(void* encoder, const int16_t* p
     }
 }
 
-extern "C" int nectarlink_video_aac_encoder_receive(void* encoder, const uint8_t** bytes, size_t* length,
+extern "C" int sa6i-link_video_aac_encoder_receive(void* encoder, const uint8_t** bytes, size_t* length,
                                                     char* error, size_t capacity)
 {
     try {
@@ -972,7 +972,7 @@ extern "C" int nectarlink_video_aac_encoder_receive(void* encoder, const uint8_t
     }
 }
 
-extern "C" void* nectarlink_video_aac_decoder_create(char* error, size_t capacity)
+extern "C" void* sa6i-link_video_aac_decoder_create(char* error, size_t capacity)
 {
     try {
         return new AacDecoder();
@@ -982,12 +982,12 @@ extern "C" void* nectarlink_video_aac_decoder_create(char* error, size_t capacit
     }
 }
 
-extern "C" void nectarlink_video_aac_decoder_destroy(void* decoder)
+extern "C" void sa6i-link_video_aac_decoder_destroy(void* decoder)
 {
     delete static_cast<AacDecoder*>(decoder);
 }
 
-extern "C" int nectarlink_video_aac_decoder_send(void* decoder, const uint8_t* bytes, size_t length,
+extern "C" int sa6i-link_video_aac_decoder_send(void* decoder, const uint8_t* bytes, size_t length,
                                                  char* error, size_t capacity)
 {
     try {
@@ -999,7 +999,7 @@ extern "C" int nectarlink_video_aac_decoder_send(void* decoder, const uint8_t* b
     }
 }
 
-extern "C" int nectarlink_video_aac_decoder_receive(void* decoder, const int16_t** pcm, size_t* frames,
+extern "C" int sa6i-link_video_aac_decoder_receive(void* decoder, const int16_t** pcm, size_t* frames,
                                                     int* sample_rate, int* channels, char* error, size_t capacity)
 {
     try {

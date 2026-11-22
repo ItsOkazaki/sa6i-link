@@ -36,11 +36,11 @@ class BrandingTests(unittest.TestCase):
         self.assertIn('visible: !buttons.useFontGlyphs', captions)
 
     def test_qml_branded_labels_keep_arabic_translation_keys(self):
-        catalogue = ET.parse(ROOT / "desktop/app/i18n/nectarlink_ar.ts")
+        catalogue = ET.parse(ROOT / "desktop/app/i18n/sa6i-link_ar.ts")
         sources = {entry.text for entry in catalogue.iter("source")}
         pattern = re.compile(
-            r'qsTr\("((?:[^"\\]|\\.)*NectarLink(?:[^"\\]|\\.)*)"\)'
-            r'\.replace\(/NectarLink/g, "Sa6i Link"\)'
+            r'qsTr\("((?:[^"\\]|\\.)*Sa6i Link(?:[^"\\]|\\.)*)"\)'
+            r'\.replace\(/Sa6i Link/g, "Sa6i Link"\)'
         )
         matches = []
         for path in (ROOT / "desktop/app/qml").rglob("*.qml"):

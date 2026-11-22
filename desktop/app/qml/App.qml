@@ -2,10 +2,10 @@
 import QtQuick
 import QtQml
 import QtQml.Models
-import app.nectarlink
+import sa6i.link
 
 // Application root. The main window exists only while it's open: closing it
-// destroys it (freeing its GPU resources) and NectarLink keeps running in
+// destroys it (freeing its GPU resources) and Sa6i Link keeps running in
 // the tray. A tray click, a second launch or a ringing request reopens it.
 QtObject {
     id: app
@@ -13,7 +13,7 @@ QtObject {
     readonly property var mainWindow: mainLoader.item
     readonly property Loader mainLoader: Loader {
         active: false
-        source: "qrc:/qt/qml/app/nectarlink/qml/MainWindow.qml"
+        source: "qrc:/qt/qml/sa6i/link/qml/MainWindow.qml"
         onLoaded: {
             item.closeRequested.connect(app.onMainClosed)
             item.sa6iCloseApproved.connect(app.finishMainClose)
@@ -22,7 +22,7 @@ QtObject {
     }
     readonly property Loader laserLoader: Loader {
         active: AppController.laserActive
-        source: active ? "qrc:/qt/qml/app/nectarlink/qml/LaserOverlay.qml" : ""
+        source: active ? "qrc:/qt/qml/sa6i/link/qml/LaserOverlay.qml" : ""
     }
     property var islandWindow: null
     readonly property Component islandWindowComponent: Component {
@@ -30,7 +30,7 @@ QtObject {
     }
 
     function syncIslandWindow() {
-        if (Preferences.nectarIsland) {
+        if (Preferences.sa6iIsland) {
             if (!app.islandWindow) {
                 const w = islandWindowComponent.createObject(app)
                 if (w) {
@@ -194,7 +194,7 @@ QtObject {
     Component.onCompleted: {
         Mirror.windowsChanged.connect(app.syncMirrorWindows)
         AppController.shelfOpenChanged.connect(app.syncShelfWindow)
-        Preferences.nectarIslandChanged.connect(app.syncIslandWindow)
+        Preferences.sa6iIslandChanged.connect(app.syncIslandWindow)
         app.syncMirrorWindows()
         app.syncShelfWindow()
         app.syncIslandWindow()

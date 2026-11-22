@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Builds an AppDir layout (including bundled Qt 6 runtime libraries, plugins,
 # and QML modules) and invokes appimagetool (if present in PATH) to produce
-# dist/Nectarlink-<version>-<arch>.AppImage.
+# dist/Sa6iLink-<version>-<arch>.AppImage.
 
 set -euo pipefail
 
@@ -31,49 +31,49 @@ if [[ -z "${QMAKE:-}" ]]; then
     fi
 fi
 
-BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/nectarlink-desktop}"
+BIN_PATH="${BIN_PATH:-${REPO_ROOT}/target/release/sa6i-link}"
 if [[ ! -f "${BIN_PATH}" ]]; then
-    echo "Building nectarlink-desktop (release)..."
-    (cd "${REPO_ROOT}" && cargo build --release -p nectarlink-desktop)
+    echo "Building sa6i-link (release)..."
+    (cd "${REPO_ROOT}" && cargo build --release -p sa6i-link)
 fi
 
-STAGE_DIR="$(mktemp -d -t nectarlink-appimage-XXXXXX)"
+STAGE_DIR="$(mktemp -d -t sa6i-link-appimage-XXXXXX)"
 trap 'rm -rf "${STAGE_DIR}"' EXIT
 
-APPDIR="${STAGE_DIR}/NectarLink.AppDir"
+APPDIR="${STAGE_DIR}/Sa6i Link.AppDir"
 mkdir -p \
     "${APPDIR}/usr/bin" \
     "${APPDIR}/usr/lib" \
-    "${APPDIR}/usr/share/nectarlink" \
+    "${APPDIR}/usr/share/sa6i-link" \
     "${APPDIR}/usr/share/applications" \
     "${APPDIR}/usr/share/metainfo" \
     "${APPDIR}/usr/share/icons/hicolor/256x256/apps" \
     "${APPDIR}/usr/share/icons/hicolor/512x512/apps" \
     "${APPDIR}/usr/share/icons/hicolor/scalable/apps"
 
-install -m 0755 "${BIN_PATH}" "${APPDIR}/usr/bin/nectarlink-desktop"
+install -m 0755 "${BIN_PATH}" "${APPDIR}/usr/bin/sa6i-link"
 for adapter in "$(dirname "${BIN_PATH}")"/libnectarlink-video-ffmpeg*.so; do
     [[ ! -f "${adapter}" ]] || install -m 0755 "${adapter}" "${APPDIR}/usr/bin/"
 done
 
-for qm in "$(dirname "${BIN_PATH}")"/nectarlink_*.qm; do
+for qm in "$(dirname "${BIN_PATH}")"/sa6i-link_*.qm; do
     if [[ -f "${qm}" ]]; then
-        install -m 0644 "${qm}" "${APPDIR}/usr/share/nectarlink/$(basename "${qm}")"
+        install -m 0644 "${qm}" "${APPDIR}/usr/share/sa6i-link/$(basename "${qm}")"
     fi
 done
 
-install -m 0644 "${SCRIPT_DIR}/nectarlink.desktop" "${APPDIR}/usr/share/applications/nectarlink.desktop"
-install -m 0644 "${SCRIPT_DIR}/nectarlink.desktop" "${APPDIR}/nectarlink.desktop"
-install -m 0644 "${SCRIPT_DIR}/org.nectarlink.desktop.metainfo.xml" "${APPDIR}/usr/share/metainfo/org.nectarlink.desktop.metainfo.xml"
+install -m 0644 "${SCRIPT_DIR}/sa6i-link.desktop" "${APPDIR}/usr/share/applications/sa6i-link.desktop"
+install -m 0644 "${SCRIPT_DIR}/sa6i-link.desktop" "${APPDIR}/sa6i-link.desktop"
+install -m 0644 "${SCRIPT_DIR}/org.sa6i-link.desktop.metainfo.xml" "${APPDIR}/usr/share/metainfo/org.sa6i-link.desktop.metainfo.xml"
 
 if [[ -f "${REPO_ROOT}/assets/brand/icon.svg" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/nectarlink.svg"
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${APPDIR}/nectarlink.svg"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/sa6i-link.svg"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon.svg" "${APPDIR}/sa6i-link.svg"
 fi
 if [[ -f "${REPO_ROOT}/assets/brand/icon-512.png" ]]; then
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/nectarlink.png"
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/nectarlink.png"
-    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/nectarlink.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/usr/share/icons/hicolor/512x512/apps/sa6i-link.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/sa6i-link.png"
+    install -m 0644 "${REPO_ROOT}/assets/brand/icon-512.png" "${APPDIR}/sa6i-link.png"
 fi
 
 bundle_qt_runtime() {
@@ -165,13 +165,13 @@ export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export QT_PLUGIN_PATH="${HERE}/usr/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
 export QML2_IMPORT_PATH="${HERE}/usr/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"
-exec "${HERE}/usr/bin/nectarlink-desktop" "$@"
+exec "${HERE}/usr/bin/sa6i-link" "$@"
 EOF
 chmod 0755 "${APPDIR}/AppRun"
 
 OUT_DIR="${OUT_DIR:-${REPO_ROOT}/dist}"
 mkdir -p "${OUT_DIR}"
-OUT_APPIMAGE="${OUT_DIR}/Nectarlink-${VERSION}-${ARCH}.AppImage"
+OUT_APPIMAGE="${OUT_DIR}/Sa6iLink-${VERSION}-${ARCH}.AppImage"
 
 if ! command -v appimagetool >/dev/null 2>&1; then
     echo "appimagetool not found in PATH; AppDir staged at ${APPDIR}" >&2

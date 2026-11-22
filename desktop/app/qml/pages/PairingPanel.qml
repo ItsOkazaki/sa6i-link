@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 // Pairing a phone: a QR code to scan (refreshed automatically), nearby
 // pairing with a 6-digit code check, and the outcome. While `running`, this
@@ -111,7 +111,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 14
                 Repeater {
-                    model: [qsTr("Install NectarLink").replace(/NectarLink/g, "Sa6i Link"), qsTr("Tap “Pair with PC”"), qsTr("Scan this code")]
+                    model: [qsTr("Install Sa6i Link"), qsTr("Tap “Pair with PC”"), qsTr("Scan this code")]
                     delegate: Row {
                         required property int index
                         required property string modelData
@@ -184,7 +184,7 @@ Item {
                     width: parent.width
                     spacing: 6
                     Repeater {
-                        model: [qsTr("Open NectarLink on your phone").replace(/NectarLink/g, "Sa6i Link"), qsTr("Tap “Pair with PC”"), qsTr("Scan this QR code")]
+                        model: [qsTr("Open Sa6i Link on your phone"), qsTr("Tap “Pair with PC”"), qsTr("Scan this QR code")]
                         delegate: Row {
                             required property int index
                             required property string modelData
@@ -232,7 +232,7 @@ Item {
                 wrapMode: Text.WordWrap
                 role: "body"
                 muted: true
-                text: qsTr("On your phone, open NectarLink and choose “Pair nearby”. It shows up here.").replace(/NectarLink/g, "Sa6i Link")
+                text: qsTr("On your phone, open Sa6i Link and choose “Pair nearby”. It shows up here.")
             }
             Repeater {
                 model: Pairing.nearby

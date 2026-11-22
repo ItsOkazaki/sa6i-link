@@ -48,7 +48,7 @@ use crate::{
     win::{autostart, http, toast},
 };
 
-const LATEST: &str = "https://api.github.com/repos/thtbee/nectarlink/releases/latest";
+const LATEST: &str = "https://api.github.com/repos/thtbee/sa6i-link/releases/latest";
 const FIRST_CHECK: Duration = Duration::from_secs(30);
 /// How often a nightly install checks: nightlies are built at most every two
 /// hours. A check is a conditional GET, a few hundred bytes when unchanged.
@@ -89,8 +89,8 @@ impl Update {
 }
 
 /// The scheduled task the installer registers (see the module docs).
-pub const TASK: &str = "Nectarlink Update";
-/// What the task runs: `nectarlink-desktop.exe --update-service`.
+pub const TASK: &str = "Sa6iLink Update";
+/// What the task runs: `sa6i-link.exe --update-service`.
 pub const SERVICE_ARG: &str = "--update-service";
 /// How long nobody may have used the PC before an update installs by itself.
 const QUIET_FOR: Duration = Duration::from_secs(10 * 60);
@@ -288,7 +288,7 @@ pub fn check_now(told: bool) -> Option<String> {
             if new {
                 announce(&update);
             }
-            Some(tr!("Updater", "NectarLink %1 is available.", update.title()))
+            Some(tr!("Updater", "Sa6i Link %1 is available.", update.title()))
         }
         Ok(None) => {
             // Nothing newer on this channel now (it may have just changed):
@@ -296,7 +296,7 @@ pub fn check_now(told: bool) -> Option<String> {
             if found().take().is_some() {
                 core_host::host().hub.update(|_| Changes::UPDATE);
             }
-            told.then(|| tr!("Updater", "NectarLink is up to date."))
+            told.then(|| tr!("Updater", "Sa6i Link is up to date."))
         }
         Err(e) => {
             tracing::info!(error = %e, "couldn't check for updates");
@@ -309,9 +309,9 @@ fn announce(update: &Update) {
     toast::show(toast::Toast {
         device: TOAST_GROUP.into(),
         key: update.version.clone(),
-        title: tr!("Updater", "NectarLink %1 is available", update.title()),
+        title: tr!("Updater", "Sa6i Link %1 is available", update.title()),
         body: tr!("Updater", "Update now, or later from Settings."),
-        attribution: "NectarLink".into(),
+        attribution: "Sa6i Link".into(),
         icon: None,
         image: None,
         actions: vec![(ACTION_UPDATE.into(), "Update".into())],
@@ -413,9 +413,9 @@ fn feed_update(found: &feed::Feed, current: &str) -> Option<Update> {
 /// a file name under %TEMP%: a plain name only, never a path.
 fn is_installer_name(name: &str, suffix: &str) -> bool {
     name.ends_with(suffix)
-        && (name.starts_with("Nectarlink-")
-            || name.starts_with("nectarlink_")
-            || name.starts_with("nectarlink-"))
+        && (name.starts_with("Sa6iLink-")
+            || name.starts_with("sa6i-link_")
+            || name.starts_with("sa6i-link-"))
         && feed::is_plain_name(name)
 }
 
@@ -474,13 +474,13 @@ fn detect_linux_install_kind() -> LinuxInstallKind {
     }
     if let Ok(exe) = std::env::current_exe() {
         let resolved = std::fs::canonicalize(&exe).unwrap_or(exe);
-        if resolved.starts_with("/opt/nectarlink")
-            || resolved.parent().and_then(|p| p.file_name()).is_some_and(|n| n == "nectarlink-app")
+        if resolved.starts_with("/opt/sa6i-link")
+            || resolved.parent().and_then(|p| p.file_name()).is_some_and(|n| n == "sa6i-link-app")
         {
             return LinuxInstallKind::Tarball;
         }
     }
-    if Path::new("/var/lib/dpkg/info/nectarlink.list").is_file() {
+    if Path::new("/var/lib/dpkg/info/sa6i-link.list").is_file() {
         return LinuxInstallKind::Deb;
     }
     if rpm_installed() {
@@ -490,11 +490,11 @@ fn detect_linux_install_kind() -> LinuxInstallKind {
     LinuxInstallKind::Tarball
 }
 
-/// Whether the `nectarlink` RPM package is installed.
+/// Whether the `sa6i-link` RPM package is installed.
 #[cfg(target_os = "linux")]
 fn rpm_installed() -> bool {
     std::process::Command::new("rpm")
-        .args(["-q", "--quiet", "nectarlink"])
+        .args(["-q", "--quiet", "sa6i-link"])
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -592,7 +592,7 @@ fn quiet() -> bool {
         s.transfers.iter().any(|t| {
             matches!(
                 t.transfer.state,
-                nectarlink_core::TransferState::Running | nectarlink_core::TransferState::Waiting
+                sa6i_link_core::TransferState::Running | sa6i_link_core::TransferState::Waiting
             )
         })
     });
@@ -684,7 +684,7 @@ impl std::fmt::Display for StageError {
 }
 
 /// Where the app leaves a downloaded installer for the task:
-/// `%ProgramData%\Nectarlink\updates`. Anyone may write here; the task only
+/// `%ProgramData%\Sa6iLink\updates`. Anyone may write here; the task only
 /// runs a copy that matches the release's own sums.
 #[cfg(windows)]
 fn staging_dir() -> PathBuf {
@@ -692,7 +692,7 @@ fn staging_dir() -> PathBuf {
         .map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
-        .join("Nectarlink")
+        .join("Sa6iLink")
         .join("updates")
 }
 
@@ -706,10 +706,10 @@ fn current_euid() -> u32 {
 #[cfg(not(windows))]
 fn staging_dir() -> PathBuf {
     if let Some(base) = dirs::cache_dir().filter(|p| p.is_absolute()) {
-        base.join("nectarlink").join("updates")
+        base.join("sa6i-link").join("updates")
     } else {
         let uid = current_euid();
-        std::env::temp_dir().join(format!("nectarlink-{uid}")).join("updates")
+        std::env::temp_dir().join(format!("sa6i-link-{uid}")).join("updates")
     }
 }
 
@@ -870,14 +870,14 @@ fn relauncher_script(exe: &str, version: &str, arguments: &str) -> String {
         format!("Start-Process -FilePath '{exe}' -ArgumentList '{arguments}'")
     };
     format!(
-        "$key = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Nectarlink'\n\
+        "$key = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Sa6iLink'\n\
          $log = Join-Path (Split-Path -Parent '{exe}') 'update.log'\n\
          $since = Get-Date\n\
          $deadline = $since.AddMinutes(10)\n\
          Start-Sleep -Seconds 3\n\
          while ((Get-Date) -lt $deadline) {{\n\
            $installed = (Get-ItemProperty -Path $key -Name DisplayVersion -ErrorAction SilentlyContinue).DisplayVersion\n\
-           $running = Get-Process -ErrorAction SilentlyContinue | Where-Object {{ $_.Name -like 'Nectarlink-*-setup' }}\n\
+           $running = Get-Process -ErrorAction SilentlyContinue | Where-Object {{ $_.Name -like 'Sa6iLink-*-setup' }}\n\
            if ($installed -eq '{version}' -and -not $running) {{ break }}\n\
            $logged = Get-Item -LiteralPath $log -ErrorAction SilentlyContinue\n\
            if ($logged -and $logged.LastWriteTime -gt $since -and -not $running) {{\n\
@@ -971,7 +971,7 @@ pub fn run_service() -> ExitCode {
                 .args([
                     "-e",
                     "-c",
-                    "tar -C \"$2\" -xzf \"$1\" && set -- \"$2\"/Nectarlink-*/install.sh && [ -x \"$1\" ] && \"$1\"",
+                    "tar -C \"$2\" -xzf \"$1\" && set -- \"$2\"/Sa6iLink-*/install.sh && [ -x \"$1\" ] && \"$1\"",
                     "sh",
                 ])
                 .arg(&path)
@@ -1013,7 +1013,7 @@ fn remove_old_service_dirs(parent: &Path) {
     let Ok(entries) = std::fs::read_dir(parent) else { return };
     for entry in entries.flatten() {
         let is_dir = entry.file_type().is_ok_and(|t| t.is_dir() && !t.is_symlink());
-        if is_dir && entry.file_name().to_string_lossy().starts_with("nectarlink-update-") {
+        if is_dir && entry.file_name().to_string_lossy().starts_with("sa6i-link-update-") {
             let _ = std::fs::remove_dir_all(entry.path());
         }
     }
@@ -1032,7 +1032,7 @@ fn service_dir() -> std::io::Result<PathBuf> {
     if !crate::win::secure_random(&mut random) {
         return Err(std::io::Error::other("no secure random source"));
     }
-    let name = format!("nectarlink-update-{}", random.iter().map(|b| format!("{b:02x}")).collect::<String>());
+    let name = format!("sa6i-link-update-{}", random.iter().map(|b| format!("{b:02x}")).collect::<String>());
     let dir = parent.join(name);
     std::fs::create_dir(&dir)?;
     Ok(dir)
@@ -1047,7 +1047,7 @@ fn service_dir() -> std::io::Result<PathBuf> {
     if !crate::win::secure_random(&mut random) {
         return Err(std::io::Error::other("no secure random source"));
     }
-    let name = format!("nectarlink-update-{}", random.iter().map(|b| format!("{b:02x}")).collect::<String>());
+    let name = format!("sa6i-link-update-{}", random.iter().map(|b| format!("{b:02x}")).collect::<String>());
     let dir = parent.join(name);
     std::fs::DirBuilder::new().mode(0o700).create(&dir)?;
     Ok(dir)
@@ -1088,7 +1088,7 @@ fn install_with_prompt(update: &Update, staged: &Path) -> Result<(), String> {
         tr!("Updater", "The update couldn't be started. Try again.")
     };
     let expected = expected_hash(update).map_err(|e| e.for_user())?;
-    let dir = std::env::temp_dir().join("Nectarlink update");
+    let dir = std::env::temp_dir().join("Sa6iLink update");
     let path: PathBuf = dir.join(&update.installer_name);
     std::fs::create_dir_all(&dir)
         .and_then(|()| match std::fs::remove_file(&path) {
@@ -1108,16 +1108,16 @@ fn install_with_prompt(update: &Update, staged: &Path) -> Result<(), String> {
 }
 
 /// Root-executed shell script that copies a user-staged `.deb` into a
-/// root-owned `0700` directory (`/var/cache/nectarlink-update`), verifies its
+/// root-owned `0700` directory (`/var/cache/sa6i-link-update`), verifies its
 /// SHA-256 digest as root on the root-owned copy, and only then runs
 /// `dpkg -i`. Prevents TOCTOU replacement in the user-writable cache directory.
 #[cfg(target_os = "linux")]
 const PRIVILEGED_DEB_INSTALL_SCRIPT: &str = "\
-dir=\"/var/cache/nectarlink-update\"\n\
+dir=\"/var/cache/sa6i-link-update\"\n\
 rm -rf -- \"$dir\"\n\
 install -d -m 0700 -o 0 -g 0 \"$dir\"\n\
 trap 'rm -rf -- \"$dir\"' EXIT\n\
-dst=\"$dir/nectarlink-update.deb\"\n\
+dst=\"$dir/sa6i-link-update.deb\"\n\
 install -m 0600 -o 0 -g 0 \"$1\" \"$dst\"\n\
 printf '%s  %s\\n' \"$2\" \"$dst\" | sha256sum -c --status -\n\
 apt-get install -y -- \"$dst\" || dpkg -i -- \"$dst\"\n";
@@ -1133,11 +1133,11 @@ else rpm -U --replacepkgs -- \"$1\"; fi";
 /// The `.rpm` counterpart of [`PRIVILEGED_DEB_INSTALL_SCRIPT`].
 #[cfg(target_os = "linux")]
 const PRIVILEGED_RPM_INSTALL_SCRIPT: &str = "\
-dir=\"/var/cache/nectarlink-update\"\n\
+dir=\"/var/cache/sa6i-link-update\"\n\
 rm -rf -- \"$dir\"\n\
 install -d -m 0700 -o 0 -g 0 \"$dir\"\n\
 trap 'rm -rf -- \"$dir\"' EXIT\n\
-dst=\"$dir/nectarlink-update.rpm\"\n\
+dst=\"$dir/sa6i-link-update.rpm\"\n\
 install -m 0600 -o 0 -g 0 \"$1\" \"$dst\"\n\
 printf '%s  %s\\n' \"$2\" \"$dst\" | sha256sum -c --status -\n\
 set -- \"$dst\"\n\
@@ -1147,15 +1147,15 @@ else rpm -U --replacepkgs -- \"$1\"; fi\n";
 
 #[cfg(target_os = "linux")]
 const PRIVILEGED_TAR_INSTALL_SCRIPT: &str = "\
-dir=\"/var/cache/nectarlink-update\"\n\
+dir=\"/var/cache/sa6i-link-update\"\n\
 rm -rf -- \"$dir\"\n\
 install -d -m 0700 -o 0 -g 0 \"$dir\"\n\
 trap 'rm -rf -- \"$dir\"' EXIT\n\
-dst=\"$dir/nectarlink-update.tar.gz\"\n\
+dst=\"$dir/sa6i-link-update.tar.gz\"\n\
 install -m 0600 -o 0 -g 0 \"$1\" \"$dst\"\n\
 printf '%s  %s\\n' \"$2\" \"$dst\" | sha256sum -c --status -\n\
 tar -C \"$dir\" -xzf \"$dst\"\n\
-set -- \"$dir\"/Nectarlink-*/install.sh\n\
+set -- \"$dir\"/Sa6iLink-*/install.sh\n\
 [ -x \"$1\" ] && \"$1\"\n";
 
 /// Starts the new version once this one has quit. If that can't be arranged
@@ -1165,7 +1165,7 @@ set -- \"$dir\"/Nectarlink-*/install.sh\n\
 fn relaunch_after_install(exe: &Path, version: &str) -> Result<(), String> {
     spawn_relauncher(exe, version, true).map_err(|e| {
         tracing::warn!(error = e, "installed, but can't start the new version");
-        tr!("Updater", "The update is installed. Restart NectarLink to use it.")
+        tr!("Updater", "The update is installed. Restart Sa6i Link to use it.")
     })
 }
 
@@ -1263,7 +1263,7 @@ fn install_with_prompt(update: &Update, staged: &Path) -> Result<(), String> {
                 .args([
                     "-e",
                     "-c",
-                    "tar -C \"$2\" -xzf \"$1\" && set -- \"$2\"/Nectarlink-*/install.sh && [ -x \"$1\" ] && \"$1\"",
+                    "tar -C \"$2\" -xzf \"$1\" && set -- \"$2\"/Sa6iLink-*/install.sh && [ -x \"$1\" ] && \"$1\"",
                     "sh",
                 ])
                 .arg(staged)
@@ -1325,7 +1325,7 @@ pub fn announce_update(previous: String, shown: bool) {
     crate::win::share_target::register_sparse_package();
     after_start(
         shown,
-        tr!("Updater", "NectarLink is updated to %1", current),
+        tr!("Updater", "Sa6i Link is updated to %1", current),
         tr!("Updater", "Your phone reconnects on its own."),
     );
 }
@@ -1337,7 +1337,7 @@ pub fn announce_update_failed(shown: bool) {
     after_start(
         shown,
         tr!("Updater", "The update didn't install"),
-        tr!("Updater", "NectarLink is still on the version you had. Try again from Settings."),
+        tr!("Updater", "Sa6i Link is still on the version you had. Try again from Settings."),
     );
 }
 
@@ -1353,7 +1353,7 @@ fn after_start(shown: bool, title: String, body: String) {
             key: "updated".into(),
             title,
             body,
-            attribution: "NectarLink".into(),
+            attribution: "Sa6i Link".into(),
             icon: None,
             image: None,
             actions: Vec::new(),
@@ -1407,38 +1407,38 @@ mod tests {
     fn release(tag: &str) -> Release {
         Release {
             tag_name: tag.into(),
-            html_url: "https://github.com/thtbee/nectarlink/releases/tag/v9".into(),
+            html_url: "https://github.com/ItsOkazaki/sa6i-link/releases/tag/v9".into(),
             draft: false,
             prerelease: false,
             assets: vec![
                 Asset {
-                    name: "Nectarlink-9.0.0-x64-setup.exe".into(),
-                    browser_download_url: "https://github.com/thtbee/nectarlink/releases/download/v9/setup"
+                    name: "Sa6iLink-9.0.0-x64-setup.exe".into(),
+                    browser_download_url: "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup"
                         .into(),
                 },
                 Asset {
-                    name: "Nectarlink-9.0.0-arm64-setup.exe".into(),
+                    name: "Sa6iLink-9.0.0-arm64-setup.exe".into(),
                     browser_download_url:
-                        "https://github.com/thtbee/nectarlink/releases/download/v9/setup-arm64".into(),
+                        "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup-arm64".into(),
                 },
                 Asset {
-                    name: "Nectarlink-9.0.0-x86_64.AppImage".into(),
+                    name: "Sa6iLink-9.0.0-x86_64.AppImage".into(),
                     browser_download_url:
-                        "https://github.com/thtbee/nectarlink/releases/download/v9/appimage-x64".into(),
+                        "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/appimage-x64".into(),
                 },
                 Asset {
-                    name: "nectarlink_9.0.0_amd64.deb".into(),
+                    name: "sa6i-link_9.0.0_amd64.deb".into(),
                     browser_download_url:
-                        "https://github.com/thtbee/nectarlink/releases/download/v9/deb-amd64".into(),
+                        "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/deb-amd64".into(),
                 },
                 Asset {
-                    name: "nectarlink-9.0.0-1.x86_64.rpm".into(),
+                    name: "sa6i-link-9.0.0-1.x86_64.rpm".into(),
                     browser_download_url:
-                        "https://github.com/thtbee/nectarlink/releases/download/v9/rpm-x86_64".into(),
+                        "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/rpm-x86_64".into(),
                 },
                 Asset {
                     name: "SHA256SUMS.txt".into(),
-                    browser_download_url: "https://github.com/thtbee/nectarlink/releases/download/v9/sums"
+                    browser_download_url: "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/sums"
                         .into(),
                 },
             ],
@@ -1448,16 +1448,16 @@ mod tests {
     #[test]
     fn the_relauncher_waits_for_the_version_then_opens_the_app() {
         let script = relauncher_script(
-            r"C:\Program Files\Nectarlink\nectarlink-desktop.exe",
+            r"C:\Program Files\Sa6iLink\sa6i-link.exe",
             "0.2.0",
             "--minimized --updated",
         );
         assert!(script.contains("$installed -eq '0.2.0'"));
-        assert!(script.contains("Nectarlink-*-setup"));
+        assert!(script.contains("Sa6iLink-*-setup"));
         assert!(script.contains(
-            r"Start-Process -FilePath 'C:\Program Files\Nectarlink\nectarlink-desktop.exe' -ArgumentList '--minimized --updated'"
+            r"Start-Process -FilePath 'C:\Program Files\Sa6iLink\sa6i-link.exe' -ArgumentList '--minimized --updated'"
         ));
-        let shown = relauncher_script(r"C:\Program Files\Nectarlink\nectarlink-desktop.exe", "0.2.0", "");
+        let shown = relauncher_script(r"C:\Program Files\Sa6iLink\sa6i-link.exe", "0.2.0", "");
         assert!(!shown.contains("-ArgumentList"));
     }
 
@@ -1480,15 +1480,15 @@ mod tests {
 
     #[test]
     fn the_relauncher_refuses_paths_and_versions_that_could_break_its_quotes() {
-        let odd = Path::new(r"C:\Program Files\it's\nectarlink-desktop.exe");
+        let odd = Path::new(r"C:\Program Files\it's\sa6i-link.exe");
         assert!(spawn_relauncher(odd, "0.2.0", false).is_err());
-        let fine = Path::new(r"C:\Program Files\Nectarlink\nectarlink-desktop.exe");
+        let fine = Path::new(r"C:\Program Files\Sa6iLink\sa6i-link.exe");
         assert!(spawn_relauncher(fine, "0.2.0'; Remove-Item x; '", false).is_err());
     }
 
     #[test]
     fn installer_names_that_are_not_plain_file_names_are_refused() {
-        for name in [r"..\..\evil-x64-setup.exe", "Nectarlink-9/../x-x64-setup.exe", "evil-x64-setup.exe"] {
+        for name in [r"..\..\evil-x64-setup.exe", "Sa6iLink-9/../x-x64-setup.exe", "evil-x64-setup.exe"] {
             let mut r = release("v9.0.0");
             r.assets[0].name = name.into();
             assert!(newer_release_for(r, "0.0.1", "-x64-setup.exe").is_none(), "{name}");
@@ -1500,14 +1500,14 @@ mod tests {
         let x64 = newer_release_for(release("v9.0.0"), "0.0.1", "-x64-setup.exe").unwrap();
         assert_eq!(
             (x64.version.as_str(), x64.installer_url.as_str()),
-            ("9.0.0", "https://github.com/thtbee/nectarlink/releases/download/v9/setup")
+            ("9.0.0", "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup")
         );
         let arm64 = newer_release_for(release("v9.0.0"), "0.0.1", "-arm64-setup.exe").unwrap();
         assert_eq!(
             (arm64.installer_name.as_str(), arm64.installer_url.as_str()),
             (
-                "Nectarlink-9.0.0-arm64-setup.exe",
-                "https://github.com/thtbee/nectarlink/releases/download/v9/setup-arm64"
+                "Sa6iLink-9.0.0-arm64-setup.exe",
+                "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup-arm64"
             )
         );
         assert!(newer_release(release("v0.0.1"), "0.0.1").is_none());
@@ -1519,7 +1519,7 @@ mod tests {
         assert!(newer_release(no_sums, "0.0.1").is_none());
         // Files anywhere but our own releases are never downloaded.
         for elsewhere in
-            ["https://example.com/setup", "https://github.com/someone/nectarlink/releases/download/v9/setup"]
+            ["https://example.com/setup", "https://github.com/someone/sa6i-link/releases/download/v9/setup"]
         {
             let mut moved = release("v9.0.0");
             moved.assets[0].browser_download_url = elsewhere.into();
@@ -1536,16 +1536,16 @@ mod tests {
         assert_eq!(
             (appimage.installer_name.as_str(), appimage.installer_url.as_str()),
             (
-                "Nectarlink-9.0.0-x86_64.AppImage",
-                "https://github.com/thtbee/nectarlink/releases/download/v9/appimage-x64"
+                "Sa6iLink-9.0.0-x86_64.AppImage",
+                "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/appimage-x64"
             )
         );
         let deb = newer_release_for(release("v9.0.0"), "0.0.1", "_amd64.deb").unwrap();
         assert_eq!(
             (deb.installer_name.as_str(), deb.installer_url.as_str()),
             (
-                "nectarlink_9.0.0_amd64.deb",
-                "https://github.com/thtbee/nectarlink/releases/download/v9/deb-amd64"
+                "sa6i-link_9.0.0_amd64.deb",
+                "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/deb-amd64"
             )
         );
         #[cfg(target_os = "linux")]
@@ -1558,7 +1558,7 @@ mod tests {
             assert!(PRIVILEGED_DEB_INSTALL_SCRIPT.contains("sha256sum -c --status -"));
             assert!(PRIVILEGED_DEB_INSTALL_SCRIPT.contains("dpkg -i -- \"$dst\""));
             let rpm = newer_release_linux_kind(release("v9.0.0"), "0.0.1", LinuxInstallKind::Rpm).unwrap();
-            assert_eq!(rpm.installer_name, "nectarlink-9.0.0-1.x86_64.rpm");
+            assert_eq!(rpm.installer_name, "sa6i-link-9.0.0-1.x86_64.rpm");
             assert!(PRIVILEGED_RPM_INSTALL_SCRIPT.contains("sha256sum -c --status -"));
             assert!(PRIVILEGED_RPM_INSTALL_SCRIPT.contains("dnf install -y --nogpgcheck -- \"$1\""));
             // An RPM install never falls back to a tarball, a second copy in /opt.
@@ -1573,7 +1573,7 @@ mod tests {
     }
 
     #[test]
-    fn linux_staging_dir_is_absolute_and_under_nectarlink_updates() {
+    fn linux_staging_dir_is_absolute_and_under_sa6i_link_updates() {
         let dir = staging_dir();
         assert!(dir.is_absolute(), "staging_dir must be absolute: {}", dir.display());
         assert!(dir.ends_with("updates"));
@@ -1582,8 +1582,8 @@ mod tests {
     #[test]
     fn finds_the_installer_hash() {
         let hash = "a".repeat(64);
-        let sums = format!("{hash}  Nectarlink-9.0.0-x64-setup.exe\n{}  other.txt\n", "b".repeat(64));
-        assert_eq!(listed_hash(&sums, "Nectarlink-9.0.0-x64-setup.exe"), Some(hash));
+        let sums = format!("{hash}  Sa6iLink-9.0.0-x64-setup.exe\n{}  other.txt\n", "b".repeat(64));
+        assert_eq!(listed_hash(&sums, "Sa6iLink-9.0.0-x64-setup.exe"), Some(hash));
         assert_eq!(listed_hash(&sums, "missing.exe"), None);
         assert_eq!(listed_hash(&format!("{}  *x.exe", "C".repeat(64)), "x.exe"), Some("c".repeat(64)));
     }

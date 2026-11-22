@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 // Shown on a locked feature: what unlocks it and how long it takes, e.g.
 // "Elevated · ~2 min". `feature` is AppController.featureState(...).
@@ -43,21 +43,21 @@ Rectangle {
         const s = feature || {}
         switch (lockKind) {
         case "assist":
-            return qsTr("On your phone, open NectarLink › Settings › Control from your PC and turn on the Accessibility service.").replace(/NectarLink/g, "Sa6i Link")
+            return qsTr("On your phone, open Sa6i Link › Settings › Control from your PC and turn on the Accessibility service.")
         case "elevated":
-            return qsTr("Needs Elevated: set up Wireless debugging in NectarLink › Settings › Control from your PC, or connect the phone over USB with USB debugging allowed.").replace(/NectarLink/g, "Sa6i Link")
+            return qsTr("Needs Elevated: set up Wireless debugging in Sa6i Link › Settings › Control from your PC, or connect the phone over USB with USB debugging allowed.")
         case "role":
-            return qsTr("On your phone, set NectarLink as the default SMS/Caller ID app when prompted.").replace(/NectarLink/g, "Sa6i Link")
+            return qsTr("On your phone, set Sa6i Link as the default SMS/Caller ID app when prompted.")
         case "permission":
             if (s.target === "notification_access")
-                return qsTr("On your phone, open NectarLink and allow Notification access.").replace(/NectarLink/g, "Sa6i Link")
+                return qsTr("On your phone, open Sa6i Link and allow Notification access.")
             if (s.target === "dnd_access")
-                return qsTr("On your phone, open NectarLink and allow Do Not Disturb access.").replace(/NectarLink/g, "Sa6i Link")
+                return qsTr("On your phone, open Sa6i Link and allow Do Not Disturb access.")
             if (s.target === "write_settings")
-                return qsTr("On your phone, open NectarLink and allow Modify system settings.").replace(/NectarLink/g, "Sa6i Link")
-            return qsTr("Open NectarLink on your phone and grant this permission in Settings.").replace(/NectarLink/g, "Sa6i Link")
+                return qsTr("On your phone, open Sa6i Link and allow Modify system settings.")
+            return qsTr("Open Sa6i Link on your phone and grant this permission in Settings.")
         case "enableAddon":
-            return qsTr("Open Settings › Camera & Audio to set up the NectarLink virtual camera add-on.")
+            return qsTr("Open Settings › Camera & Audio to set up the Sa6i Link virtual camera add-on.")
         case "enablePath":
             return qsTr("Open Settings › Connection & About and turn on Connect over mobile data.")
         case "enableToggle":

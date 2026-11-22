@@ -17,9 +17,9 @@ mod imp {
     #[cfg(any(windows, target_os = "linux"))]
     use std::time::{Duration, Instant};
 
-    use nectarlink_core::{DeviceId, KeyMod, MirrorInput, MirrorStart, mirror_keys};
+    use sa6i_link_core::{DeviceId, KeyMod, MirrorInput, MirrorStart, mirror_keys};
     #[cfg(any(windows, target_os = "linux"))]
-    use nectarlink_core::{MirrorConfig, MirrorSend, PacketKind};
+    use sa6i_link_core::{MirrorConfig, MirrorSend, PacketKind};
     #[cfg(windows)]
     use windows::Win32::{
         Foundation::{E_INVALIDARG, E_NOTIMPL, ERROR_TIMEOUT, POINT, RECT},
@@ -163,7 +163,7 @@ mod imp {
 
         let stop_on_failure = Arc::clone(&stop);
         if let Err(e) = std::thread::Builder::new()
-            .name("nectarlink-pc-mirror".into())
+            .name("sa6i-link-pc-mirror".into())
             .spawn(move || run_capture_loop(peer, options, stop, force_keyframe))
         {
             // Not a session that claims to share with nothing behind it.
@@ -217,7 +217,7 @@ mod imp {
             {
                 node.set_pc_mirror_session_allowed(peer, false);
                 core_host::spawn(async move {
-                    node.mirror_stop(peer, nectarlink_core::MIRROR_SCREEN).await;
+                    node.mirror_stop(peer, sa6i_link_core::MIRROR_SCREEN).await;
                 });
             }
             core_host::host().hub.changed(crate::state::Changes::REMOTE);
@@ -237,7 +237,7 @@ mod imp {
 
     /// Injects touch, scroll, key, or text input from a phone viewing the PC screen.
     pub fn handle_input(peer: &DeviceId, session: u32, input: MirrorInput) {
-        if session != nectarlink_core::MIRROR_SCREEN {
+        if session != sa6i_link_core::MIRROR_SCREEN {
             return;
         }
         if active_peer() != Some(*peer) || is_watching() {
@@ -280,16 +280,16 @@ mod imp {
         }
     }
 
-    pub fn on_event(event: &nectarlink_core::NodeEvent) {
+    pub fn on_event(event: &sa6i_link_core::NodeEvent) {
         match event {
-            nectarlink_core::NodeEvent::LinkChanged {
+            sa6i_link_core::NodeEvent::LinkChanged {
                 device,
-                link: nectarlink_core::LinkState::Offline { .. },
+                link: sa6i_link_core::LinkState::Offline { .. },
             }
-            | nectarlink_core::NodeEvent::DeviceRemoved(device) => {
+            | sa6i_link_core::NodeEvent::DeviceRemoved(device) => {
                 stop_for(device);
             }
-            nectarlink_core::NodeEvent::PcMirrorRequested { .. } => {
+            sa6i_link_core::NodeEvent::PcMirrorRequested { .. } => {
                 core_host::host().hub.update(|s| s.apply(event));
                 crate::bridge::app::request_activation();
             }
@@ -2026,8 +2026,8 @@ mod imp {
 
             // 1. CreateSession
             let mut create_opts: HashMap<&str, Value<'_>> = HashMap::new();
-            let req_tok_1 = format!("nectarlink_sc_req1_{pid}");
-            let sess_tok = format!("nectarlink_sc_sess_{pid}");
+            let req_tok_1 = format!("sa6i-link_sc_req1_{pid}");
+            let sess_tok = format!("sa6i-link_sc_sess_{pid}");
             create_opts.insert("handle_token", Value::from(req_tok_1.as_str()));
             create_opts.insert("session_handle_token", Value::from(sess_tok.as_str()));
 
@@ -2051,7 +2051,7 @@ mod imp {
 
             // 2. SelectSources (types = 1 MONITOR, cursor_mode = 2 EMBEDDED)
             let mut select_opts: HashMap<&str, Value<'_>> = HashMap::new();
-            let req_tok_2 = format!("nectarlink_sc_req2_{pid}");
+            let req_tok_2 = format!("sa6i-link_sc_req2_{pid}");
             select_opts.insert("handle_token", Value::from(req_tok_2.as_str()));
             select_opts.insert("types", Value::from(1u32));
             select_opts.insert("multiple", Value::from(false));
@@ -2078,7 +2078,7 @@ mod imp {
 
             // 3. Start
             let mut start_opts: HashMap<&str, Value<'_>> = HashMap::new();
-            let req_tok_3 = format!("nectarlink_sc_req3_{pid}");
+            let req_tok_3 = format!("sa6i-link_sc_req3_{pid}");
             start_opts.insert("handle_token", Value::from(req_tok_3.as_str()));
 
             let reply = conn
@@ -2548,7 +2548,7 @@ mod imp {
                             codec: codec.clone(),
                             width: dst_w,
                             height: dst_h,
-                            session: nectarlink_core::MIRROR_SCREEN,
+                            session: sa6i_link_core::MIRROR_SCREEN,
                         };
                         if matches!(sender.send(PacketKind::Config, 0, cfg.to_cbor()), MirrorSend::Closed) {
                             break;
@@ -2958,14 +2958,14 @@ mod imp {
         }
 
         /// With a Chromium browser showing a video on a page whose title has
-        /// `NECTARLINK_TEST_TAB` in it, in view: captures just the video, as
+        /// `SA6I_TEST_TAB` in it, in view: captures just the video, as
         /// Play on phone does.
         #[cfg(windows)]
         #[test]
-        #[ignore = "needs a browser tab titled NECTARLINK_TEST_TAB"]
+        #[ignore = "needs a browser tab titled SA6I_TEST_TAB"]
         fn captures_a_browsers_video() {
             use crate::win::browser::{Automation, window_for};
-            let wanted = std::env::var("NECTARLINK_TEST_TAB").expect("NECTARLINK_TEST_TAB");
+            let wanted = std::env::var("SA6I_TEST_TAB").expect("SA6I_TEST_TAB");
             // SAFETY: COM for this test's thread.
             let _ = unsafe {
                 windows::Win32::System::Com::CoInitializeEx(
@@ -3018,7 +3018,7 @@ mod imp {
 mod imp {
     #![allow(dead_code)]
 
-    use nectarlink_core::{DeviceId, MirrorInput, MirrorStart, NodeEvent};
+    use sa6i_link_core::{DeviceId, MirrorInput, MirrorStart, NodeEvent};
 
     pub fn active_peer() -> Option<DeviceId> {
         None

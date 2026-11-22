@@ -14,7 +14,7 @@ use std::{
     time::{Instant, SystemTime},
 };
 
-use nectarlink_core::{RecordingMarker, Transfer, TransferState};
+use sa6i_link_core::{RecordingMarker, Transfer, TransferState};
 #[cfg(windows)]
 use windows::{
     Win32::{
@@ -71,15 +71,15 @@ pub fn set_format(format: RecordingFormat) {
     cfg.updated_at = Some(SystemTime::now());
 }
 
-/// Default folder: `Documents\Nectarlink Recordings`.
+/// Default folder: `Documents\Sa6iLink Recordings`.
 pub fn default_folder() -> PathBuf {
     dirs::document_dir()
         .unwrap_or_else(|| core_host::host().data_dir.join("recordings"))
-        .join("Nectarlink Recordings")
+        .join("Sa6iLink Recordings")
 }
 
 /// The folder where recordings go right now (`configured` if set, otherwise
-/// `Documents\Nectarlink Recordings`).
+/// `Documents\Sa6iLink Recordings`).
 pub fn effective_folder(configured: Option<&Path>) -> PathBuf {
     configured.filter(|p| !p.as_os_str().is_empty()).map(Path::to_path_buf).unwrap_or_else(default_folder)
 }
@@ -550,19 +550,19 @@ fn demux_m4a_aac(bytes: &[u8]) -> Option<DemuxedM4a> {
 
 #[cfg(all(target_os = "linux", linux_ffmpeg_video))]
 unsafe extern "C" {
-    fn nectarlink_video_aac_decoder_create(
+    fn sa6i-link_video_aac_decoder_create(
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> *mut std::ffi::c_void;
-    fn nectarlink_video_aac_decoder_destroy(decoder: *mut std::ffi::c_void);
-    fn nectarlink_video_aac_decoder_send(
+    fn sa6i-link_video_aac_decoder_destroy(decoder: *mut std::ffi::c_void);
+    fn sa6i-link_video_aac_decoder_send(
         decoder: *mut std::ffi::c_void,
         bytes: *const u8,
         length: usize,
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> std::ffi::c_int;
-    fn nectarlink_video_aac_decoder_receive(
+    fn sa6i-link_video_aac_decoder_receive(
         decoder: *mut std::ffi::c_void,
         pcm: *mut *const i16,
         frames: *mut usize,
@@ -584,14 +584,14 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
 
     unsafe {
         let mut error = [0 as std::ffi::c_char; 256];
-        let dec = nectarlink_video_aac_decoder_create(error.as_mut_ptr(), error.len());
+        let dec = sa6i-link_video_aac_decoder_create(error.as_mut_ptr(), error.len());
         if dec.is_null() {
             return None;
         }
         struct Guard(*mut std::ffi::c_void);
         impl Drop for Guard {
             fn drop(&mut self) {
-                unsafe { nectarlink_video_aac_decoder_destroy(self.0) };
+                unsafe { sa6i-link_video_aac_decoder_destroy(self.0) };
             }
         }
         let guard = Guard(dec);
@@ -610,7 +610,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
                 let mut frames = 0usize;
                 let mut sr = 0 as std::ffi::c_int;
                 let mut ch = 0 as std::ffi::c_int;
-                let status = nectarlink_video_aac_decoder_receive(
+                let status = sa6i-link_video_aac_decoder_receive(
                     dec,
                     &mut pcm_ptr,
                     &mut frames,
@@ -651,7 +651,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
             adts_buf.extend_from_slice(&header);
             adts_buf.extend_from_slice(raw_frame);
 
-            if nectarlink_video_aac_decoder_send(
+            if sa6i-link_video_aac_decoder_send(
                 guard.0,
                 adts_buf.as_ptr(),
                 adts_buf.len(),
@@ -663,7 +663,7 @@ fn decode_m4a_to_pcm_s16le(m4a_bytes: &[u8]) -> Option<(u32, u8, Vec<i16>)> {
             }
         }
         let _ =
-            nectarlink_video_aac_decoder_send(guard.0, std::ptr::null(), 0, error.as_mut_ptr(), error.len());
+            sa6i-link_video_aac_decoder_send(guard.0, std::ptr::null(), 0, error.as_mut_ptr(), error.len());
         drain_frames(guard.0, &mut sample_rate, &mut out_channels, &mut pcm_samples);
 
         if pcm_samples.is_empty() {
@@ -1210,7 +1210,7 @@ pub fn on_done(transfer: Transfer) {
             };
             node.update_timeline_by_ref(
                 &transfer.id,
-                nectarlink_core::TimelineKind::Recording,
+                sa6i_link_core::TimelineKind::Recording,
                 &file_name,
                 &detail,
                 &final_path_str,
@@ -1236,7 +1236,7 @@ pub fn on_done(transfer: Transfer) {
             key: final_path.to_string_lossy().into_owned(),
             title: tr!("Recordings", "Recording from %1 saved", device),
             body,
-            attribution: "NectarLink".into(),
+            attribution: "Sa6i Link".into(),
             icon: None,
             image: None,
             actions: vec![(ACTION_OPEN.into(), "Open".into()), (ACTION_SHOW.into(), "Show in folder".into())],

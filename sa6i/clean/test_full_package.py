@@ -21,7 +21,7 @@ class FullPackageTests(unittest.TestCase):
             (cleaner / 'resources').mkdir(parents=True)
             fixture_exe, fixture_asar, shim = b'inert exe', b'inert asar', b'inert shim'
             exe_hash, asar_hash = digest(fixture_exe), digest(fixture_asar)
-            (desktop / 'nectarlink-desktop.exe').write_bytes(
+            (desktop / 'sa6i-link.exe').write_bytes(
                 pack.OUTPUT_NAME.encode('utf-16le') + bytes.fromhex(exe_hash) + bytes.fromhex(asar_hash))
             (desktop / 'Qt6Core.dll').write_bytes(b'not Qt')
             (cleaner / pack.OUTPUT_NAME).write_bytes(fixture_exe)

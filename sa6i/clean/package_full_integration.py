@@ -42,7 +42,7 @@ def package(desktop, cleaner, output, win7_shim):
         reject_links(source)
     if output.exists() or output.is_symlink():
         raise FileExistsError(f'Refusing to overwrite {output}')
-    binary = desktop / 'nectarlink-desktop.exe'
+    binary = desktop / 'sa6i-link.exe'
     if not binary.is_file() or not (desktop / 'Qt6Core.dll').is_file():
         raise ValueError('Not a staged Windows desktop build')
     # The filename and both immutable SHA-256 constants are linked into the
@@ -97,7 +97,7 @@ set "SA6I_CLEAN_WIN7_COMPAT=1"\r
 set "SA6I_CLEAN_WIN7_SOFTWARE="\r
 set "QT_QUICK_BACKEND="\r
 set "SA6I_DATA=%LOCALAPPDATA%\\Sa6i-Link-Integrated-Standard-{unique}"\r
-start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" --sa6i-clean-header-clearance "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
+start "" "%~dp0sa6i-link.exe" --data-dir "%SA6I_DATA%" --sa6i-clean-header-clearance "--sa6i-clean-test-dir=%~dp0Sa6i Clean"\r
 '''
         (staged / 'Start Integrated Test.cmd').write_bytes(launch.encode('ascii'))
         # A separate comparison launcher retains the software rendering path;
@@ -116,7 +116,7 @@ start "" "%~dp0nectarlink-desktop.exe" --data-dir "%SA6I_DATA%" --sa6i-clean-hea
             'Use only a disposable environment with verified backups.\n'
             'To launch this experiment, use Start Integrated Test.cmd from this folder. '
             'On Windows 7, VxKex may need to be enabled separately for both '
-            'nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean Integration.exe; '
+            'sa6i-link.exe and Sa6i Clean\\Sa6i Clean Integration.exe; '
             'this is not configured automatically and compatibility is not guaranteed.\n'
             'The default launcher uses normal rendering and reserves extra space below '
             'the header as an experimental overlap workaround. It has not been verified '

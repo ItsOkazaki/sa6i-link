@@ -26,7 +26,7 @@ NEW_EXE_SHA = '2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74'
 NEW_ASAR_SHA = '4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba'
 OLD_ROOT = 'Sa6i Link Integrated Candidate/'
 NEW_ROOT = 'Sa6i Link Hardened Candidate/'
-DESKTOP = 'nectarlink-desktop.exe'
+DESKTOP = 'sa6i-link.exe'
 CLEAN_EXE = 'Sa6i Clean/Sa6i Clean Integration.exe'
 CLEAN_ASAR = 'Sa6i Clean/resources/app.asar'
 
@@ -41,7 +41,7 @@ cleanup, Recycle Bin, uninstall or startup action has been validated anywhere.
 
 The cleaner's files differ from the previous candidate, so this build has not
 been launched yet. Expect to test it before trusting it. Windows 7 may need
-VxKex enabled separately for nectarlink-desktop.exe and Sa6i Clean\\Sa6i Clean
+VxKex enabled separately for sa6i-link.exe and Sa6i Clean\\Sa6i Clean
 Integration.exe. Existing pairings and settings do not automatically transfer;
 this launcher uses its own app data directory. A separate profile is NOT a
 sandbox, and the cleaner can still delete files permanently.

@@ -7,7 +7,7 @@ for old,new in [(b'visible: Qt.platform.os === "windows"',b'visible: false'), (b
  assert s.count(old)==1; assert len(new)<=len(old); s=s.replace(old,new+b' '*(len(old)-len(new)))
 b[pos:pos+n]=s
 # Bypass only the cached compiled unit for CaptionButtons, so modified source is used.
-key='/qt/qml/app/nectarlink/qml/components/CaptionButtons.qml'.encode('utf-16le');pos=0x1d8b330
+key='/qt/qml/app/sa6i-link/qml/components/CaptionButtons.qml'.encode('utf-16le');pos=0x1d8b330
 assert b[pos:pos+len(key)]==key
-j=pos+len('/qt/qml/app/nectarlink/qml/components/'.encode('utf-16le')); assert b[j:j+2]==b'C\0';b[j]=ord('D')
+j=pos+len('/qt/qml/app/sa6i-link/qml/components/'.encode('utf-16le')); assert b[j:j+2]==b'C\0';b[j]=ord('D')
 open(out,'wb').write(b); print('sha256',hashlib.sha256(b).hexdigest())

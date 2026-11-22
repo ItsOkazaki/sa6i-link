@@ -31,16 +31,16 @@ class StandaloneCandidateTests(unittest.TestCase):
             'Sa6i Clean/resources/app.asar': b'asar',
             'Sa6i Clean/LICENSE.electron.txt': b'notice',
             'cldapi.dll': b'shim',
-            'nectarlink-desktop.exe': b'old desktop',
-            'nectarlink_vcam.dll': b'old vcam',
+            'sa6i-link.exe': b'old desktop',
+            'sa6i_link_vcam.dll': b'old vcam',
             'Start Integrated Test.cmd': b'old launcher',
             'Start Win7 Compatibility Test.cmd': b'old launcher',
             'READ FIRST - EXPERIMENT.txt': b'old readme',
             'INTEGRATION-BUILD-ONLY.txt': b'old notice',
         }
         self.update = {
-            'nectarlink-desktop.exe': b'new desktop',
-            'nectarlink_vcam.dll': b'new vcam',
+            'sa6i-link.exe': b'new desktop',
+            'sa6i_link_vcam.dll': b'new vcam',
             'Start Reopen Speed Test.cmd': b'@echo off\r\nset "SA6I_DATA=old"\r\nstart app --sa6i-clean-header-clearance\r\n',
         }
         base_hash = make_zip(self.base, self.files, pack.BASE_ROOT)
@@ -60,8 +60,8 @@ class StandaloneCandidateTests(unittest.TestCase):
             self.assertIsNone(result.testzip())
             self.assertTrue(all(info.extract_version <= 20 for info in result.infolist()))
             read = lambda name: result.read(pack.OUT_ROOT + name)
-            self.assertEqual(read('nectarlink-desktop.exe'), b'new desktop')
-            self.assertEqual(read('nectarlink_vcam.dll'), b'new vcam')
+            self.assertEqual(read('sa6i-link.exe'), b'new desktop')
+            self.assertEqual(read('sa6i_link_vcam.dll'), b'new vcam')
             self.assertEqual(read('Sa6i Clean/resources/app.asar'), b'asar')
             self.assertEqual(read('Sa6i Clean/LICENSE.electron.txt'), b'notice')
             self.assertNotIn(pack.OUT_ROOT + 'Start Integrated Test.cmd', result.namelist())

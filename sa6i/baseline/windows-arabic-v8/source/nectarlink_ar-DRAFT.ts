@@ -54,27 +54,27 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="17" />
-            <source>NectarLink · %1</source>
+            <source>Sa6i Link · %1</source>
             <translation>Sa6i Link · %1</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="18" />
-            <source>NectarLink · %1 devices connected</source>
+            <source>Sa6i Link · %1 devices connected</source>
             <translation>Sa6i Link · %1 جهاز متصل</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="19" />
-            <source>NectarLink · 1 device connected</source>
+            <source>Sa6i Link · 1 device connected</source>
             <translation>Sa6i Link · جهاز واحد متصل</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="20" />
-            <source>NectarLink · no devices paired</source>
+            <source>Sa6i Link · no devices paired</source>
             <translation>Sa6i Link · لم يتم إقران أي أجهزة</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="21" />
-            <source>NectarLink · not connected</source>
+            <source>Sa6i Link · not connected</source>
             <translation>Sa6i Link · غير متصل</translation>
         </message>
         <message>
@@ -84,7 +84,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="23" />
-            <source>Open NectarLink</source>
+            <source>Open Sa6i Link</source>
             <translation>افتح Sa6i Link</translation>
         </message>
         <message>
@@ -94,7 +94,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="25" />
-            <source>Quit NectarLink</source>
+            <source>Quit Sa6i Link</source>
             <translation>قم بإنهاء Sa6i Link</translation>
         </message>
         <message>
@@ -197,7 +197,7 @@
         </message>
         <message>
             <location filename="../../qml/pages/AppsPage.qml" line="94" />
-            <source>Set up Wireless debugging in NectarLink on the phone to open its apps here.</source>
+            <source>Set up Wireless debugging in Sa6i Link on the phone to open its apps here.</source>
             <translation>قم بإعداد تصحيح الأخطاء اللاسلكية في Sa6i Link على الهاتف لفتح تطبيقاته هنا.</translation>
         </message>
         <message>
@@ -808,7 +808,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="63" />
-            <source>Update NectarLink on %1 to send it images.</source>
+            <source>Update Sa6i Link on %1 to send it images.</source>
             <translation>قم بتحديث Sa6i Link على %1 لإرسال الصور إليه.</translation>
         </message>
         <message>
@@ -1066,7 +1066,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="105" />
-            <source>Opened Recordings folder. Start a voice note in NectarLink on %1 to send it here.</source>
+            <source>Opened Recordings folder. Start a voice note in Sa6i Link on %1 to send it here.</source>
             <translation>فتح مجلد التسجيلات. ابدأ ملاحظة صوتية في Sa6i Link على %1 لإرسالها هنا.</translation>
         </message>
         <message>
@@ -1226,7 +1226,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="137" />
-            <source>Stream %1's camera into the NectarLink virtual webcam</source>
+            <source>Stream %1's camera into the Sa6i Link virtual webcam</source>
             <translation>قم ببث كاميرا %1 إلى كاميرا الويب الافتراضية Sa6i Link</translation>
         </message>
         <message>
@@ -1887,12 +1887,12 @@
         <name>Doctor</name>
         <message>
             <location filename="../rust_strings.h" line="187" />
-            <source>%1 Open NectarLink on the phone and keep both on the same network. If the phone asks to run in the background, allow it.</source>
+            <source>%1 Open Sa6i Link on the phone and keep both on the same network. If the phone asks to run in the background, allow it.</source>
             <translation>%1 افتح Sa6i Link على الهاتف واحتفظ بهما على نفس الشبكة. إذا طلب الهاتف العمل في الخلفية، فاسمح بذلك.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="188" />
-            <source>%1 announces itself at %2, which isn't in a private range such as 192.168.x.x. NectarLink connects on such a network once both apps are up to date. Until then, turn on Connect over mobile data on both, or connect with a USB cable.</source>
+            <source>%1 announces itself at %2, which isn't in a private range such as 192.168.x.x. Sa6i Link connects on such a network once both apps are up to date. Until then, turn on Connect over mobile data on both, or connect with a USB cable.</source>
             <translation>يعلن %1 عن نفسه في %2، وهو ليس في نطاق خاص مثل 192.168.x.x. يتصل Sa6i Link بمثل هذه الشبكة بمجرد تحديث كلا التطبيقين. وحتى ذلك الحين، قم بتشغيل الاتصال عبر بيانات الهاتف المحمول على كليهما، أو الاتصال باستخدام كابل USB.</translation>
         </message>
         <message>
@@ -1947,7 +1947,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="199" />
-            <source>A firewall rule blocks incoming NectarLink connections. Allow it, and your phone can connect.</source>
+            <source>A firewall rule blocks incoming Sa6i Link connections. Allow it, and your phone can connect.</source>
             <translation>تقوم قاعدة جدار الحماية بحظر اتصالات Sa6i Link الواردة. اسمح بذلك، وسيتمكن هاتفك من الاتصال.</translation>
         </message>
         <message>
@@ -2017,47 +2017,47 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="213" />
-            <source>NectarLink can't show its icon in the top bar</source>
+            <source>Sa6i Link can't show its icon in the top bar</source>
             <translation>لا يستطيع Sa6i Link إظهار الرمز الخاص به في الشريط العلوي</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="214" />
-            <source>NectarLink is in the top bar</source>
+            <source>Sa6i Link is in the top bar</source>
             <translation>Sa6i Link موجود في الشريط العلوي</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="215" />
-            <source>NectarLink isn't allowed through Windows Firewall</source>
+            <source>Sa6i Link isn't allowed through Windows Firewall</source>
             <translation>Sa6i Link غير مسموح به من خلال جدار حماية Windows</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="216" />
-            <source>NectarLink isn't allowed through the firewall</source>
+            <source>Sa6i Link isn't allowed through the firewall</source>
             <translation>Sa6i Link غير مسموح به من خلال جدار الحماية</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="217" />
-            <source>On Huawei / Honor: open Settings → Battery → App launch, turn off Manage automatically for NectarLink, and keep Auto-launch, Secondary launch, and Run in background on.</source>
+            <source>On Huawei / Honor: open Settings → Battery → App launch, turn off Manage automatically for Sa6i Link, and keep Auto-launch, Secondary launch, and Run in background on.</source>
             <translation>على Huawei / Honor: افتح الإعدادات → البطارية → تشغيل التطبيق، وأوقف تشغيل الإدارة تلقائيًا لـ Sa6i Link، واستمر في التشغيل التلقائي والتشغيل الثانوي والتشغيل في الخلفية.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="218" />
-            <source>On OnePlus / OxygenOS: open Settings → Apps → App management → NectarLink → Battery usage and turn on Allow background activity and Allow auto-launch.</source>
+            <source>On OnePlus / OxygenOS: open Settings → Apps → App management → Sa6i Link → Battery usage and turn on Allow background activity and Allow auto-launch.</source>
             <translation>على OnePlus / OxygenOS: افتح الإعدادات ← التطبيقات ← إدارة التطبيقات ← Sa6i Link ← استخدام البطارية وقم بتشغيل السماح بنشاط الخلفية والسماح بالتشغيل التلقائي.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="219" />
-            <source>On Oppo / Realme: open Settings → Apps → App management → NectarLink → Battery usage and turn on Allow background activity and Allow auto-launch.</source>
+            <source>On Oppo / Realme: open Settings → Apps → App management → Sa6i Link → Battery usage and turn on Allow background activity and Allow auto-launch.</source>
             <translation>على هاتف oppo/realme: افتح الإعدادات ← التطبيقات ← إدارة التطبيقات ← Sa6i Link ← استخدام البطارية وقم بتشغيل السماح بنشاط الخلفية والسماح بالتشغيل التلقائي.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="220" />
-            <source>On Pixel: open Settings → Apps → See all apps → NectarLink → App battery usage, tap Allow background usage, and choose Unrestricted.</source>
+            <source>On Pixel: open Settings → Apps → See all apps → Sa6i Link → App battery usage, tap Allow background usage, and choose Unrestricted.</source>
             <translation>على هاتف Pixel: افتح الإعدادات ← التطبيقات ← عرض جميع التطبيقات ← Sa6i Link ← استخدام بطارية التطبيق، اضغط على السماح باستخدام الخلفية، واختر غير مقيد.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="221" />
-            <source>On Samsung: open Settings → Apps → NectarLink → Battery and choose Unrestricted, then in Device care → Battery → Background usage limits make sure NectarLink is never put to sleep.</source>
+            <source>On Samsung: open Settings → Apps → Sa6i Link → Battery and choose Unrestricted, then in Device care → Battery → Background usage limits make sure Sa6i Link is never put to sleep.</source>
             <translation>على أجهزة Samsung: افتح الإعدادات → التطبيقات → Sa6i Link → البطارية واختر غير مقيد، ثم في العناية بالجهاز → البطارية → حدود استخدام الخلفية وتأكد من عدم وضع Sa6i Link في وضع السكون مطلقًا.</translation>
         </message>
         <message>
@@ -2067,12 +2067,12 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="223" />
-            <source>On Vivo / OriginOS / Funtouch: open Settings → Battery → Background power consumption management → NectarLink and choose Unrestricted, and allow Autostart.</source>
+            <source>On Vivo / OriginOS / Funtouch: open Settings → Battery → Background power consumption management → Sa6i Link and choose Unrestricted, and allow Autostart.</source>
             <translation>على Vivo / OriginOS / Funtouch: افتح الإعدادات ← البطارية ← إدارة استهلاك الطاقة في الخلفية ← Sa6i Link واختر غير مقيد، واسمح ببدء التشغيل التلقائي.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="224" />
-            <source>On Xiaomi / HyperOS / MIUI: open Settings → Apps → Manage apps → NectarLink, turn on Autostart, and set Battery saver to No restrictions.</source>
+            <source>On Xiaomi / HyperOS / MIUI: open Settings → Apps → Manage apps → Sa6i Link, turn on Autostart, and set Battery saver to No restrictions.</source>
             <translation>على Xiaomi / HyperOS / MIUI: افتح الإعدادات ← التطبيقات ← إدارة التطبيقات ← Sa6i Link، قم بتشغيل التشغيل التلقائي، واضبط موفر البطارية على بلا قيود.</translation>
         </message>
         <message>
@@ -2127,7 +2127,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="235" />
-            <source>The firewall blocks NectarLink</source>
+            <source>The firewall blocks Sa6i Link</source>
             <translation>يقوم جدار الحماية بحظر Sa6i Link</translation>
         </message>
         <message>
@@ -2177,7 +2177,7 @@
         </message>
         <message>
             <location filename="../rust_strings.h" line="245" />
-            <source>Windows Firewall blocks NectarLink</source>
+            <source>Windows Firewall blocks Sa6i Link</source>
             <translation>يقوم جدار حماية Windows بحظر Sa6i Link</translation>
         </message>
         <message>
@@ -2458,7 +2458,7 @@
         </message>
         <message>
             <location filename="../../qml/pages/FeaturesGuidePage.qml" line="586" />
-            <source>Every feature in NectarLink, what it needs, and where to find it.</source>
+            <source>Every feature in Sa6i Link, what it needs, and where to find it.</source>
             <translation>كل ميزة في Sa6i Link وما تحتاج إليه وأين يمكن العثور عليها.</translation>
         </message>
         <message>
@@ -2748,7 +2748,7 @@
         </message>
         <message>
             <location filename="../../qml/pages/FeaturesGuidePage.qml" />
-            <source>Use your phone camera as the NectarLink Virtual Camera in Zoom, Teams, Meet, and OBS.</source>
+            <source>Use your phone camera as the Sa6i Link Virtual Camera in Zoom, Teams, Meet, and OBS.</source>
             <translation>استخدم كاميرا هاتفك ككاميرا Sa6i Link الافتراضية في Zoom وTeams وMeet وOBS.</translation>
         </message>
         <message>
@@ -2933,7 +2933,7 @@
         </message>
         <message>
             <location filename="../../qml/pages/FeaturesGuidePage.qml" />
-            <source>Nectar Island</source>
+            <source>Sa6i Island</source>
             <translation>Sa6i Island</translation>
         </message>
         <message>
@@ -2943,12 +2943,12 @@
         </message>
         <message>
             <location filename="../../qml/pages/FeaturesGuidePage.qml" />
-            <source>Settings › General › Nectar Island</source>
+            <source>Settings › General › Sa6i Island</source>
             <translation>الإعدادات &gt; عام &gt; جزيرة الرحيق</translation>
         </message>
         <message>
             <location filename="../../qml/pages/FeaturesGuidePage.qml" />
-            <source>Nectar Island enabled in Settings</source>
+            <source>Sa6i Island enabled in Settings</source>
             <translation>تم تمكين جزيرة نكتار في الإعدادات</translation>
         </message>
         <message>
@@ -3099,10 +3099,10 @@
         <name>Guide</name>
         <message>
             <location filename="../rust_strings.h" line="265" />
-            <source>1. Install NectarLink on your PC (Windows 11 or Linux) and your Android phone (Android 8.0 or newer).
+            <source>1. Install Sa6i Link on your PC (Windows 11 or Linux) and your Android phone (Android 8.0 or newer).
 2. Connect both devices to the same Wi-Fi network, or plug your phone into your PC with a USB cable.
 3. Open the Pair step in the setup walkthrough, or click + (Pair a new device) at the bottom of the left rail.
-4. Scan the QR code from the NectarLink Android app, or select your phone from the nearby devices list and confirm that the 6-digit code matches on both screens.
+4. Scan the QR code from the Sa6i Link Android app, or select your phone from the nearby devices list and confirm that the 6-digit code matches on both screens.
 5. Choose which features to share for that phone and grant only the Android permissions you want to use.</source>
             <translation>1. قم بتثبيت Sa6i Link على جهاز الكمبيوتر الخاص بك (Windows 11 أو Linux) وهاتف Android الخاص بك (Android 8.0 أو أحدث).
 2. قم بتوصيل كلا الجهازين بنفس شبكة Wi-Fi، أو قم بتوصيل هاتفك بالكمبيوتر باستخدام كابل USB.
@@ -3180,9 +3180,9 @@
             <source>If your phone and PC do not see each other:
 
 1. Open Connection Doctor from Settings › Connection &amp; About or the Command Palette.
-2. Check that your Wi-Fi network profile in Windows is set to Private rather than Public, or click Fix in Connection Doctor to allow NectarLink through Windows Firewall.
+2. Check that your Wi-Fi network profile in Windows is set to Private rather than Public, or click Fix in Connection Doctor to allow Sa6i Link through Windows Firewall.
 3. Verify that both devices are on the same subnet and that guest Wi-Fi client isolation is turned off on your router.
-4. You can also connect over a USB cable with USB debugging enabled; NectarLink automatically sets up a local tunnel.</source>
+4. You can also connect over a USB cable with USB debugging enabled; Sa6i Link automatically sets up a local tunnel.</source>
             <translation>إذا كان هاتفك وجهاز الكمبيوتر الخاص بك لا يرى بعضهما البعض:
 
 1. افتح Connection Doctor من الإعدادات &gt; الاتصال وحول أو لوحة الأوامر.
@@ -3231,7 +3231,7 @@ Sensitive capabilities such as Share PC folders, Remote input, and Reverse PC sc
         </message>
         <message>
             <location filename="../rust_strings.h" line="285" />
-            <source>Most NectarLink features work in Standard mode with regular Android permissions. Two optional modes unlock deeper system integration:
+            <source>Most Sa6i Link features work in Standard mode with regular Android permissions. Two optional modes unlock deeper system integration:
 
 Elevated mode (Wireless debugging or root)
 - Captures the phone screen without showing the Android cast confirmation prompt every time.
@@ -3240,7 +3240,7 @@ Elevated mode (Wireless debugging or root)
 
 Assist mode (Android Accessibility Service)
 - Injects mouse clicks, scrolling, and touch gestures when you control your phone from your PC.
-- NectarLink never reads screen text or logs keystrokes through the Accessibility service.</source>
+- Sa6i Link never reads screen text or logs keystrokes through the Accessibility service.</source>
             <translation>تعمل معظم ميزات Sa6i Link في الوضع القياسي مع أذونات Android العادية. يفتح الوضعان الاختياريان تكاملًا أعمق للنظام:
 
 الوضع المرتفع (تصحيح الأخطاء اللاسلكية أو الجذر)
@@ -3254,12 +3254,12 @@ Assist mode (Android Accessibility Service)
         </message>
         <message>
             <location filename="../rust_strings.h" line="286" />
-            <source>Nectar Island</source>
+            <source>Sa6i Island</source>
             <translation>Sa6i Island</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="287" />
-            <source>NectarLink links your Android phone and your PC directly on your local network or over a USB cable.
+            <source>Sa6i Link links your Android phone and your PC directly on your local network or over a USB cable.
 
 How it works
 - Devices discover each other over local Wi-Fi (mDNS) or USB (ADB reverse tunnel) and connect over QUIC (TLS 1.3).
@@ -3284,7 +3284,7 @@ Capability tiers on Android
         </message>
         <message>
             <location filename="../rust_strings.h" line="288" />
-            <source>NectarLink never asks for every permission up front. Each feature works independently:
+            <source>Sa6i Link never asks for every permission up front. Each feature works independently:
 
 - Notification Access: Required only if you want phone notifications, inline replies, and notification-backed chat threads on your PC.
 - SMS and Contacts: Required only if you want to read and send SMS/MMS messages or look up contact names on your PC.
@@ -3301,7 +3301,7 @@ Capability tiers on Android
         </message>
         <message>
             <location filename="../rust_strings.h" line="289" />
-            <source>NectarLink overview</source>
+            <source>Sa6i Link overview</source>
             <translation>نظرة عامة على Sa6i Link</translation>
         </message>
         <message>
@@ -3458,10 +3458,10 @@ What it needs
 Displays a compact pill at the top center of your primary monitor for incoming calls, live file transfer progress, media playback, and optional notification previews.
 
 Where to find it
-- Settings › General › Nectar Island.
+- Settings › General › Sa6i Island.
 
 What it needs
-- Turn on Nectar Island in Settings › General and pick which events should appear.</source>
+- Turn on Sa6i Island in Settings › General and pick which events should appear.</source>
             <translation>ماذا يفعل
 يعرض قرصًا مضغوطًا في الجزء العلوي الأوسط من شاشتك الأساسية للمكالمات الواردة، وتقدم نقل الملفات المباشر، وتشغيل الوسائط، ومعاينات الإشعارات الاختيارية.
 
@@ -3469,12 +3469,12 @@ What it needs
 - الإعدادات › عام › جزيرة الرحيق.
 
 ما يحتاجه
-- قم بتشغيل Nectar Island في الإعدادات › عام واختر الأحداث التي يجب أن تظهر.</translation>
+- قم بتشغيل Sa6i Island في الإعدادات › عام واختر الأحداث التي يجب أن تظهر.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="311" />
             <source>What it does
-Exposes an opt-in localhost HTTP/JSON and Server-Sent Events API on 127.0.0.1 (default port 53320) protected by a bearer token so scripts, CLI tools, and Stream Deck plugins can trigger NectarLink actions.
+Exposes an opt-in localhost HTTP/JSON and Server-Sent Events API on 127.0.0.1 (default port 53320) protected by a bearer token so scripts, CLI tools, and Stream Deck plugins can trigger Sa6i Link actions.
 
 Where to find it
 - Settings › Connection &amp; About › Local automation API.
@@ -3500,7 +3500,7 @@ Where to find it
 - Command Palette › Type on phone with PC keyboard.
 
 What it needs
-- Assist mode (Accessibility service), the NectarLink input method, or Elevated mode on your phone.</source>
+- Assist mode (Accessibility service), the Sa6i Link input method, or Elevated mode on your phone.</source>
             <translation>ماذا يفعل
 يقوم بإعادة توجيه ضغطات المفاتيح والنص الملصق من لوحة مفاتيح الكمبيوتر مباشرة إلى هاتفك دون الحاجة إلى عكس شاشة الهاتف.
 
@@ -3629,7 +3629,7 @@ Where to find it
 - Settings › General › Copy one-time codes.
 
 What it needs
-- Notification Access permission enabled for NectarLink on your Android phone.
+- Notification Access permission enabled for Sa6i Link on your Android phone.
 - The per-device Notifications toggle enabled on your PC.</source>
             <translation>ماذا يفعل
 يعكس إشعارات هاتفك إلى موجز الصفحة الرئيسية والنوافذ المنبثقة لإشعارات Windows. يمكنك الرد بشكل مضمن على الرسائل، والنقر فوق أزرار الإجراءات، ورفض الإشعارات الفردية أو المجموعات، والتراجع عن الرفض الأخير.
@@ -3649,7 +3649,7 @@ What it needs
 Opens a keyboard-first search bar over actions, contacts, message threads, mirrorable apps, phone quick toggles, clipboard history, and navigation pages.
 
 Where to find it
-- Global hotkey Ctrl+Alt+Space (or Ctrl+K inside the NectarLink window).
+- Global hotkey Ctrl+Alt+Space (or Ctrl+K inside the Sa6i Link window).
 - Commands in the top bar.
 
 What it needs
@@ -3751,7 +3751,7 @@ What it needs
         <message>
             <location filename="../rust_strings.h" line="324" />
             <source>What it does
-Sends files, folders, links, and text between your phone and PC at local network speed. If your phone is offline when you send, NectarLink places the item in the Waiting to send queue and delivers it automatically as soon as your phone reconnects.
+Sends files, folders, links, and text between your phone and PC at local network speed. If your phone is offline when you send, Sa6i Link places the item in the Waiting to send queue and delivers it automatically as soon as your phone reconnects.
 
 Where to find it
 - Home › Send files button, drag-and-drop anywhere on the window, Waiting to send card, and Transfers list.
@@ -3799,7 +3799,7 @@ Where to find it
 
 What it needs
 - Automatic PC-to-phone clipboard send works whenever your phone is connected.
-- Background phone-to-PC clipboard sync on Android 10+ uses notifications, the NectarLink quick tile, or Elevated mode.</source>
+- Background phone-to-PC clipboard sync on Android 10+ uses notifications, the Sa6i Link quick tile, or Elevated mode.</source>
             <translation>ماذا يفعل
 يشارك النص المنسوخ ونص HTML/RTF الغني والصور ومجموعات الملفات الصغيرة المنسوخة بين جهاز الكمبيوتر والهاتف. يحتفظ بسجل محلي مشفر لما يصل إلى 50 عنصرًا مع تثبيت وشرائح سياق ذكية للروابط وأرقام الهواتف والعناوين وأكواد التتبع.
 
@@ -3818,7 +3818,7 @@ Shows incoming and active phone calls on your PC with Answer, Decline, and Rejec
 
 Where to find it
 - Left navigation rail › Calls.
-- Incoming call banner on Home and Nectar Island.
+- Incoming call banner on Home and Sa6i Island.
 
 What it needs
 - Phone, Call Log, and Contacts permissions on your Android phone.
@@ -3861,7 +3861,7 @@ What it needs
 Streams your PC's screen to your phone so you can view your desktop from across the room and use your phone as a trackpad or laser pointer.
 
 Where to find it
-- Started from the NectarLink app on your phone.
+- Started from the Sa6i Link app on your phone.
 - Settings › Devices › Share PC screen to phone.
 
 What it needs
@@ -3879,7 +3879,7 @@ What it needs
         <message>
             <location filename="../rust_strings.h" line="330" />
             <source>What it does
-Streams your phone camera into the NectarLink Virtual Camera on Windows so Zoom, Teams, Meet, Discord, and OBS can use your phone's rear or front camera at up to 4K.
+Streams your phone camera into the Sa6i Link Virtual Camera on Windows so Zoom, Teams, Meet, Discord, and OBS can use your phone's rear or front camera at up to 4K.
 
 Where to find it
 - Home › Phone as webcam.
@@ -4949,7 +4949,7 @@ What it needs
         <name>IslandWindow</name>
         <message>
             <location filename="../../qml/IslandWindow.qml" line="16" />
-            <source>Nectar Island</source>
+            <source>Sa6i Island</source>
             <translation>Sa6i Island</translation>
         </message>
         <message>
@@ -4991,12 +4991,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/IslandWindow.qml" line="238" />
-            <source>Nectar Island · %1</source>
+            <source>Sa6i Island · %1</source>
             <translation>جزيرة الرحيق · %1</translation>
         </message>
         <message>
             <location filename="../../qml/IslandWindow.qml" line="239" />
-            <source>Nectar Island · Ready</source>
+            <source>Sa6i Island · Ready</source>
             <translation>جزيرة الرحيق · جاهز</translation>
         </message>
         <message>
@@ -5026,7 +5026,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/IslandWindow.qml" line="268" />
-            <source>Click to view in NectarLink</source>
+            <source>Click to view in Sa6i Link</source>
             <translation>انقر للعرض في Sa6i Link</translation>
         </message>
         <message>
@@ -5104,7 +5104,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="348" />
-            <source>Update NectarLink on %1.</source>
+            <source>Update Sa6i Link on %1.</source>
             <translation>قم بتحديث Sa6i Link على %1.</translation>
         </message>
     </context>
@@ -5167,42 +5167,42 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="46" />
-            <source>On your phone, open NectarLink › Settings › Control from your PC and turn on the Accessibility service.</source>
+            <source>On your phone, open Sa6i Link › Settings › Control from your PC and turn on the Accessibility service.</source>
             <translation>على هاتفك، افتح Sa6i Link ›الإعدادات› التحكم من جهاز الكمبيوتر الخاص بك وقم بتشغيل خدمة إمكانية الوصول.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="48" />
-            <source>Needs Elevated: set up Wireless debugging in NectarLink › Settings › Control from your PC, or connect the phone over USB with USB debugging allowed.</source>
+            <source>Needs Elevated: set up Wireless debugging in Sa6i Link › Settings › Control from your PC, or connect the phone over USB with USB debugging allowed.</source>
             <translation>يحتاج إلى المزيد من التحسين: قم بإعداد تصحيح الأخطاء اللاسلكية في Sa6i Link › الإعدادات › التحكم من جهاز الكمبيوتر الخاص بك، أو قم بتوصيل الهاتف عبر USB مع السماح بتصحيح أخطاء USB.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="50" />
-            <source>On your phone, set NectarLink as the default SMS/Caller ID app when prompted.</source>
+            <source>On your phone, set Sa6i Link as the default SMS/Caller ID app when prompted.</source>
             <translation>على هاتفك، قم بتعيين Sa6i Link باعتباره التطبيق الافتراضي للرسائل النصية القصيرة/معرف المتصل عندما يُطلب منك ذلك.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="53" />
-            <source>On your phone, open NectarLink and allow Notification access.</source>
+            <source>On your phone, open Sa6i Link and allow Notification access.</source>
             <translation>على هاتفك، افتح Sa6i Link واسمح بالوصول إلى الإشعارات.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="55" />
-            <source>On your phone, open NectarLink and allow Do Not Disturb access.</source>
+            <source>On your phone, open Sa6i Link and allow Do Not Disturb access.</source>
             <translation>على هاتفك، افتح Sa6i Link واسمح بالوصول إلى وضع "عدم الإزعاج".</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="57" />
-            <source>On your phone, open NectarLink and allow Modify system settings.</source>
+            <source>On your phone, open Sa6i Link and allow Modify system settings.</source>
             <translation>على هاتفك، افتح Sa6i Link واسمح بتعديل إعدادات النظام.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="58" />
-            <source>Open NectarLink on your phone and grant this permission in Settings.</source>
+            <source>Open Sa6i Link on your phone and grant this permission in Settings.</source>
             <translation>افتح Sa6i Link على هاتفك وامنح هذا الإذن في الإعدادات.</translation>
         </message>
         <message>
             <location filename="../../qml/components/LockChip.qml" line="60" />
-            <source>Open Settings › Camera &amp; Audio to set up the NectarLink virtual camera add-on.</source>
+            <source>Open Settings › Camera &amp; Audio to set up the Sa6i Link virtual camera add-on.</source>
             <translation>افتح الإعدادات › الكاميرا والصوت لإعداد الوظيفة الإضافية للكاميرا الافتراضية Sa6i Link.</translation>
         </message>
         <message>
@@ -5777,13 +5777,13 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="360" />
-            <source>Recording from %1, saved in Downloads/Nectarlink</source>
-            <translation>التسجيل من %1، محفوظ في التنزيلات/Nectarlink</translation>
+            <source>Recording from %1, saved in Downloads/Sa6iLink</source>
+            <translation>التسجيل من %1، محفوظ في التنزيلات/Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="361" />
-            <source>Recording from %1, saved in Downloads\Nectarlink</source>
-            <translation>التسجيل من %1، محفوظ في Downloads\Nectarlink</translation>
+            <source>Recording from %1, saved in Downloads\Sa6iLink</source>
+            <translation>التسجيل من %1، محفوظ في Downloads\Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="362" />
@@ -5792,13 +5792,13 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="363" />
-            <source>Saved %1 to Downloads/Nectarlink.</source>
-            <translation>تم الحفظ %1 في التنزيلات/Nectarlink.</translation>
+            <source>Saved %1 to Downloads/Sa6iLink.</source>
+            <translation>تم الحفظ %1 في التنزيلات/Sa6iLink.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="364" />
-            <source>Saved %1 to Downloads\Nectarlink.</source>
-            <translation>تم حفظ %1 في Downloads\Nectarlink.</translation>
+            <source>Saved %1 to Downloads\Sa6iLink.</source>
+            <translation>تم حفظ %1 في Downloads\Sa6iLink.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="365" />
@@ -5807,13 +5807,13 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="366" />
-            <source>Screenshot from %1, saved in Downloads/Nectarlink</source>
-            <translation>لقطة شاشة من %1، محفوظة في التنزيلات/Nectarlink</translation>
+            <source>Screenshot from %1, saved in Downloads/Sa6iLink</source>
+            <translation>لقطة شاشة من %1، محفوظة في التنزيلات/Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="367" />
-            <source>Screenshot from %1, saved in Downloads\Nectarlink</source>
-            <translation>لقطة شاشة من %1، محفوظة في Downloads\Nectarlink</translation>
+            <source>Screenshot from %1, saved in Downloads\Sa6iLink</source>
+            <translation>لقطة شاشة من %1، محفوظة في Downloads\Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="368" />
@@ -5827,7 +5827,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="370" />
-            <source>Set up Wireless debugging in NectarLink on the phone to open its apps here.</source>
+            <source>Set up Wireless debugging in Sa6i Link on the phone to open its apps here.</source>
             <translation>قم بإعداد تصحيح الأخطاء اللاسلكية في Sa6i Link على الهاتف لفتح تطبيقاته هنا.</translation>
         </message>
         <message>
@@ -5837,7 +5837,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="372" />
-            <source>The app didn't open on the phone. Try again, or open NectarLink on the phone to check Wireless debugging.</source>
+            <source>The app didn't open on the phone. Try again, or open Sa6i Link on the phone to check Wireless debugging.</source>
             <translation>التطبيق لم يفتح على الهاتف حاول مرة أخرى، أو افتح Sa6i Link على الهاتف للتحقق من تصحيح الأخطاء اللاسلكية.</translation>
         </message>
         <message>
@@ -5862,7 +5862,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="377" />
-            <source>This phone's app doesn't share its screen yet. Update NectarLink on the phone.</source>
+            <source>This phone's app doesn't share its screen yet. Update Sa6i Link on the phone.</source>
             <translation>لا يشارك تطبيق هذا الهاتف شاشته حتى الآن. قم بتحديث Sa6i Link على الهاتف.</translation>
         </message>
         <message>
@@ -5880,12 +5880,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/MirrorWindow.qml" line="25" />
-            <source>%1 · NectarLink</source>
+            <source>%1 · Sa6i Link</source>
             <translation>%1 · Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/MirrorWindow.qml" line="25" />
-            <source>Phone screen · NectarLink</source>
+            <source>Phone screen · Sa6i Link</source>
             <translation>شاشة الهاتف · Sa6i Link</translation>
         </message>
         <message>
@@ -5961,7 +5961,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/MirrorWindow.qml" line="514" />
-            <source>To control the phone, turn on Control from your PC in NectarLink's settings on the phone.</source>
+            <source>To control the phone, turn on Control from your PC in Sa6i Link's settings on the phone.</source>
             <translation>للتحكم في الهاتف، قم بتشغيل التحكم من جهاز الكمبيوتر الخاص بك في إعدادات Sa6i Link على الهاتف.</translation>
         </message>
         <message>
@@ -6334,7 +6334,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/PairingPanel.qml" line="114" />
-            <source>Install NectarLink</source>
+            <source>Install Sa6i Link</source>
             <translation>قم بتثبيت Sa6i Link</translation>
         </message>
         <message>
@@ -6362,7 +6362,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/PairingPanel.qml" line="187" />
-            <source>Open NectarLink on your phone</source>
+            <source>Open Sa6i Link on your phone</source>
             <translation>افتح Sa6i Link على هاتفك</translation>
         </message>
         <message>
@@ -6372,7 +6372,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/PairingPanel.qml" line="235" />
-            <source>On your phone, open NectarLink and choose “Pair nearby”. It shows up here.</source>
+            <source>On your phone, open Sa6i Link and choose “Pair nearby”. It shows up here.</source>
             <translation>على هاتفك، افتح Sa6i Link واختر "إقران قريب". يظهر هنا.</translation>
         </message>
         <message>
@@ -6483,7 +6483,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="395" />
-            <source>Update NectarLink on %1 to use its microphone.</source>
+            <source>Update Sa6i Link on %1 to use its microphone.</source>
             <translation>قم بتحديث Sa6i Link على %1 لاستخدام الميكروفون الخاص به.</translation>
         </message>
     </context>
@@ -6491,7 +6491,7 @@ What it needs
         <name>PhoneSound</name>
         <message>
             <location filename="../rust_strings.h" line="396" />
-            <source>%1 couldn't ask to share its sound. Check that NectarLink can show notifications on the phone.</source>
+            <source>%1 couldn't ask to share its sound. Check that Sa6i Link can show notifications on the phone.</source>
             <translation>تعذر على %1 طلب مشاركة صوته. تأكد من أن Sa6i Link يمكنه عرض الإشعارات على الهاتف.</translation>
         </message>
         <message>
@@ -6506,7 +6506,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="399" />
-            <source>Update NectarLink on %1 to play its sound here.</source>
+            <source>Update Sa6i Link on %1 to play its sound here.</source>
             <translation>قم بتحديث Sa6i Link على %1 لتشغيل صوته هنا.</translation>
         </message>
     </context>
@@ -6559,7 +6559,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="409" />
-            <source>Update NectarLink on %1 to back up its photos.</source>
+            <source>Update Sa6i Link on %1 to back up its photos.</source>
             <translation>قم بتحديث Sa6i Link على %1 لعمل نسخة احتياطية من صوره.</translation>
         </message>
         <message>
@@ -6572,8 +6572,8 @@ What it needs
         <name>Photos</name>
         <message>
             <location filename="../rust_strings.h" line="411" />
-            <source>%1 of %2 couldn't be moved to %3. They're in Downloads\Nectarlink.</source>
-            <translation>تعذر نقل %1 من %2 إلى %3. إنهم موجودون في Downloads\Nectarlink.</translation>
+            <source>%1 of %2 couldn't be moved to %3. They're in Downloads\Sa6iLink.</source>
+            <translation>تعذر نقل %1 من %2 إلى %3. إنهم موجودون في Downloads\Sa6iLink.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="412" />
@@ -6647,8 +6647,8 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="424" />
-            <source>The photo couldn't be copied. It's in Downloads\Nectarlink.</source>
-            <translation>لا يمكن نسخ الصورة. إنه موجود في Downloads\Nectarlink.</translation>
+            <source>The photo couldn't be copied. It's in Downloads\Sa6iLink.</source>
+            <translation>لا يمكن نسخ الصورة. إنه موجود في Downloads\Sa6iLink.</translation>
         </message>
     </context>
     <context>
@@ -6962,7 +6962,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="430" />
-            <source>Update NectarLink on %1 to play on it.</source>
+            <source>Update Sa6i Link on %1 to play on it.</source>
             <translation>قم بتحديث Sa6i Link على %1 للعب عليه.</translation>
         </message>
     </context>
@@ -7024,7 +7024,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="439" />
-            <source>Send to %1 with NectarLink</source>
+            <source>Send to %1 with Sa6i Link</source>
             <translation>أرسل إلى %1 باستخدام Sa6i Link</translation>
         </message>
         <message>
@@ -7503,12 +7503,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="922" />
-            <source>NectarLink follows the system unless you pick one.</source>
+            <source>Sa6i Link follows the system unless you pick one.</source>
             <translation>يتبع Sa6i Link النظام ما لم تختر واحدًا.</translation>
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="923" />
-            <source>NectarLink follows Windows unless you pick one.</source>
+            <source>Sa6i Link follows Windows unless you pick one.</source>
             <translation>يتبع Sa6i Link نظام Windows إلا إذا اخترت واحدًا.</translation>
         </message>
         <message>
@@ -7547,7 +7547,7 @@ What it needs
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="1026" />
             <location filename="../../qml/pages/SettingsPage.qml" line="1029" />
-            <source>Nectar Island</source>
+            <source>Sa6i Island</source>
             <translation>Sa6i Island</translation>
         </message>
         <message>
@@ -8450,7 +8450,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="3272" />
-            <source>NectarLink %1</source>
+            <source>Sa6i Link %1</source>
             <translation>Sa6i Link %1</translation>
         </message>
         <message>
@@ -8518,7 +8518,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="3474" />
-            <source>The phone asks once to let this PC in. NectarLink there also needs All files access, or this folder under Selected folders only.</source>
+            <source>The phone asks once to let this PC in. Sa6i Link there also needs All files access, or this folder under Selected folders only.</source>
             <translation>يطلب الهاتف مرة واحدة السماح لهذا الكمبيوتر بالدخول. يحتاج Sa6i Link هناك أيضًا إلى الوصول إلى جميع الملفات، أو هذا المجلد ضمن المجلدات المحددة فقط.</translation>
         </message>
         <message>
@@ -8569,7 +8569,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="3588" />
-            <source>Wi-Fi networks this PC has joined before. Your system keeps their passwords; NectarLink never sees them.</source>
+            <source>Wi-Fi networks this PC has joined before. Your system keeps their passwords; Sa6i Link never sees them.</source>
             <translation>شبكات Wi-Fi التي انضم إليها هذا الكمبيوتر من قبل. يحتفظ نظامك بكلمات المرور الخاصة به؛ Sa6i Link لا يراهم أبدًا.</translation>
         </message>
         <message>
@@ -8579,7 +8579,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/SettingsPage.qml" line="3591" />
-            <source>Wi-Fi networks this PC has joined before. Windows keeps their passwords; NectarLink never sees them.</source>
+            <source>Wi-Fi networks this PC has joined before. Windows keeps their passwords; Sa6i Link never sees them.</source>
             <translation>شبكات Wi-Fi التي انضم إليها هذا الكمبيوتر من قبل. يحتفظ Windows بكلمات المرور الخاصة به؛ Sa6i Link لا يراهم أبدًا.</translation>
         </message>
         <message>
@@ -8717,7 +8717,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="447" />
-            <source>Couldn't uninstall NectarLink: %1</source>
+            <source>Couldn't uninstall Sa6i Link: %1</source>
             <translation>تعذر إلغاء تثبيت Sa6i Link: %1</translation>
         </message>
         <message>
@@ -8747,7 +8747,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="453" />
-            <source>The uninstaller is missing. Reinstall NectarLink, then uninstall it.</source>
+            <source>The uninstaller is missing. Reinstall Sa6i Link, then uninstall it.</source>
             <translation>برنامج إلغاء التثبيت مفقود. أعد تثبيت Sa6i Link، ثم قم بإلغاء تثبيته.</translation>
         </message>
         <message>
@@ -8775,17 +8775,17 @@ What it needs
         <name>SetupWindow</name>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="51" />
-            <source>Uninstall NectarLink</source>
+            <source>Uninstall Sa6i Link</source>
             <translation>إلغاء تثبيت Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="51" />
-            <source>NectarLink Setup</source>
+            <source>Sa6i Link Setup</source>
             <translation>إعداد Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="67" />
-            <source>Install NectarLink in</source>
+            <source>Install Sa6i Link in</source>
             <translation>قم بتثبيت Sa6i Link في</translation>
         </message>
         <message>
@@ -8798,12 +8798,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="187" />
-            <source>NectarLink</source>
+            <source>Sa6i Link</source>
             <translation>Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="216" />
-            <source>Couldn't uninstall NectarLink</source>
+            <source>Couldn't uninstall Sa6i Link</source>
             <translation>تعذر إلغاء تثبيت Sa6i Link</translation>
         </message>
         <message>
@@ -8813,27 +8813,27 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="218" />
-            <source>Uninstalling NectarLink</source>
+            <source>Uninstalling Sa6i Link</source>
             <translation>إلغاء تثبيت Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="219" />
-            <source>Updating NectarLink</source>
+            <source>Updating Sa6i Link</source>
             <translation>تحديث Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="220" />
-            <source>Installing NectarLink</source>
+            <source>Installing Sa6i Link</source>
             <translation>تثبيت Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="221" />
-            <source>Uninstall NectarLink?</source>
+            <source>Uninstall Sa6i Link?</source>
             <translation>إلغاء تثبيت Sa6i Link؟</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="236" />
-            <source>Sorry to see you go. This uninstalls NectarLink and deletes its settings and pairings on this PC. Files you received stay in %1.</source>
+            <source>Sorry to see you go. This uninstalls Sa6i Link and deletes its settings and pairings on this PC. Files you received stay in %1.</source>
             <translation>آسف لرؤيتك تذهب. يؤدي هذا إلى إلغاء تثبيت Sa6i Link وحذف إعداداته وإقرانه على هذا الكمبيوتر. الملفات التي تلقيتها تبقى في %1.</translation>
         </message>
         <message>
@@ -8883,7 +8883,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="298" />
-            <source>Keep NectarLink</source>
+            <source>Keep Sa6i Link</source>
             <translation>احتفظ بـ Sa6i Link</translation>
         </message>
         <message>
@@ -8914,12 +8914,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="469" />
-            <source>NectarLink is uninstalled</source>
+            <source>Sa6i Link is uninstalled</source>
             <translation>تم إلغاء تثبيت Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="469" />
-            <source>NectarLink is ready</source>
+            <source>Sa6i Link is ready</source>
             <translation>Sa6i Link جاهز</translation>
         </message>
         <message>
@@ -8944,12 +8944,12 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="531" />
-            <source>Open NectarLink</source>
+            <source>Open Sa6i Link</source>
             <translation>افتح Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/setup/SetupWindow.qml" line="591" />
-            <source>NectarLink goes into Program Files, or the folder you choose, for everyone on this PC. Setup also:</source>
+            <source>Sa6i Link goes into Program Files, or the folder you choose, for everyone on this PC. Setup also:</source>
             <translation>ينتقل Sa6i Link إلى Program Files، أو المجلد الذي تختاره، للجميع على هذا الكمبيوتر. الإعداد أيضًا:</translation>
         </message>
         <message>
@@ -8987,7 +8987,7 @@ What it needs
         <name>ShelfWindow</name>
         <message>
             <location filename="../../qml/ShelfWindow.qml" line="16" />
-            <source>NectarLink Shelf</source>
+            <source>Sa6i Link Shelf</source>
             <translation>رف Sa6i Link</translation>
         </message>
         <message>
@@ -9183,12 +9183,12 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="459" />
-            <source>On the phone, allow All files access for NectarLink.</source>
+            <source>On the phone, allow All files access for Sa6i Link.</source>
             <translation>على الهاتف، قم بالسماح لجميع الملفات بالوصول إلى Sa6i Link.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="460" />
-            <source>On the phone, turn on Browse this phone's storage in File Explorer in NectarLink.</source>
+            <source>On the phone, turn on Browse this phone's storage in File Explorer in Sa6i Link.</source>
             <translation>على الهاتف، قم بتشغيل تصفح مساحة تخزين هذا الهاتف في File Explorer في Sa6i Link.</translation>
         </message>
     </context>
@@ -9657,8 +9657,8 @@ What it needs
         <name>Transfers</name>
         <message>
             <location filename="../rust_strings.h" line="490" />
-            <source>Accept in NectarLink to save to Downloads\Nectarlink</source>
-            <translation>قم بالقبول في Sa6i Link للحفظ في Downloads\Nectarlink</translation>
+            <source>Accept in Sa6i Link to save to Downloads\Sa6iLink</source>
+            <translation>قم بالقبول في Sa6i Link للحفظ في Downloads\Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="491" />
@@ -9667,13 +9667,13 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="492" />
-            <source>From %1, opened from Downloads\Nectarlink</source>
-            <translation>من %1، تم فتحه من Downloads\Nectarlink</translation>
+            <source>From %1, opened from Downloads\Sa6iLink</source>
+            <translation>من %1، تم فتحه من Downloads\Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="493" />
-            <source>From %1, saved in Downloads\Nectarlink</source>
-            <translation>من %1، تم حفظه في Downloads\Nectarlink</translation>
+            <source>From %1, saved in Downloads\Sa6iLink</source>
+            <translation>من %1، تم حفظه في Downloads\Sa6iLink</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="494" />
@@ -9700,27 +9700,27 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="498" />
-            <source>NectarLink %1 is available</source>
+            <source>Sa6i Link %1 is available</source>
             <translation>Sa6i Link %1 متاح</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="499" />
-            <source>NectarLink %1 is available.</source>
+            <source>Sa6i Link %1 is available.</source>
             <translation>Sa6i Link %1 متاح.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="500" />
-            <source>NectarLink is still on the version you had. Try again from Settings.</source>
+            <source>Sa6i Link is still on the version you had. Try again from Settings.</source>
             <translation>Sa6i Link لا يزال على الإصدار الذي لديك. حاول مرة أخرى من الإعدادات.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="501" />
-            <source>NectarLink is up to date.</source>
+            <source>Sa6i Link is up to date.</source>
             <translation>Sa6i Link محدث.</translation>
         </message>
         <message>
             <location filename="../rust_strings.h" line="502" />
-            <source>NectarLink is updated to %1</source>
+            <source>Sa6i Link is updated to %1</source>
             <translation>تم تحديث Sa6i Link إلى %1</translation>
         </message>
         <message>
@@ -9760,7 +9760,7 @@ What it needs
         </message>
         <message>
             <location filename="../rust_strings.h" line="510" />
-            <source>The update is installed. Restart NectarLink to use it.</source>
+            <source>The update is installed. Restart Sa6i Link to use it.</source>
             <translation>تم تثبيت التحديث. أعد تشغيل Sa6i Link لاستخدامه.</translation>
         </message>
         <message>
@@ -9948,7 +9948,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" line="1555" />
-            <source>Keep NectarLink ready in the system tray when you sign in.</source>
+            <source>Keep Sa6i Link ready in the system tray when you sign in.</source>
             <translation>أبقِ Sa6i Link جاهزًا في علبة النظام عند تسجيل الدخول.</translation>
         </message>
         <message>
@@ -9993,7 +9993,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Welcome to NectarLink</source>
+            <source>Welcome to Sa6i Link</source>
             <translation>مرحبا بكم في Sa6i Link</translation>
         </message>
         <message>
@@ -10003,7 +10003,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Install NectarLink on your phone</source>
+            <source>Install Sa6i Link on your phone</source>
             <translation>قم بتثبيت Sa6i Link على هاتفك</translation>
         </message>
         <message>
@@ -10043,7 +10043,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Scan the QR code from the NectarLink Android app, or pick your phone from nearby devices.</source>
+            <source>Scan the QR code from the Sa6i Link Android app, or pick your phone from nearby devices.</source>
             <translation>قم بمسح رمز الاستجابة السريعة من تطبيق Sa6i Link Android، أو اختر هاتفك من الأجهزة القريبة.</translation>
         </message>
         <message>
@@ -10193,7 +10193,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Notifications are off for NectarLink in Windows Settings.</source>
+            <source>Notifications are off for Sa6i Link in Windows Settings.</source>
             <translation>تم إيقاف الإشعارات الخاصة بـ Sa6i Link في إعدادات Windows.</translation>
         </message>
         <message>
@@ -10228,7 +10228,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Open the NectarLink Android app whenever you are ready to scan the QR code.</source>
+            <source>Open the Sa6i Link Android app whenever you are ready to scan the QR code.</source>
             <translation>افتح تطبيق Sa6i Link Android عندما تكون مستعدًا لمسح رمز الاستجابة السريعة ضوئيًا.</translation>
         </message>
         <message>
@@ -10238,7 +10238,7 @@ What it needs
         </message>
         <message>
             <location filename="../../qml/pages/WalkthroughPage.qml" />
-            <source>Browse every feature in NectarLink, see what permissions it needs, and jump straight to it.</source>
+            <source>Browse every feature in Sa6i Link, see what permissions it needs, and jump straight to it.</source>
             <translation>تصفح كل ميزة في Sa6i Link، واطلع على الأذونات التي تحتاجها، وانتقل إليها مباشرة.</translation>
         </message>
         <message>
@@ -10284,12 +10284,12 @@ What it needs
         <name>WelcomePage</name>
         <message>
             <location filename="../../qml/pages/WelcomePage.qml" line="36" />
-            <source>Welcome to NectarLink</source>
+            <source>Welcome to Sa6i Link</source>
             <translation>مرحبا بكم في Sa6i Link</translation>
         </message>
         <message>
             <location filename="../../qml/pages/WelcomePage.qml" line="46" />
-            <source>NectarLink couldn't start.</source>
+            <source>Sa6i Link couldn't start.</source>
             <translation>تعذر بدء تشغيل Sa6i Link.</translation>
         </message>
         <message>

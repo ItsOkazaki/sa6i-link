@@ -2,7 +2,7 @@
 import QtQuick
 import QtQuick.Dialogs
 import QtQuick.Shapes
-import app.nectarlink
+import sa6i.link
 
 // The installer's and the uninstaller's window (src/setup.rs). One window,
 // three moments: welcome, working, done. Its own fixed colors (honey on warm
@@ -48,7 +48,7 @@ NativeWindow {
     minimumHeight: height
     maximumHeight: height
     visible: true
-    title: removing ? qsTr("Uninstall NectarLink") : qsTr("NectarLink Setup")
+    title: removing ? qsTr("Uninstall Sa6i Link") : qsTr("Sa6i Link Setup")
     color: bg
     backdrop: false
     darkFrame: dark
@@ -64,7 +64,7 @@ NativeWindow {
 
     FolderDialog {
         id: dirPicker
-        title: qsTr("Install NectarLink in")
+        title: qsTr("Install Sa6i Link in")
         onAccepted: Setup.chooseDir(selectedFolder.toString())
     }
 
@@ -184,7 +184,7 @@ NativeWindow {
                 mipmap: true
                 scale: 1 + emblem.breath * 0.04
                 Accessible.role: Accessible.Graphic
-                Accessible.name: qsTr("NectarLink")
+                Accessible.name: qsTr("Sa6i Link")
             }
             SadBee {
                 anchors.centerIn: parent
@@ -213,13 +213,13 @@ NativeWindow {
                 font.weight: Font.DemiBold
                 color: window.ink
                 text: window.phase === "failed"
-                    ? (window.removing ? qsTr("Couldn't uninstall NectarLink") : qsTr("Setup couldn't finish"))
+                    ? (window.removing ? qsTr("Couldn't uninstall Sa6i Link") : qsTr("Setup couldn't finish"))
                     : window.phase === "working"
-                    ? (window.action === "remove" ? qsTr("Uninstalling NectarLink")
-                       : window.action === "update" ? qsTr("Updating NectarLink")
-                       : qsTr("Installing NectarLink"))
-                    : window.removing ? qsTr("Uninstall NectarLink?")
-                    : "NectarLink"
+                    ? (window.action === "remove" ? qsTr("Uninstalling Sa6i Link")
+                       : window.action === "update" ? qsTr("Updating Sa6i Link")
+                       : qsTr("Installing Sa6i Link"))
+                    : window.removing ? qsTr("Uninstall Sa6i Link?")
+                    : "Sa6i Link"
             }
             Item { width: 1; height: 10 }
             Text {
@@ -233,7 +233,7 @@ NativeWindow {
                 text: window.phase === "failed" ? Setup.message
                     : window.phase === "working" ? Setup.step
                     : window.removing
-                    ? qsTr("Sorry to see you go. This uninstalls NectarLink and deletes its settings and pairings on this PC. Files you received stay in %1.").arg("Downloads\\Nectarlink")
+                    ? qsTr("Sorry to see you go. This uninstalls Sa6i Link and deletes its settings and pairings on this PC. Files you received stay in %1.").arg("Downloads\\Sa6iLink")
                     : Setup.kind === "update"
                     ? qsTr("Update from %1 to %2. Your settings and pairings stay as they are.").arg(Setup.installedVersion).arg(Setup.version)
                     : Setup.kind === "reinstall"
@@ -295,7 +295,7 @@ NativeWindow {
                 SetupButton {
                     visible: window.removing || window.phase === "failed"
                     filled: false
-                    text: window.removing && window.phase !== "failed" ? qsTr("Keep NectarLink") : qsTr("Close")
+                    text: window.removing && window.phase !== "failed" ? qsTr("Keep Sa6i Link") : qsTr("Close")
                     ink: window.ink
                     focusColor: window.honey
                     onClicked: window.close()
@@ -466,7 +466,7 @@ NativeWindow {
                 font.pixelSize: 28
                 font.weight: Font.DemiBold
                 color: window.ink
-                text: window.removing ? qsTr("NectarLink is uninstalled") : qsTr("NectarLink is ready")
+                text: window.removing ? qsTr("Sa6i Link is uninstalled") : qsTr("Sa6i Link is ready")
             }
             Item { width: 1; height: 8 }
             Text {
@@ -478,7 +478,7 @@ NativeWindow {
                 font.pixelSize: 15
                 color: window.muted
                 text: window.removing
-                    ? qsTr("Your received files are still in %1. Thanks for giving it a try.").arg("Downloads\\Nectarlink")
+                    ? qsTr("Your received files are still in %1. Thanks for giving it a try.").arg("Downloads\\Sa6iLink")
                     : qsTr("Next, get the Android app. Scan this code with your phone's camera to open its download page.")
             }
 
@@ -511,7 +511,7 @@ NativeWindow {
                 font.pixelSize: 13
                 font.underline: true
                 color: window.honey
-                text: "github.com/thtbee/nectarlink/releases/latest"
+                text: "github.com/thtbee/sa6i-link/releases/latest"
                 Accessible.role: Accessible.Link
                 Accessible.name: qsTr("Open the Android app download page")
                 Accessible.onPressAction: Setup.openAndroidPage()
@@ -528,7 +528,7 @@ NativeWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 12
                 SetupButton {
-                    text: window.removing ? qsTr("Close") : qsTr("Open NectarLink")
+                    text: window.removing ? qsTr("Close") : qsTr("Open Sa6i Link")
                     fill: window.removing ? window.ink : window.honey
                     ink: window.removing ? window.bg : window.onHoney
                     focusColor: window.honey
@@ -588,7 +588,7 @@ NativeWindow {
                         font.pixelSize: 14
                         color: window.muted
                         textFormat: Text.StyledText
-                        text: qsTr("NectarLink goes into Program Files, or the folder you choose, for everyone on this PC. Setup also:")
+                        text: qsTr("Sa6i Link goes into Program Files, or the folder you choose, for everyone on this PC. Setup also:")
                             + "<br>&#8226; " + qsTr("allows it through Windows Firewall on private networks, so your phone can connect")
                             + "<br>&#8226; " + qsTr("adds a task that installs updates without an administrator prompt, where only administrators can change the folder")
                             + "<br>&#8226; " + qsTr("adds a Start menu shortcut, and a desktop one if you leave that ticked, and starts it with Windows (turn this off in Settings)")
@@ -607,7 +607,7 @@ NativeWindow {
                             anchors.fill: parent
                             anchors.margins: -6
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: Qt.openUrlExternally("https://github.com/thtbee/nectarlink/blob/main/docs/guide/privacy-and-security.md")
+                            onClicked: Qt.openUrlExternally("https://github.com/ItsOkazaki/sa6i-link/blob/main/docs/guide/privacy-and-security.md")
                         }
                     }
                 }

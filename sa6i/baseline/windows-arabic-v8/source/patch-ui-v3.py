@@ -40,11 +40,11 @@ struct.pack_into('>I',d,pos-8,len(c)+4);struct.pack_into('>I',d,pos-4,len(s.enco
 d[pos:pos+limit]=c+b'\0'*(limit-len(c))
 # Prevent only MainWindow's original compiled cache entry from being selected;
 # the resource URL itself remains unchanged, allowing source-QML fallback.
-key='/qt/qml/app/nectarlink/qml/MainWindow.qml'.encode('utf-16le'); i=0x1d8b050
+key='/qt/qml/app/sa6i-link/qml/MainWindow.qml'.encode('utf-16le'); i=0x1d8b050
 assert d[i:i+len(key)]==key
-j=i+len('/qt/qml/app/nectarlink/qml/'.encode('utf-16le')); assert d[j:j+2]==b'M\0';d[j]=ord('N')
+j=i+len('/qt/qml/app/sa6i-link/qml/'.encode('utf-16le')); assert d[j:j+2]==b'M\0';d[j]=ord('N')
 # Likewise fall back to our edited source for the welcome screen.
-key='/qt/qml/app/nectarlink/qml/pages/WelcomePage.qml'.encode('utf-16le'); i=0x1d8c440
+key='/qt/qml/app/sa6i-link/qml/pages/WelcomePage.qml'.encode('utf-16le'); i=0x1d8c440
 assert d[i:i+len(key)]==key
-j=i+len('/qt/qml/app/nectarlink/qml/pages/'.encode('utf-16le'));assert d[j:j+2]==b'W\0';d[j]=ord('V')
+j=i+len('/qt/qml/app/sa6i-link/qml/pages/'.encode('utf-16le'));assert d[j:j+2]==b'W\0';d[j]=ord('V')
 open(out,'wb').write(d); print('compressed',len(c),'max',limit,'sha256',hashlib.sha256(d).hexdigest())

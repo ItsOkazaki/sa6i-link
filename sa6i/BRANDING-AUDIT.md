@@ -9,7 +9,7 @@ the artwork candidate is a separate ZIP.
 Inspected public release `Sa6i.Link.zip`, SHA-256
 `4cfcb2227ba61f6d54282dfb2513ae9c8dda5faceda2ce11979e4a4237f602d9`.
 `Assets/Square150x150Logo.png` and `Assets/Square44x44Logo.png` contained the
-old NectarLink mark. The artwork candidate replaces only those two PNG entries
+old Sa6i Link mark. The artwork candidate replaces only those two PNG entries
 with sizes derived from the supplied Sa6i Link ICO. A complete decompressed
 entry-by-entry comparison verifies all other ZIP entries have unchanged bytes;
 the ZIP passes `testzip()`. The candidate has not been run on Windows. The
@@ -19,7 +19,7 @@ The loose `AppxManifest.xml` still contains upstream display strings, identity,
 publisher and executable references. Its role in the portable package has not
 been verified. It was intentionally not modified because changing package
 identity or executable references may affect Windows integration. Translation
-filenames and `nectarlink_vcam.dll` also contain the upstream name and are kept
+filenames and `sa6i_link_vcam.dll` also contain the upstream name and are kept
 because they may be referenced by the executable. Licence and copyright notices
 are preserved. No claim of a complete trace-free Windows build is made.
 
@@ -43,15 +43,15 @@ Inspected public release `Sa6i.Link.apk`, SHA-256
 `86913c1ab9ac5f1aac060b966708a0fc4442fd56e02df7cbc2dc4a4a1d92b5b1`.
 Androguard reports package `app.sa6ilink.test`, label `Sa6i Link`, version
 `0.1.5`. Its compiled string resources contain the existing destination
-`Download/Nectarlink` in file-transfer guidance for English, Arabic, German,
+`Download/Sa6iLink` in file-transfer guidance for English, Arabic, German,
 Turkish and Chinese; those strings match the old storage path. Blindly changing
 only the displayed text would be misleading.
 
-DEX strings contain upstream references including `NectarLink PC media`,
-`NectarLink Virtual Gamepad`, `NectarLink Virtual Keyboard`,
-`Phone speaker (NectarLink)`, an upstream update API/release feed and internal
+DEX strings contain upstream references including `Sa6i Link PC media`,
+`Sa6i Link Virtual Gamepad`, `Sa6i Link Virtual Keyboard`,
+`Phone speaker (Sa6i Link)`, an upstream update API/release feed and internal
 package/class names. String presence alone does not establish where or when each
-one appears. Native library files also retain the name `libnectarlink_ffi.so`.
+one appears. Native library files also retain the name `libsa6i_link_ffi.so`.
 APK signing and device behavior were not tested. The existing APK has not been
 changed, rebuilt, signed, or replaced; Android source-string edits in the
 workspace are not present in this APK. The separate source update-string edits
@@ -86,7 +86,7 @@ The same package ID and different signer mean Android will not install it over
 the original, nor will the original update it. Uninstalling can delete app data,
 settings and pairing keys; backing up received files alone is not a complete
 backup of app data. Do not uninstall unless this loss is acceptable. Prefer a
-spare Android device for testing. The destination `Download/Nectarlink`, old
+spare Android device for testing. The destination `Download/Sa6iLink`, old
 updater endpoints, native library and internal references remain unchanged.
 Do not use the in-app updater, and do not publish this test candidate as a final
 release. The original public APK remains untouched.

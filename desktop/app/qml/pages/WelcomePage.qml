@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 // First run: pair a phone. Also covers the moment before the core is ready
 // and the (rare) case where it failed to start.
@@ -32,7 +32,7 @@ Item {
             Txt {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("Welcome to NectarLink").replace(/NectarLink/g, "Sa6i Link")
+                text: qsTr("Welcome to Sa6i Link")
                 role: "displaySmall"
             }
             Txt {
@@ -42,7 +42,7 @@ Item {
                 role: "body"
                 muted: true
                 text: page.status === "failed"
-                      ? qsTr("NectarLink couldn't start.").replace(/NectarLink/g, "Sa6i Link")
+                      ? qsTr("Sa6i Link couldn't start.")
                       : qsTr("Your phone and this PC, together. Pair once and they find each other from then on.")
             }
         }

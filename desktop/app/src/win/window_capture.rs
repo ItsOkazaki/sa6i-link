@@ -340,13 +340,13 @@ mod tests {
     }
 
     /// With a Chromium browser showing a page whose title has
-    /// `NECTARLINK_TEST_TAB` in it: captures its window's video, covered
-    /// or not, and writes it to `NECTARLINK_TEST_DUMP` (raw BGRA) if set.
+    /// `SA6I_TEST_TAB` in it: captures its window's video, covered
+    /// or not, and writes it to `SA6I_TEST_DUMP` (raw BGRA) if set.
     #[test]
-    #[ignore = "needs a browser tab titled NECTARLINK_TEST_TAB"]
+    #[ignore = "needs a browser tab titled SA6I_TEST_TAB"]
     fn captures_a_window_behind_others() {
         use crate::win::browser::{Automation, frame_of, use_physical_pixels, window_for};
-        let wanted = std::env::var("NECTARLINK_TEST_TAB").expect("NECTARLINK_TEST_TAB");
+        let wanted = std::env::var("SA6I_TEST_TAB").expect("SA6I_TEST_TAB");
         // SAFETY: COM for this test's thread.
         let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
         use_physical_pixels();
@@ -369,7 +369,7 @@ mod tests {
         }
         let distinct: std::collections::HashSet<&[u8; 4]> = bgra.as_chunks::<4>().0.iter().collect();
         eprintln!("{crop:?} {w}x{h}: {} colors", distinct.len());
-        if let Ok(path) = std::env::var("NECTARLINK_TEST_DUMP") {
+        if let Ok(path) = std::env::var("SA6I_TEST_DUMP") {
             std::fs::write(path, &bgra).unwrap();
         }
         assert!(distinct.len() > 50);

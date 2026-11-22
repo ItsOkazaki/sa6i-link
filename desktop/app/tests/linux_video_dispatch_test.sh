@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-stage="$(mktemp -d -t nectarlink-video-test-XXXXXX)"
+stage="$(mktemp -d -t sa6i-link-video-test-XXXXXX)"
 trap 'rm -rf "${stage}"' EXIT
 test_source="${root}/tests/linux_video_dispatch_test.cpp"
 

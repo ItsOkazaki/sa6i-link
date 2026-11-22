@@ -54,10 +54,10 @@ jobs:
           its backend only accepts the pinned restricted cleaner fixture.
           Do not install over an existing copy or use for real cleanup.
           See sa6i/clean/INTEGRATION.md and QT-HOST-PLAN.md in the source.
-          '@ | Set-Content -Encoding UTF8 target/package/Nectarlink/INTEGRATION-BUILD-ONLY.txt
+          '@ | Set-Content -Encoding UTF8 target/package/Sa6iLink/INTEGRATION-BUILD-ONLY.txt
       - uses: actions/upload-artifact@v7
         with:
           name: sa6i-clean-windows-integration-build
-          path: target/package/Nectarlink/
+          path: target/package/Sa6iLink/
           if-no-files-found: error
           retention-days: 7

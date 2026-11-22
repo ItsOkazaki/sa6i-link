@@ -108,7 +108,7 @@ $fixture = (Resolve-Path $FixtureDir).Path
 $data = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-data'
 New-Item -ItemType Directory -Path $data | Out-Null
 $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-full-ui-synthetic-stderr.txt'
-$env:NECTARLINK_NO_ADB = '1'
+$env:SA6I_NO_ADB = '1'
 # Exercise both the normal Qt renderer and the opt-in software workaround.
 # The synthetic fixture is not the real cleaner and hosted Windows is not Win7.
 if ($env:SA6I_SYNTHETIC_QT_BACKEND -eq 'default') {

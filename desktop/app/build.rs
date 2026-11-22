@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Builds the QML module `app.nectarlink` (QML files compiled ahead of time,
+//! Builds the QML module `sa6i.link` (QML files compiled ahead of time,
 //! Rust QObjects, C++ helpers), compiles in the bundled fonts, gives the
 //! executable its icon and version information, and links the Windows
 //! libraries C++ uses.
@@ -216,7 +216,7 @@ fn shaders_qrc() -> PathBuf {
 /// Task Manager show).
 fn windows_resources() {
     let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR"));
-    let ico = out.join("nectarlink.ico");
+    let ico = out.join("sa6i-link.ico");
     write_if_changed(&ico, icon_file());
     let version = std::env::var("CARGO_PKG_VERSION").expect("version");
     let numbers: Vec<&str> = version.split(['.', '-', '+']).take(3).collect();
@@ -235,13 +235,13 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "The NectarLink contributors"
-      VALUE "FileDescription", "NectarLink"
+      VALUE "CompanyName", "The Sa6i Link contributors"
+      VALUE "FileDescription", "Sa6i Link"
       VALUE "FileVersion", "{version}"
-      VALUE "InternalName", "nectarlink-desktop"
+      VALUE "InternalName", "sa6i-link"
       VALUE "LegalCopyright", "GPL-3.0-or-later"
-      VALUE "OriginalFilename", "nectarlink-desktop.exe"
-      VALUE "ProductName", "NectarLink"
+      VALUE "OriginalFilename", "sa6i-link.exe"
+      VALUE "ProductName", "Sa6i Link"
       VALUE "ProductVersion", "{version}"
     END
   END
@@ -253,7 +253,7 @@ END
 "#,
         ico = ico.display().to_string().replace('\\', "/"),
     );
-    let rc_path = out.join("nectarlink.rc");
+    let rc_path = out.join("sa6i-link.rc");
     write_if_changed(&rc_path, rc);
     embed_resource::compile(&rc_path, embed_resource::NONE).manifest_required().expect("compile resources");
 }
@@ -351,7 +351,7 @@ fn compile_translations() {
         let Some(stem) = ts.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
-        let Some(lang) = stem.strip_prefix("nectarlink_") else {
+        let Some(lang) = stem.strip_prefix("sa6i-link_") else {
             continue;
         };
         if !offered.contains(lang) {
@@ -387,7 +387,7 @@ fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         compile_translations();
     }
-    let module = QmlModule::new("app.nectarlink")
+    let module = QmlModule::new("sa6i.link")
         .qml_files(QML.iter().map(|f| QmlFile::from(*f)))
         .qml_files(QML_SINGLETONS.iter().map(|f| QmlFile::from(*f).singleton(true)));
     // Never enable the cleaner in ordinary builds. This is a separate,
@@ -471,7 +471,7 @@ fn main() {
         println!("cargo:rustc-link-lib=Qt6Quick");
         println!("cargo:rustc-link-lib=Qt6Widgets");
         println!(
-            "cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib:$ORIGIN/../lib/nectarlink/lib"
+            "cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib:$ORIGIN/../lib/sa6i-link/lib"
         );
     } else if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         println!("cargo:rustc-link-lib=framework=AppKit");
@@ -505,8 +505,8 @@ fn build_linux_video_codec() {
         .cpp(true)
         .std("c++17")
         .file("cpp/linux_video_dispatch.cpp")
-        .compile("nectarlink_linux_video_dispatch");
-    build.compile("nectarlink_linux_video_codec");
+        .compile("sa6i-link_linux_video_dispatch");
+    build.compile("sa6i-link_linux_video_codec");
     println!("cargo::rustc-link-lib=dl");
     println!("cargo::rustc-cfg=linux_ffmpeg_video");
 }

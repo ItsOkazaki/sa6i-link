@@ -512,21 +512,21 @@ struct EncodedAacTrack {
 
 #[cfg(linux_ffmpeg_video)]
 unsafe extern "C" {
-    fn nectarlink_video_aac_encoder_create(
+    fn sa6i-link_video_aac_encoder_create(
         sample_rate: std::ffi::c_int,
         channels: std::ffi::c_int,
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> *mut std::ffi::c_void;
-    fn nectarlink_video_aac_encoder_destroy(encoder: *mut std::ffi::c_void);
-    fn nectarlink_video_aac_encoder_send(
+    fn sa6i-link_video_aac_encoder_destroy(encoder: *mut std::ffi::c_void);
+    fn sa6i-link_video_aac_encoder_send(
         encoder: *mut std::ffi::c_void,
         pcm: *const i16,
         frames: usize,
         error: *mut std::ffi::c_char,
         capacity: usize,
     ) -> std::ffi::c_int;
-    fn nectarlink_video_aac_encoder_receive(
+    fn sa6i-link_video_aac_encoder_receive(
         encoder: *mut std::ffi::c_void,
         bytes: *mut *const u8,
         length: *mut usize,
@@ -555,7 +555,7 @@ fn encode_pcm_to_aac(rate: u32, channels: u8, pcm_s16le: &[u8]) -> Option<Encode
 
     unsafe {
         let mut error = [0 as std::ffi::c_char; 256];
-        let enc = nectarlink_video_aac_encoder_create(
+        let enc = sa6i-link_video_aac_encoder_create(
             rate as std::ffi::c_int,
             ch as std::ffi::c_int,
             error.as_mut_ptr(),
@@ -567,18 +567,18 @@ fn encode_pcm_to_aac(rate: u32, channels: u8, pcm_s16le: &[u8]) -> Option<Encode
         struct Guard(*mut std::ffi::c_void);
         impl Drop for Guard {
             fn drop(&mut self) {
-                unsafe { nectarlink_video_aac_encoder_destroy(self.0) };
+                unsafe { sa6i-link_video_aac_encoder_destroy(self.0) };
             }
         }
         let guard = Guard(enc);
-        if nectarlink_video_aac_encoder_send(
+        if sa6i-link_video_aac_encoder_send(
             guard.0,
             samples.as_ptr(),
             total_pcm_frames,
             error.as_mut_ptr(),
             error.len(),
         ) < 0
-            || nectarlink_video_aac_encoder_send(
+            || sa6i-link_video_aac_encoder_send(
                 guard.0,
                 std::ptr::null(),
                 0,
@@ -594,7 +594,7 @@ fn encode_pcm_to_aac(rate: u32, channels: u8, pcm_s16le: &[u8]) -> Option<Encode
         loop {
             let mut ptr: *const u8 = std::ptr::null();
             let mut len = 0usize;
-            let status = nectarlink_video_aac_encoder_receive(
+            let status = sa6i-link_video_aac_encoder_receive(
                 guard.0,
                 &mut ptr,
                 &mut len,

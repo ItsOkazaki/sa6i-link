@@ -97,9 +97,9 @@ pub fn register_sparse_package() {
                 "-ExecutionPolicy",
                 "Bypass",
                 "-Command",
-                "try { Add-AppxPackage -Register \"$env:NECTARLINK_INSTDIR\\AppxManifest.xml\" -ExternalLocation $env:NECTARLINK_INSTDIR -ErrorAction SilentlyContinue } catch {}",
+                "try { Add-AppxPackage -Register \"$env:SA6I_INSTDIR\\AppxManifest.xml\" -ExternalLocation $env:SA6I_INSTDIR -ErrorAction SilentlyContinue } catch {}",
             ])
-            .env("NECTARLINK_INSTDIR", &dir)
+            .env("SA6I_INSTDIR", &dir)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -262,7 +262,7 @@ mod tests {
         let xml_str = std::fs::read_to_string(&manifest_path).expect("read AppxManifest.xml");
         let doc = XmlDocument::new().unwrap();
         doc.LoadXml(&HSTRING::from(&xml_str)).expect("valid AppxManifest.xml");
-        assert!(xml_str.contains(r#"Name="Nectarlink.Desktop""#));
+        assert!(xml_str.contains(r#"Name="Sa6iLink.Desktop""#));
         assert!(xml_str.contains("uap10:AllowExternalContent"));
         assert!(xml_str.contains(r#"Category="windows.shareTarget""#));
         for format in ["StorageItems", "WebLink", "Uri", "Text", "Bitmap"] {

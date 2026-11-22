@@ -1,0 +1,35 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Sa6i Link
+GenericName=Phone Link
+Comment=Connect your Android phone and Linux PC over LAN
+Exec=sa6i-link %U
+Icon=sa6i-link
+Terminal=false
+Categories=Network;FileTransfer;Telephony;
+Keywords=android;phone;sync;clipboard;notifications;files;mirror;sms;calls;
+StartupNotify=true
+StartupWMClass=sa6i-link
+MimeType=x-scheme-handler/sa6i-link;x-scheme-handler/tel;x-scheme-handler/sms;x-scheme-handler/smsto;x-scheme-handler/mms;x-scheme-handler/mmsto;x-scheme-handler/geo;
+Actions=send-files;send-clipboard;find-phone;take-photo;open-timeline;
+
+[Desktop Action send-files]
+Name=Send files to phone
+Exec=sa6i-link --task send-files
+
+[Desktop Action send-clipboard]
+Name=Send clipboard to phone
+Exec=sa6i-link --task send-clipboard
+
+[Desktop Action find-phone]
+Name=Find my phone
+Exec=sa6i-link --task find-phone
+
+[Desktop Action take-photo]
+Name=Take photo with phone
+Exec=sa6i-link --task take-photo
+
+[Desktop Action open-timeline]
+Name=Open Timeline
+Exec=sa6i-link --task open-timeline

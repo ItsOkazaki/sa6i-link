@@ -11,7 +11,7 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
-use nectarlink_core::DeviceId;
+use sa6i_link_core::DeviceId;
 use windows::{
     Devices::Bluetooth::Advertisement::{
         BluetoothLEAdvertisementPublisher, BluetoothLEAdvertisementPublisherStatus,
@@ -22,7 +22,7 @@ use windows::{
     Storage::Streams::{DataReader, DataWriter},
 };
 
-/// Bluetooth SIG test/internal company identifier used for NectarLink proximity frames.
+/// Bluetooth SIG test/internal company identifier used for Sa6i Link proximity frames.
 pub const COMPANY_ID: u16 = 0xFFFF;
 
 /// 5-byte magic header (`"NCTR"` + protocol version `0x01`).
@@ -99,7 +99,7 @@ pub fn build_manufacturer_payload(device_id: &DeviceId) -> [u8; 13] {
     out
 }
 
-/// Starts advertising the NectarLink BLE proximity beacon for `device_id`.
+/// Starts advertising the Sa6i Link BLE proximity beacon for `device_id`.
 ///
 /// The RSSI watcher (`try_start_watcher`) stays off: phones don't broadcast a
 /// beacon yet, so it would scan all the time and only ever hear other PCs.

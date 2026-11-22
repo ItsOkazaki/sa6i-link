@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtTest
-import app.nectarlink
+import sa6i.link
 
 // The island says how transfers really ended: "complete" only for one that
 // finished, "failed" for one that didn't, and nothing for a cancelled one.

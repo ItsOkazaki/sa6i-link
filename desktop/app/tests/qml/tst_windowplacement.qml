@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtTest
-import app.nectarlink
+import sa6i.link
 
 // A window comes back on the monitor it was on, wherever that monitor sits.
 Item {

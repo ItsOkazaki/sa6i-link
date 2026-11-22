@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtQuick.Dialogs
-import app.nectarlink
+import sa6i.link
 
 // Settings: two-pane categorized layout for appearance, general behavior,
 // paired devices & permissions, camera & audio, notifications, files & sync,
@@ -925,8 +925,8 @@ Item {
                             iconPath: Icons.globe
                             title: qsTr("Language")
                             description: Qt.platform.os === "linux"
-                                ? qsTr("NectarLink follows the system unless you pick one.").replace(/NectarLink/g, "Sa6i Link")
-                                : qsTr("NectarLink follows Windows unless you pick one.").replace(/NectarLink/g, "Sa6i Link")
+                                ? qsTr("Sa6i Link follows the system unless you pick one.")
+                                : qsTr("Sa6i Link follows Windows unless you pick one.")
                             Segmented {
                                 readonly property var other: page.languages.find(
                                     (l) => l.code === Preferences.language && l.code !== "en")
@@ -1013,7 +1013,7 @@ Item {
 
                         Divider { width: parent.width }
 
-                        // Row 2: Nectar Island | Battery alerts
+                        // Row 2: Sa6i Island | Battery alerts
                         Item {
                             id: islandBatteryPairRow
                             width: parent.width
@@ -1029,12 +1029,12 @@ Item {
                                 y: islandBatteryPairRow.splitCols ? Math.round((parent.height - height) / 2) : 0
                                 width: islandBatteryPairRow.colWidth
                                 iconPath: Icons.island
-                                title: qsTr("Nectar Island")
+                                title: qsTr("Sa6i Island")
                                 description: qsTr("Top-screen pill for calls, transfers & media.")
                                 Toggle {
-                                    label: qsTr("Nectar Island")
-                                    checked: Preferences.nectarIsland
-                                    onToggled: (on) => Preferences.nectarIsland = on
+                                    label: qsTr("Sa6i Island")
+                                    checked: Preferences.sa6iIsland
+                                    onToggled: (on) => Preferences.sa6iIsland = on
                                 }
                             }
 
@@ -1071,10 +1071,10 @@ Item {
                             }
                         }
 
-                        // Sub-row: Granular Nectar Island triggers (Calls, Transfers, Media, Notifications)
+                        // Sub-row: Granular Sa6i Island triggers (Calls, Transfers, Media, Notifications)
                         Column {
                             id: islandTriggersBlock
-                            visible: Preferences.nectarIsland
+                            visible: Preferences.sa6iIsland
                             width: parent.width
                             spacing: 0
 
@@ -1101,16 +1101,16 @@ Item {
                                             id: trigChip
                                             required property var modelData
                                             readonly property bool active: {
-                                                if (modelData.key === "calls") return Preferences.nectarIslandCalls
-                                                if (modelData.key === "transfers") return Preferences.nectarIslandTransfers
-                                                if (modelData.key === "media") return Preferences.nectarIslandMedia
-                                                return Preferences.nectarIslandNotifications
+                                                if (modelData.key === "calls") return Preferences.sa6iIslandCalls
+                                                if (modelData.key === "transfers") return Preferences.sa6iIslandTransfers
+                                                if (modelData.key === "media") return Preferences.sa6iIslandMedia
+                                                return Preferences.sa6iIslandNotifications
                                             }
                                             function toggleTrigger(nextVal) {
-                                                if (modelData.key === "calls") Preferences.nectarIslandCalls = nextVal
-                                                else if (modelData.key === "transfers") Preferences.nectarIslandTransfers = nextVal
-                                                else if (modelData.key === "media") Preferences.nectarIslandMedia = nextVal
-                                                else Preferences.nectarIslandNotifications = nextVal
+                                                if (modelData.key === "calls") Preferences.sa6iIslandCalls = nextVal
+                                                else if (modelData.key === "transfers") Preferences.sa6iIslandTransfers = nextVal
+                                                else if (modelData.key === "media") Preferences.sa6iIslandMedia = nextVal
+                                                else Preferences.sa6iIslandNotifications = nextVal
                                             }
                                             height: 30
                                             width: trigChipRow.implicitWidth + 16
@@ -3275,7 +3275,7 @@ Item {
                         ListRow {
                             width: parent.width
                             iconPath: Icons.desktop
-                            title: qsTr("NectarLink %1").replace(/NectarLink/g, "Sa6i Link").arg(AppController.version)
+                            title: qsTr("Sa6i Link %1").arg(AppController.version)
                             description: AppController.updateStatus.length > 0
                                          ? AppController.updateStatus
                                          : qsTr("This PC: %1").arg(AppController.deviceName)
@@ -3477,7 +3477,7 @@ Item {
                 wrapMode: Text.WordWrap
                 role: "body"
                 muted: true
-                text: qsTr("The phone asks once to let this PC in. NectarLink there also needs All files access, or this folder under Selected folders only.").replace(/NectarLink/g, "Sa6i Link")
+                text: qsTr("The phone asks once to let this PC in. Sa6i Link there also needs All files access, or this folder under Selected folders only.")
             }
 
             Txt { text: qsTr("Folder on the phone"); role: "label" }
@@ -3591,10 +3591,10 @@ Item {
                 muted: true
                 text: Qt.platform.os === "linux"
                     ? (hotspotSheet.networks.length > 0
-                        ? qsTr("Wi-Fi networks this PC has joined before. Your system keeps their passwords; NectarLink never sees them.").replace(/NectarLink/g, "Sa6i Link")
+                        ? qsTr("Wi-Fi networks this PC has joined before. Your system keeps their passwords; Sa6i Link never sees them.")
                         : qsTr("This PC hasn't saved any Wi-Fi networks yet. Join the phone's hotspot once from your system Wi-Fi list first."))
                     : (hotspotSheet.networks.length > 0
-                        ? qsTr("Wi-Fi networks this PC has joined before. Windows keeps their passwords; NectarLink never sees them.").replace(/NectarLink/g, "Sa6i Link")
+                        ? qsTr("Wi-Fi networks this PC has joined before. Windows keeps their passwords; Sa6i Link never sees them.")
                         : qsTr("This PC hasn't saved any Wi-Fi networks yet. Join the phone's hotspot once from Windows' Wi-Fi list first."))
             }
             // A PC can have saved dozens of networks: the list scrolls.

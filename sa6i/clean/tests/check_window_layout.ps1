@@ -1,6 +1,6 @@
 # Read-only Win32 geometry report. Never prints window titles or paths.
 # Reads only the running application executables to identify their versions.
-param([string]$ProcessName = 'nectarlink-desktop',
+param([string]$ProcessName = 'sa6i-link',
       [string]$CleanerProcessName = 'Sa6i Clean Integration')
 $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
