@@ -39,7 +39,8 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
      Retarget Sa6i Clean.cmd
      Sa6i-Link-Icon.ico
 
-   Then double-click "Retarget Sa6i Clean.cmd" and wait for "Done.".
+   Then double-click "Retarget Sa6i Clean.cmd" and wait for "Done.". Add
+   -NoIcon if the icon step misbehaves; the archive is produced either way.
 
    Sa6i Link never starts a cleaner it has not identified: it hashes the
    cleaner's exe and bundle and compares them with two digests compiled into
@@ -71,6 +72,18 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
 
 Desktop or taskbar shortcuts made before this step still point at the old file
 name; delete them and pin "Sa6i Link.exe" again.
+
+STARTING THE APP. "Sa6i Link.exe" does nothing when double-clicked, and that
+is the application's design, not damage: it needs the arguments and settings in
+"Start Sa6i Link Candidate.cmd" (a data directory, two clearance switches, and
+three environment settings). For a launcher with the app's icon and no console
+window, put "Make Sa6i Link Shortcut.cmd" and its .ps1 in the candidate folder
+and run it; it creates "Sa6i Link" on the Desktop.
+
+IF IT SAYS "cannot unlock device key (0x8007000B)". The profile in
+%LOCALAPPDATA% was made before the product name changed, and its device key can
+no longer be unlocked. "Reset Sa6i Link Profile.cmd" points the app at a new
+profile and leaves the old one in place; the phone then has to be paired again.
 
 If either step stops with an ERROR line, send me its log (patch-log.txt or
 retarget-log.txt): the line names the exact check that failed, and nothing is
