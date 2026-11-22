@@ -1,8 +1,8 @@
 """Checks on the Sa6i Clean delivery package.
 
-These are static checks: the delivery is three text files plus a prebuilt
+These are static checks: the package is a set of text scripts plus a prebuilt
 bundle, and the point is to catch a package whose words and hashes disagree
-with the bundle it carries.
+with the bundle it carries, or whose scripts would fail on Windows 7.
 """
 
 from __future__ import annotations
@@ -18,79 +18,98 @@ sys.path.insert(0, str(HERE))
 
 import build_delivery  # noqa: E402
 
-HEADER_HASH = "8e6ee85e794723de784eb1adc1baedf28a612f968e7b88970297f91053e37fb9"
+HEADER_HASH = "653f05e211811d173cd943c6fc44aecb6c9318a3091010abafcb4abca87e5a0a"
+PATCH_NAME = "Install-Sa6i-Clean-Patch.ps1"
+RETARGET_NAME = "Retarget-Sa6i-Clean-Digests.ps1"
 
 
-def ps1_code() -> str:
-    """The patch script with its comment lines removed."""
-    script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+def source(name: str) -> str:
+    return (HERE / name).read_text(encoding="utf-8")
+
+
+def ps1_code(name: str) -> str:
+    """A patch script with its comment lines removed."""
     return "\n".join(
-        line for line in script.splitlines() if not line.lstrip().startswith("#")
+        line for line in source(name).splitlines() if not line.lstrip().startswith("#")
     )
 
 
 class DeliveryFilesTest(unittest.TestCase):
     def test_payload_files_exist(self):
-        for name in build_delivery.PAYLOAD:
-            self.assertTrue((HERE / name).is_file(), name)
+        for source_name, _ in build_delivery.PAYLOAD:
+            self.assertTrue((HERE / source_name).is_file(), source_name)
 
     def test_readme_states_the_expected_bundle_hash(self):
-        readme = (HERE / "README.txt").read_text(encoding="utf-8")
+        readme = source("README.txt")
         self.assertIn(build_delivery.EXPECTED_ASAR_SHA, readme)
 
     def test_readme_states_the_debranded_header_hash(self):
-        readme = (HERE / "README.txt").read_text(encoding="utf-8")
-        self.assertIn(HEADER_HASH, readme)
+        self.assertIn(HEADER_HASH, source("README.txt"))
 
-    def test_script_expects_the_debranded_header_hash(self):
-        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
-        self.assertIn("$expectedNew = '" + HEADER_HASH + "'", script)
+    def test_scripts_expect_the_debranded_header_hash(self):
+        self.assertIn("$expectedNew = '" + HEADER_HASH + "'", source(PATCH_NAME))
 
-    def test_script_reads_the_installed_hash_instead_of_pinning_it(self):
+    def test_patch_reads_the_installed_hash_instead_of_pinning_it(self):
         # The old script refused any build but one exact version; the hash now
         # comes from the bundle that is actually installed.
-        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
+        script = source(PATCH_NAME)
         self.assertIn("$oldHash = Get-HeaderHash $oldAsar", script)
         self.assertNotIn("$expectedOld", script)
 
-    def test_readme_tells_the_user_to_copy_all_four_files(self):
-        # The script reads app.asar from its own folder, so a package
-        # described as "three files" cannot work.
-        readme = (HERE / "README.txt").read_text(encoding="utf-8")
-        self.assertIn("all four files", readme)
+    def test_readme_says_where_app_asar_must_and_must_not_go(self):
+        readme = source("README.txt")
+        self.assertIn("NOT inside resources", readme)
         self.assertIn("app.asar", readme)
-        self.assertNotIn("three files", readme)
+        self.assertNotIn("three files into", readme)
 
-    def test_script_needs_the_bundle_beside_it(self):
-        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
-        self.assertIn("$newAsar = Join-Path $here 'app.asar'", script)
-        self.assertIn("app.asar is not next to this script.", script)
+    def test_readme_covers_both_steps(self):
+        readme = source("README.txt")
+        self.assertIn("Apply Sa6i Clean Patch.cmd", readme)
+        self.assertIn("Retarget Sa6i Clean.cmd", readme)
 
-    def test_script_avoids_net_four_only_apis(self):
+    def test_patch_avoids_net_four_only_apis(self):
         # Windows 7 ships Windows PowerShell 2.0 on .NET 3.5. Dispose() on a
         # hash object and System.IO.Compression both fail there, which is what
-        # an earlier package hit on the user's machine. Comments are excluded:
-        # they mention the broken calls on purpose.
-        code = ps1_code()
-        self.assertNotIn(".Dispose()", code)
-        self.assertNotIn("System.IO.Compression", code)
-        self.assertNotIn("Is64BitProcess", code)
-        self.assertIn("[void]$sha.Clear()", code)
+        # an earlier package hit on the user's machine.
+        for name in (PATCH_NAME, RETARGET_NAME):
+            code = ps1_code(name)
+            self.assertNotIn(".Dispose()", code, name)
+            self.assertNotIn("System.IO.Compression", code, name)
+            self.assertNotIn("Is64BitProcess", code, name)
+            self.assertIn("[void]$sha.Clear()", code, name)
 
     def test_packing_uses_the_zip_support_built_into_windows(self):
-        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
-        self.assertIn("CopyHere", script)
-        self.assertIn("Shell.Application", script)
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("CopyHere", code)
+        self.assertIn("Shell.Application", code)
 
-    def test_script_parks_backups_out_of_the_archive(self):
-        script = (HERE / "Install-Sa6i-Clean-Patch.ps1").read_text(encoding="utf-8")
-        self.assertIn("'*.bak'", script)
-        self.assertIn("patch-log.txt", script)
+    def test_packing_happens_after_the_digests_are_retargeted(self):
+        # An archive built before the retarget would ship an exe that refuses
+        # the bundle it contains.
+        code = ps1_code(RETARGET_NAME)
+        self.assertLess(code.index("ConvertFrom-Hex $chosen"), code.index("New-CandidateZip $here"))
 
-    def test_launcher_keeps_the_window_open(self):
-        launcher = (HERE / "Apply Sa6i Clean Patch.cmd").read_text(encoding="utf-8")
-        self.assertIn("pause", launcher)
-        self.assertIn("patch-log.txt", launcher)
+    def test_scripts_park_backups_out_of_the_archive(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("'*.bak'", code)
+        self.assertIn("'*-log.txt'", code)
+
+    def test_patch_renames_the_executable_description_but_not_by_truncating(self):
+        code = ps1_code(PATCH_NAME)
+        self.assertIn("Unicode.GetBytes('Cleanly')", code)
+        # Only values that end there are rewritten; longer ones are reported.
+        self.assertIn("Left ' + $kept + ' field(s) alone", code)
+
+    def test_retarget_knows_the_builds_it_may_be_pointing_at(self):
+        code = ps1_code(RETARGET_NAME)
+        self.assertIn("2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74", code)
+        self.assertIn("4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba", code)
+
+    def test_launchers_keep_the_window_open(self):
+        for name in ("Apply Sa6i Clean Patch.cmd", "Retarget Sa6i Clean.cmd"):
+            launcher = source(name)
+            self.assertIn("pause", launcher, name)
+            self.assertIn("-log.txt", launcher, name)
 
 
 class BuildDeliveryTest(unittest.TestCase):
@@ -110,7 +129,7 @@ class BuildDeliveryTest(unittest.TestCase):
                 build_delivery.build(pathlib.Path(tmp) / "absent.asar", out)
             self.assertFalse(out.exists())
 
-    def test_packs_four_named_files_when_the_bundle_matches(self):
+    def test_packs_the_two_folders_with_windows_line_endings(self):
         with tempfile.TemporaryDirectory() as tmp:
             asar = pathlib.Path(tmp) / "app.asar"
             asar.write_bytes(b"bundle")
@@ -123,15 +142,18 @@ class BuildDeliveryTest(unittest.TestCase):
                 build_delivery.EXPECTED_ASAR_SHA = original
             with zipfile.ZipFile(out) as archive:
                 names = archive.namelist()
-                self.assertEqual(archive.read("app.asar"), b"bundle")
-                for name in build_delivery.PAYLOAD:
-                    data = archive.read(name)
-                    self.assertNotIn(b"\n", data.replace(b"\r\n", b""), name)
-                    self.assertIn(b"\r\n", data, name)
-            self.assertEqual(
-                sorted(names),
-                sorted(list(build_delivery.PAYLOAD) + ["app.asar"]),
-            )
+                self.assertEqual(archive.read(build_delivery.ASAR_ENTRY), b"bundle")
+                for _, entry in build_delivery.PAYLOAD:
+                    data = archive.read(entry)
+                    self.assertNotIn(b"\n", data.replace(b"\r\n", b""), entry)
+                    self.assertIn(b"\r\n", data, entry)
+            expected = sorted([entry for _, entry in build_delivery.PAYLOAD]
+                              + [build_delivery.ASAR_ENTRY])
+            self.assertEqual(sorted(names), expected)
+            self.assertTrue(any(name.startswith(build_delivery.CLEAN_FOLDER + "/")
+                                for name in names))
+            self.assertTrue(any(name.startswith(build_delivery.CANDIDATE_FOLDER + "/")
+                                for name in names))
 
 
 if __name__ == "__main__":

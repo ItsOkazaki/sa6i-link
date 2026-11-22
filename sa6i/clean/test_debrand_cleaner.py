@@ -65,5 +65,81 @@ class DebrandTest(unittest.TestCase):
             self.assertEqual(debrand.leftovers(out), [])
 
 
+CHROME_JS = (
+    'const nav=(0,F.jsxs)(`div`,{className:`brand`,children:[(0,F.jsx)(Ee,{}),'
+    '(0,F.jsx)(`span`,{className:`brand-name`,children:`cleanly`})]});'
+    'const about=(0,F.jsxs)(`div`,{children:[(0,F.jsx)(Ee,{size:44}),'
+    '(0,F.jsx)(`h3`,{children:`cleanly`})]});'
+    'const api=window.cleanly??re();'
+    'const demo=[t(`cleanly`,1.4*f,`code`)];'
+    'function Ee({size:e=30}){return(0,F.jsxs)(`svg`,{className:`brand-mark`,'
+    'width:e,height:e,viewBox:`0 0 32 32`,"aria-hidden":`true`,'
+    'children:[(0,F.jsx)(`path`,{d:`M16 2c1.2 7.4 6.6 12.8 14 14-7.4 1.2-12.8 '
+    '6.6-14 14-1.2-7.4-6.6-12.8-14-14C9.4 14.8 14.8 9.4 16 2z`,'
+    'fill:`url(#g-brand)`}),(0,F.jsx)(`circle`,{cx:`25`,cy:`7`,r:`2.4`,'
+    'fill:`#ffb547`})]})}'
+)
+
+
+class ChromeTest(unittest.TestCase):
+    """The parts of the interface the first pass left branded."""
+
+    def test_lowercase_product_name_in_the_chrome_is_rewritten(self):
+        counts = {}
+        text = debrand.apply_brand(CHROME_JS, counts)
+        self.assertNotRegex(text, '(?i)cleanly')
+        self.assertEqual(counts['children:`cleanly`'], 2)
+        self.assertEqual(text.count('children:`Sa6i Clean`'), 2)
+
+    def test_client_api_and_channel_names_move_together(self):
+        text = debrand.apply_brand(CHROME_JS, {})
+        self.assertIn('window.sa6i', text)
+        # Both ends of the bridge are in the same bundle set, so the rename is
+        # consistent; what must not survive is the old spelling.
+        self.assertNotIn('window.cleanly', text)
+
+    def test_the_sparkle_logo_becomes_the_sa6i_clean_emblem(self):
+        counts = {}
+        text = debrand.apply_brand(CHROME_JS, counts)
+        self.assertEqual(counts['brand mark'], 1)
+        self.assertNotIn('#ffb547', text)
+        self.assertNotIn('url(#g-brand)', text)
+        self.assertIn('data:image/png;base64,', text)
+        self.assertIn('className:`brand-mark`', text)
+        # The replacement stays small enough to live in the bundle.
+        self.assertLess(len(text) - len(CHROME_JS), 60000)
+
+    def test_window_title_and_package_metadata_are_rewritten(self):
+        with TemporaryDirectory() as tmp:
+            app = Path(tmp) / 'app'
+            (app / 'dist/assets').mkdir(parents=True)
+            (app / 'dist-electron').mkdir()
+            (app / 'dist/assets/index-abc.js').write_text(BUNDLE, encoding='utf-8')
+            (app / 'dist/index.html').write_text(
+                '<title>Cleanly</title>', encoding='utf-8')
+            (app / 'package.json').write_text(
+                '{\"name\": \"cleanly\", \"productName\": \"Cleanly\"}',
+                encoding='utf-8')
+            out = Path(tmp) / 'out'
+            debrand.debrand(app, out)
+            html = (out / 'dist/index.html').read_text(encoding='utf-8')
+            manifest = (out / 'package.json').read_text(encoding='utf-8')
+            self.assertIn('<title>Sa6i Clean</title>', html)
+            self.assertIn('"productName": "Sa6i Clean"', manifest)
+            self.assertIn('"name": "sa6i-clean"', manifest)
+            self.assertEqual(debrand.leftovers(out), [])
+
+    def test_leftovers_catches_a_lowercase_name(self):
+        with TemporaryDirectory() as tmp:
+            app = Path(tmp) / 'app'
+            (app / 'dist/assets').mkdir(parents=True)
+            (app / 'dist-electron').mkdir()
+            (app / 'dist/assets/index-abc.js').write_text(BUNDLE, encoding='utf-8')
+            (app / 'dist-electron/main.js').write_text('ok', encoding='utf-8')
+            (app / 'note.txt').write_text('children:`cleanly`', encoding='utf-8')
+            problems = debrand.leftovers(app)
+            self.assertTrue(problems)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,25 +1,21 @@
-# Apply the Sa6i Clean debranded bundle to an installed Sa6i Clean folder, then
-# pack the whole candidate folder into one ZIP.
+# Install the debranded Sa6i Clean bundle into an installed cleaner folder.
 #
 # Electron checks that resources\app.asar matches a hash stored inside
 # "Sa6i Clean Integration.exe". Replacing the bundle therefore requires
-# updating that stored hash, which is what this script does. The hash is read
-# from the bundle that is actually installed, so this works for any cleaner
-# build, not just one exact version. Both files are backed up first, so the
-# folder can be put back exactly as it was.
+# updating that stored hash, which is what this script does. It also renames
+# the product name in the executable's own file properties, so Windows stops
+# describing it as the original product. The hash is read from the bundle that
+# is actually installed, so any cleaner build works, not just one version.
+# Both files are backed up first, so the folder can be put back exactly.
 #
 # Written for Windows PowerShell 2.0, which is what Windows 7 ships: no .NET 4
-# types, no IDisposable.Dispose() calls, and the packing step goes through
-# Windows' own ZIP support instead of System.IO.Compression.
+# types and no IDisposable.Dispose() calls.
 #
-# Run "Apply Sa6i Clean Patch.cmd" instead of this file directly: that keeps
-# the window open and saves everything it printed to patch-log.txt.
+# Put this file, "Apply Sa6i Clean Patch.cmd", README.txt and app.asar in the
+# "Sa6i Clean" folder (beside "Sa6i Clean Integration.exe"), then run the .cmd.
 
 [CmdletBinding()]
-param(
-    [switch] $NoZip,
-    [string] $ZipRoot = ''
-)
+param()
 
 $ErrorActionPreference = 'Stop'
 
@@ -28,7 +24,7 @@ $log = Join-Path $here 'patch-log.txt'
 $newAsar = Join-Path $here 'app.asar'
 $exe = Join-Path $here 'Sa6i Clean Integration.exe'
 $oldAsar = Join-Path $here 'resources\app.asar'
-$expectedNew = '8e6ee85e794723de784eb1adc1baedf28a612f968e7b88970297f91053e37fb9'
+$expectedNew = '653f05e211811d173cd943c6fc44aecb6c9318a3091010abafcb4abca87e5a0a'
 
 function Say([string] $text) {
     Write-Host $text
@@ -66,101 +62,16 @@ function Get-HeaderHash([string] $path) {
     return (ConvertTo-Hex $hash)
 }
 
-function Get-FileHashText([string] $path) {
-    $sha = [System.Security.Cryptography.SHA256]::Create()
-    $stream = [System.IO.File]::OpenRead($path)
-    try {
-        $hash = $sha.ComputeHash($stream)
-    } finally {
-        $stream.Close()
-        [void]$sha.Clear()
-    }
-    return (ConvertTo-Hex $hash)
-}
-
-# Packs one folder into a ZIP using the ZIP support built into Windows, because
-# System.IO.Compression needs .NET 4.5 and Windows 7 ships .NET 3.5. Local
-# backups and the log are parked beside the folder while it packs: the exe
-# backup alone would double the size of the result.
-function New-CandidateZip([string] $root, [string] $outPath) {
-    $root = (Get-Item -LiteralPath $root).FullName.TrimEnd('\')
-    $parent = Split-Path -Parent $root
-    $leaf = Split-Path -Leaf $root
-
-    if (Test-Path -LiteralPath $outPath) { Remove-Item -LiteralPath $outPath -Force }
-    # An empty ZIP: "PK\5\6" plus 18 zero bytes. CopyHere can only fill an
-    # existing archive.
-    $emptyZip = New-Object byte[] 22
-    $emptyZip[0] = 80; $emptyZip[1] = 75; $emptyZip[2] = 5; $emptyZip[3] = 6
-    [System.IO.File]::WriteAllBytes($outPath, $emptyZip)
-
-    $park = Join-Path $parent ('_sa6i_pack_' + [Guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $park -Force | Out-Null
-    $parked = New-Object System.Collections.ArrayList
-    try {
-        foreach ($file in (Get-ChildItem -LiteralPath $root -Recurse -Force | Where-Object { -not $_.PSIsContainer })) {
-            if ($file.Name -like '*.bak' -or $file.Name -eq 'patch-log.txt') {
-                $target = Join-Path $park ([Guid]::NewGuid().ToString('N'))
-                Move-Item -LiteralPath $file.FullName -Destination $target
-                [void]$parked.Add(@($target, $file.FullName))
-            }
-        }
-
-        $shell = New-Object -ComObject Shell.Application
-        $zipNs = $shell.NameSpace($outPath)
-        if ($zipNs -eq $null) { throw 'Windows will not open the new ZIP for writing.' }
-        $parentNs = $shell.NameSpace($parent)
-        if ($parentNs -eq $null) { throw ('Windows cannot open the folder above: ' + $parent) }
-        $item = $parentNs.ParseName($leaf)
-        if ($item -eq $null) { throw ('Windows cannot see the folder to pack: ' + $root) }
-
-        # 4 = no progress dialog, 16 = answer "yes to all". The copy runs in
-        # the background, so wait until the archive stops growing.
-        $zipNs.CopyHere($item, 20)
-
-        $last = ''
-        $stable = 0
-        $count = 0
-        for ($i = 0; $i -lt 900; $i++) {
-            Start-Sleep -Seconds 2
-            $size = 0
-            if (Test-Path -LiteralPath $outPath) { $size = (Get-Item -LiteralPath $outPath).Length }
-            try { $count = $zipNs.Items().Count } catch { }
-            $sig = ([string]$size) + '/' + ([string]$count)
-            if ($sig -eq $last -and $count -ge 1 -and $size -gt 100000) {
-                $stable = $stable + 1
-                if ($stable -ge 2) { break }
-            } else {
-                $stable = 0
-                $last = $sig
-            }
-        }
-
-        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($zipNs)
-        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($parentNs)
-        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
-        return $count
-    } finally {
-        foreach ($pair in $parked) {
-            if (Test-Path -LiteralPath $pair[0]) {
-                Move-Item -LiteralPath $pair[0] -Destination $pair[1] -Force
-            }
-        }
-        if (Test-Path -LiteralPath $park) { Remove-Item -LiteralPath $park -Recurse -Force }
-    }
-}
-
-# ASCII decoding maps one byte to one character, so a character index in this
-# text is a byte offset in the file.
+# ASCII and Latin-1 decoding both map one byte to one character, so a
+# character index in this text is a byte offset in the file.
 
 try {
     Set-Content -Path $log -Value ('Sa6i Clean patch log ' + (Get-Date).ToString('s'))
-    Say 'Sa6i Clean debranding patch'
+    Say 'Sa6i Clean: install the debranded bundle'
     Say ''
     Say ('Folder: ' + $here)
     Say ('PowerShell ' + $PSVersionTable.PSVersion.ToString() + ', ' + ([string]([IntPtr]::Size * 8)) + '-bit')
     Say ''
-    Say 'Step 1 of 2: patch the cleaner'
 
     if (-not (Test-Path -LiteralPath $newAsar)) { throw 'app.asar is not next to this script. Copy all four files of the package into this folder.' }
     if (-not (Test-Path -LiteralPath $exe)) { throw '"Sa6i Clean Integration.exe" is not next to this script.' }
@@ -184,7 +95,6 @@ try {
         Say 'Reading the executable (about 110 MB, this takes a moment)...'
         $bytes = [System.IO.File]::ReadAllBytes($exe)
         $text = [System.Text.Encoding]::ASCII.GetString($bytes)
-        $bytes = $null
         $position = $text.IndexOf($oldHash, [System.StringComparison]::Ordinal)
         if ($position -lt 0) {
             throw ('The executable does not store the hash of the installed bundle (' + $oldHash + '). Nothing was changed.')
@@ -192,60 +102,59 @@ try {
         if ($text.IndexOf($oldHash, $position + $oldHash.Length, [System.StringComparison]::Ordinal) -ge 0) {
             throw 'The executable stores that hash more than once. Nothing was changed.'
         }
-        $text = $null
         Say ('Found the stored hash at byte ' + $position + '.')
 
         Copy-Item -LiteralPath $exe -Destination ($exe + '.bak') -Force
         Copy-Item -LiteralPath $oldAsar -Destination ($oldAsar + '.bak') -Force
         Say 'Backed up the executable and the old bundle as .bak.'
 
-        $bytes = [System.IO.File]::ReadAllBytes($exe)
         $replacement = [System.Text.Encoding]::ASCII.GetBytes($newHash)
         [Array]::Copy($replacement, 0, $bytes, $position, $replacement.Length)
+
+        # The executable's own file properties still name the original product;
+        # that is the "description" Windows shows in Task Manager and in the
+        # file's Details tab. Windows stores those strings as UTF-16 in a
+        # fixed-size field, so a shorter name replaces it in place. Only values
+        # that end where "Cleanly" ends are touched: anything with more text
+        # after it (a file name, say) is reported instead of truncated.
+        $latin = [System.Text.Encoding]::GetEncoding(28591)
+        $wide = $latin.GetString($bytes)
+        $pattern = $latin.GetString([System.Text.Encoding]::Unicode.GetBytes('Cleanly'))
+        $replacementBytes = New-Object byte[] ($pattern.Length)
+        $short = [System.Text.Encoding]::Unicode.GetBytes('Sa6i')
+        [Array]::Copy($short, 0, $replacementBytes, 0, $short.Length)
+        $renamed = 0
+        $kept = 0
+        $from = 0
+        while ($true) {
+            $at = $wide.IndexOf($pattern, $from, [System.StringComparison]::Ordinal)
+            if ($at -lt 0) { break }
+            $after = $at + $pattern.Length
+            if ($after + 1 -lt $wide.Length -and $wide[$after] -eq [char]0 -and $wide[$after + 1] -eq [char]0) {
+                [Array]::Copy($replacementBytes, 0, $bytes, $at, $replacementBytes.Length)
+                $renamed = $renamed + 1
+            } else {
+                $kept = $kept + 1
+            }
+            $from = $after
+        }
+        $wide = $null
+        $text = $null
+
         [System.IO.File]::WriteAllBytes($exe, $bytes)
         $bytes = $null
         Copy-Item -LiteralPath $newAsar -Destination $oldAsar -Force
 
         $after = Get-HeaderHash $oldAsar
         if ($after -ne $newHash) { throw 'The debranded bundle did not install correctly.' }
-        Say 'Patched. The cleaner no longer has Tip or Feedback.'
-    }
-
-    Say ''
-    if ($NoZip) {
-        Say 'Step 2 of 2: skipped (-NoZip was given).'
-    } else {
-        $root = $ZipRoot
-        if ([string]::IsNullOrEmpty($root)) {
-            if ((Split-Path -Leaf $here) -eq 'Sa6i Clean') { $root = Split-Path -Parent $here }
-            else { $root = $here }
+        Say ''
+        Say 'Bundle installed. The cleaner no longer has Tip or Feedback.'
+        Say ('Renamed ' + $renamed + ' product-name field(s) in the executable.')
+        if ($kept -gt 0) {
+            Say ('Left ' + $kept + ' field(s) alone because more text followed the name.')
         }
-        $root = $root.TrimEnd('\')
-        if (-not (Test-Path -LiteralPath $root)) { throw ('The folder to pack does not exist: ' + $root) }
-
-        $parent = Split-Path -Parent $root
-        if ([string]::IsNullOrEmpty($parent)) { $parent = $root }
-        $zipPath = Join-Path $parent 'Sa6i-Link-Integrated-Candidate.zip'
-
-        Say 'Step 2 of 2: pack the candidate folder'
-        Say ('  from: ' + $root)
-        Say ('  to:   ' + $zipPath)
-        Say 'This can take a few minutes. Leave this window open.'
-
-        $bytesTotal = 0
-        foreach ($file in (Get-ChildItem -LiteralPath $root -Recurse -Force | Where-Object { -not $_.PSIsContainer })) { $bytesTotal = $bytesTotal + $file.Length }
-        Say ('  size before packing: ' + [Math]::Round($bytesTotal / 1MB, 1) + ' MB')
-
-        try {
-            $count = New-CandidateZip $root $zipPath
-            $zipSize = (Get-Item -LiteralPath $zipPath).Length
-            Say ('Packed ' + $count + ' top-level entries into ' + [Math]::Round($zipSize / 1MB, 1) + ' MB.')
-            Say ('ZIP SHA-256: ' + (Get-FileHashText $zipPath))
-        } catch {
-            Say ('Could not build the ZIP: ' + $_.Exception.Message)
-            Say 'The patch itself is done; only the ZIP failed.'
-            Say 'Do it by hand instead: right-click the candidate folder, then Send to, then Compressed (zipped) folder.'
-        }
+        Say ''
+        Say 'Next: in the candidate folder, one level up, run "Retarget Sa6i Clean.cmd".'
     }
 
     Say ''
@@ -257,7 +166,6 @@ try {
     } else {
         Say 'Nothing was patched, so the earlier .bak files are untouched.'
     }
-    Say 'Start Sa6i Link as usual.'
 } catch {
     Say ''
     Say ('ERROR: ' + $_.Exception.Message)
