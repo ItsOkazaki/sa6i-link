@@ -1,19 +1,21 @@
-# The Sa6i Link mark
+# The Sa6i marks
 
-The Sa6i shield: a violet-to-blue shield with a four-point spark on the dark
-Sa6i tile. It is the same shield family as the Sa6i Clean icon, so the two
-windows read as one product.
+Two supplied logos, both violet-to-blue on black:
+
+- **Sa6i Link** — the laptop, the phone and the swap arrows inside the swoosh,
+  with the "Sa6i Link" wordmark. `logo.png` is the full lockup; `icon-256.png`
+  and `icon-512.png` are the square app icon built from the emblem alone.
+- **Sa6i Clean** — the bin and broom with sparkles. `logo-sa6i-clean.png` is the
+  full lockup; the cleaner's own `sa6i/clean/assets/icon-*.png` are the square
+  icon built from that emblem.
 
 | File | What it is |
 |---|---|
-| `icon.svg` | The full-color app icon: dark tile, gradient shield, spark |
-| `icon-flat.svg` | The same without the gradients, for flat contexts |
-| `icon-mono.svg` | The mark alone in white, for one-color uses (notifications, themed icons) |
-| `icon-512.png` | `icon.svg` at 512 × 512 |
+| `logo.png` | The Sa6i Link lockup (emblem and wordmark), as supplied |
+| `icon-256.png`, `icon-512.png` | The Sa6i Link app icon |
+| `logo-sa6i-clean.png` | The Sa6i Clean lockup, as supplied |
 
-The desktop app draws the mark itself from the same geometry
-(`desktop/app/src/mark.rs`): the executable's icon, the tray and notification
-icons at every size.
-
-Colors: tile `#1B0D33` to `#0B0516`, tile edge `#3A2A5E`, shield `#9B5CF0` to
-`#2F7BFF`, shield edge `#8B6CE8`, spark `#F2EEFF`.
+The desktop app does not redraw the mark: `desktop/app/assets/mark/<size>.rgba`
+holds the icon art at every size the executable, tray, taskbar and notifications
+use, and `desktop/app/src/mark.rs` reduces it for any other size. Regenerate
+those files from `icon-512.png` when the artwork changes.

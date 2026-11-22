@@ -378,6 +378,7 @@ fn main() {
         build_linux_video_codec();
     }
     println!("cargo:rerun-if-changed=src/mark.rs");
+    println!("cargo:rerun-if-changed=assets/mark");
     for qml in QML.iter().chain(QML_SINGLETONS.iter()) {
         println!("cargo:rerun-if-changed={qml}");
     }
