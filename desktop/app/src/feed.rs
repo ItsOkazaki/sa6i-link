@@ -26,7 +26,7 @@ use crate::{
 };
 
 /// Where the feeds are: `<FEEDS><channel>.json`.
-const FEEDS: &str = "https://raw.githubusercontent.com/thtbee/sa6i-link/channels/";
+const FEEDS: &str = "https://raw.githubusercontent.com/ItsOkazaki/sa6i-link/channels/";
 /// The only place a feed's files may come from.
 pub const RELEASE_DOWNLOADS: &str = "https://github.com/ItsOkazaki/sa6i-link/releases/download/";
 /// Release notes live on the repository's own pages.

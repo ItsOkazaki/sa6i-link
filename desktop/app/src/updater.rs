@@ -48,7 +48,7 @@ use crate::{
     win::{autostart, http, toast},
 };
 
-const LATEST: &str = "https://api.github.com/repos/thtbee/sa6i-link/releases/latest";
+const LATEST: &str = "https://api.github.com/repos/ItsOkazaki/sa6i-link/releases/latest";
 const FIRST_CHECK: Duration = Duration::from_secs(30);
 /// How often a nightly install checks: nightlies are built at most every two
 /// hours. A check is a conditional GET, a few hundred bytes when unchanged.
