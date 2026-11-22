@@ -294,6 +294,17 @@ class DeliveryFilesTest(unittest.TestCase):
             self.assertIn(name, names)
             self.assertTrue(names[name].startswith(build_delivery.CANDIDATE_FOLDER))
 
+    def test_profile_reset_moves_the_profile_rather_than_deleting_it(self):
+        code = source("Reset-Sa6i-Link-Profile.ps1")
+        self.assertIn("[System.IO.Directory]::Move($dataDir, $moved)", code)
+        self.assertNotIn("Remove-Item", code)
+        self.assertIn("Nothing was deleted", code)
+
+    def test_profile_reset_reads_the_location_from_the_batch_file(self):
+        code = source("Reset-Sa6i-Link-Profile.ps1")
+        self.assertIn("SA6I_DATA=(.*)", code)
+        self.assertIn("ReadAllLines($batch.FullName)", code)
+
     def test_launchers_keep_the_window_open(self):
         for name in ("Apply Sa6i Clean Patch.cmd", "Retarget Sa6i Clean.cmd"):
             launcher = source(name)

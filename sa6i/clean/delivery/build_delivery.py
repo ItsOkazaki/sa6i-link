@@ -38,6 +38,8 @@ PAYLOAD = (
     ("Sa6i-Link-Icon.ico", f"{CANDIDATE_FOLDER}/Sa6i-Link-Icon.ico"),
     ("Make-Sa6i-Link-Shortcut.ps1", f"{CANDIDATE_FOLDER}/Make-Sa6i-Link-Shortcut.ps1"),
     ("Make Sa6i Link Shortcut.cmd", f"{CANDIDATE_FOLDER}/Make Sa6i Link Shortcut.cmd"),
+    ("Reset-Sa6i-Link-Profile.ps1", f"{CANDIDATE_FOLDER}/Reset-Sa6i-Link-Profile.ps1"),
+    ("Reset Sa6i Link Profile.cmd", f"{CANDIDATE_FOLDER}/Reset Sa6i Link Profile.cmd"),
     ("Retarget Sa6i Clean.cmd", f"{CANDIDATE_FOLDER}/Retarget Sa6i Clean.cmd"),
     ("README.txt", "README.txt"),
 )
