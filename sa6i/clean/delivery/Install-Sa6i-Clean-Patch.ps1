@@ -25,6 +25,9 @@ $newAsar = Join-Path $here 'app.asar'
 $exe = Join-Path $here 'Sa6i Clean Integration.exe'
 $oldAsar = Join-Path $here 'resources\app.asar'
 $expectedNew = '653f05e211811d173cd943c6fc44aecb6c9318a3091010abafcb4abca87e5a0a'
+# Bundles shipped by earlier versions of this package, so the failure can say
+# what happened instead of just quoting a hash.
+$olderBundles = @('8e6ee85e794723de784eb1adc1baedf28a612f968e7b88970297f91053e37fb9')
 
 function Say([string] $text) {
     Write-Host $text
@@ -79,6 +82,9 @@ try {
 
     $newHash = Get-HeaderHash $newAsar
     if ($newHash -ne $expectedNew) {
+        if ($olderBundles -contains $newHash) {
+            throw ('The app.asar in this folder is the previous debranded bundle (' + $newHash + '), not this one. Copy app.asar from "1 - into the Sa6i Clean folder" over it - it must be 1,420,960 bytes - and run this again. Nothing was changed.')
+        }
         throw ('app.asar next to this script is not the debranded bundle (its hash is ' + $newHash + '). Nothing was changed.')
     }
 
@@ -104,9 +110,20 @@ try {
         }
         Say ('Found the stored hash at byte ' + $position + '.')
 
-        Copy-Item -LiteralPath $exe -Destination ($exe + '.bak') -Force
-        Copy-Item -LiteralPath $oldAsar -Destination ($oldAsar + '.bak') -Force
-        Say 'Backed up the executable and the old bundle as .bak.'
+        # Keep the oldest backup: re-running this after an earlier patch must
+        # not replace the pristine original with an already patched file.
+        if (-not (Test-Path -LiteralPath ($exe + '.bak'))) {
+            Copy-Item -LiteralPath $exe -Destination ($exe + '.bak') -Force
+            Say 'Backed up the executable as .bak.'
+        } else {
+            Say 'Kept the existing executable backup; it is the older original.'
+        }
+        if (-not (Test-Path -LiteralPath ($oldAsar + '.bak'))) {
+            Copy-Item -LiteralPath $oldAsar -Destination ($oldAsar + '.bak') -Force
+            Say 'Backed up the old bundle as .bak.'
+        } else {
+            Say 'Kept the existing bundle backup; it is the older original.'
+        }
 
         $replacement = [System.Text.Encoding]::ASCII.GetBytes($newHash)
         [Array]::Copy($replacement, 0, $bytes, $position, $replacement.Length)

@@ -67,6 +67,16 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("Apply Sa6i Clean Patch.cmd", readme)
         self.assertIn("Retarget Sa6i Clean.cmd", readme)
 
+    def test_patch_names_the_previous_bundle_when_the_copy_was_missed(self):
+        script = source(PATCH_NAME)
+        self.assertIn("8e6ee85e794723de784eb1adc1baedf28a612f968e7b88970297f91053e37fb9", script)
+        self.assertIn("previous debranded bundle", script)
+        self.assertIn("1,420,960 bytes", script)
+
+    def test_rerunning_keeps_the_oldest_backup(self):
+        self.assertIn("Test-Path -LiteralPath ($exe + '.bak')", source(PATCH_NAME))
+        self.assertIn("Test-Path -LiteralPath ($Desktop + '.bak')", source(RETARGET_NAME))
+
     def test_patch_avoids_net_four_only_apis(self):
         # Windows 7 ships Windows PowerShell 2.0 on .NET 3.5. Dispose() on a
         # hash object and System.IO.Compression both fail there, which is what

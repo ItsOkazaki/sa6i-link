@@ -27,6 +27,11 @@ contains sa6i-link.exe and a "Sa6i Clean" subfolder.
    It copies app.asar into resources itself; dropping it there by hand would
    leave the executable pointing at a bundle it cannot verify.
 
+   If it stops saying the folder holds the *previous* bundle, the copy did not
+   overwrite the old app.asar: check that the file you copied is 1,420,960
+   bytes and copy it again. Re-running is safe either way - an existing .bak
+   is kept, so the oldest original backup is never replaced by a patched file.
+
 3. SA6I LINK. Copy the two files inside "2 - into the candidate folder" into
    the candidate folder itself, beside sa6i-link.exe:
 

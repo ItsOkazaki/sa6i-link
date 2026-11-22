@@ -212,8 +212,12 @@ try {
         throw 'This sa6i-link.exe does not pin either cleaner build this script knows. Nothing was changed.'
     }
 
-    Copy-Item -LiteralPath $Desktop -Destination ($Desktop + '.bak') -Force
-    Say 'Backed up sa6i-link.exe as .bak.'
+    if (-not (Test-Path -LiteralPath ($Desktop + '.bak'))) {
+        Copy-Item -LiteralPath $Desktop -Destination ($Desktop + '.bak') -Force
+        Say 'Backed up sa6i-link.exe as .bak.'
+    } else {
+        Say 'Kept the existing sa6i-link.exe backup.'
+    }
 
     $offset = $text.IndexOf($latin.GetString((ConvertFrom-Hex $chosen[0])), 0, [System.StringComparison]::Ordinal)
     [Array]::Copy($newExe, 0, $bytes, $offset, $newExe.Length)
