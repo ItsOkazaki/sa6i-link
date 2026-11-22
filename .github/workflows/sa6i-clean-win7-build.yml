@@ -53,7 +53,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'qmake query failed' }
       - name: Build and stage separately
         shell: pwsh
-        run: ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'build.log'
+          ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly *>&1 | Tee-Object -FilePath $log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Reject unsupported static media imports
         shell: pwsh
         run: |
@@ -188,3 +191,18 @@ jobs:
           path: target/package/Sa6iLink/
           if-no-files-found: error
           retention-days: 7
+      - name: Publish the build log when the build fails
+        if: failure()
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'build.log'
+          if (-not (Test-Path $log)) { return }
+          $dir = Join-Path $env:RUNNER_TEMP 'log-bridge'
+          git clone --depth 1 --branch ci-desktop "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" $dir
+          Copy-Item $log (Join-Path $dir 'build.log') -Force
+          Set-Content -Path (Join-Path $dir 'SOURCE-COMMIT.txt') -Value $env:GITHUB_SHA -Encoding ASCII
+          git -C $dir config user.name 'Sa6i CI'
+          git -C $dir config user.email 'ci@users.noreply.github.com'
+          git -C $dir add build.log SOURCE-COMMIT.txt
+          git -C $dir commit -m "Build log for $env:GITHUB_SHA" | Out-Null
+          git -C $dir push --force origin ci-desktop

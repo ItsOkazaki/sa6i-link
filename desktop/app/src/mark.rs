@@ -14,16 +14,16 @@
 const SIZES: [usize; 10] = [16, 20, 24, 32, 40, 48, 64, 128, 256, 512];
 
 static ART: [&[u8]; 10] = [
-    include_bytes!("../assets/mark/16.rgba"),
-    include_bytes!("../assets/mark/20.rgba"),
-    include_bytes!("../assets/mark/24.rgba"),
-    include_bytes!("../assets/mark/32.rgba"),
-    include_bytes!("../assets/mark/40.rgba"),
-    include_bytes!("../assets/mark/48.rgba"),
-    include_bytes!("../assets/mark/64.rgba"),
-    include_bytes!("../assets/mark/128.rgba"),
-    include_bytes!("../assets/mark/256.rgba"),
-    include_bytes!("../assets/mark/512.rgba"),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/16.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/20.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/24.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/32.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/40.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/48.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/64.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/128.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/256.rgba")),
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/mark/512.rgba")),
 ];
 
 /// Renders the mark as straight-alpha RGBA, row by row, `size`×`size`.
