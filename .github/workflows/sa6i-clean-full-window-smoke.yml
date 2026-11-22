@@ -26,7 +26,11 @@ on:
   workflow_dispatch:
 permissions:
   actions: read
-  contents: read
+  # The called build workflow force-pushes its desktop artifact to the
+  # throwaway ci-desktop branch; GitHub caps a called workflow at the
+  # caller's permissions, so this must match. Remove with the bridge
+  # workflows before release.
+  contents: write
 jobs:
   build:
     # Reuses the same guarded build and startup checks as the manual build.
