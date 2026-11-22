@@ -44,7 +44,16 @@ jobs:
       - name: Run the deletion-guard probe
         shell: pwsh
         run: |
-          node sa6i/clean/tests/probe_upstream_cleanup_windows.mjs "$env:UPSTREAM_DIR"
+          $out = node sa6i/clean/tests/probe_upstream_cleanup_windows.mjs "$env:UPSTREAM_DIR" 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          Write-Host $out
+          $line = ($out -split "`r?`n" | Where-Object { $_ -like 'PROBE_RESULT=*' } | Select-Object -First 1) -replace '^PROBE_RESULT=', ''
+          if ($line) { Write-Host "::notice title=Cleanup probe results::$line" }
+          if ($code -ne 0) {
+            $tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Error|error|Expected|expected|actual|assert' } | Select-Object -Last 3) -join ' | '
+            Write-Host "::error title=Cleanup probe failed::$($tail.Substring(0, [Math]::Min(800, $tail.Length)))"
+            exit $code
+          }
       - name: Record runner facts
         if: always()
         shell: pwsh

@@ -106,6 +106,9 @@ try {
   results.guardAllowsOrdinaryUserFile = isSafeUserPath(path.join(home, 'sa6i-probe-fixture', 'notes.txt'));
   results.guardRejectsRelativePath = isSafeUserPath('notes.txt');
 
+  // One compact line is re-emitted as a GitHub annotation: job logs live in
+  // storage some environments cannot reach, annotations are readable via API.
+  console.log('PROBE_RESULT=' + JSON.stringify(results));
   console.log(JSON.stringify(results, null, 2));
   // Only a regression of the documented guard fails the run. The redirected-root
   // result is an observation for SAFETY-REVIEW.md, not an assertion about safety.
