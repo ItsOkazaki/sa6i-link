@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Windows runner probe for Cleanly 0.2.0 deletion guards.
+// Windows runner probe for the Sa6i cache-root guard.
 //
 // Runs on a disposable Windows CI machine, never on a user's PC. It bundles the
-// pinned upstream trash.ts with esbuild, replaces its Electron/disk imports with
-// inert stubs, and then only touches files it created under one temporary
-// directory. No Electron, no cleaner UI, no real caches, no Recycle Bin.
+// pinned upstream trash.ts (already patched by harden_upstream.py) with its
+// Electron/disk imports replaced by inert stubs, then touches only files it
+// created under one temporary directory. No Electron, no cleaner UI, no real
+// caches, no Recycle Bin.
 //
-// What it answers: on real NTFS, does a junction count as a link when it is the
-// deletion target, and does deleting through a junction *above* a cache root
-// reach the junction target? The second is the documented limitation; this
-// records what Windows actually does instead of assuming Linux behaviour carries
-// over.
+// What it answers on real NTFS: does the guard accept an ordinary cache root,
+// including one spelled with different letter case; does it refuse a root
+// reached through a junction; and does the existing rule still refuse a
+// junction as the deletion target?
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { mkdtemp, mkdir, lstat, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
@@ -21,14 +21,15 @@ import assert from 'node:assert/strict';
 
 if (process.platform !== 'win32') throw new Error('This probe is for Windows runners only');
 const source = process.argv[2] && path.resolve(process.argv[2]);
-if (!source) throw new Error('Pass the pinned Cleanly v0.2.0 source directory as the first argument');
+if (!source) throw new Error('Pass the hardened Cleanly v0.2.0 source directory as the first argument');
+const expectGuard = true; // this workflow always runs the hardened source
 const pinned = {
-  'electron/services/trash.ts': '28a2f68426ec7511fcbd0e20ce96763dd3042770d8ef314975d5e93b6cde2252',
+  'electron/services/trash.ts': 'f24e1c0be3fc1766c599df796cff4eeead57c0dd50102c236842021f706156ac',
   'electron/services/walk.ts': 'ec40101e574b4746129f440ba330cbd5a38a5b509bb58938d24a26667d63da62',
 };
 for (const [name, expected] of Object.entries(pinned)) {
   const hash = createHash('sha256').update(await readFile(path.join(source, name))).digest('hex');
-  assert.equal(hash, expected, `Unknown upstream file ${name}; refusing to run`);
+  assert.equal(hash, expected, `Unknown hardened source file ${name}; refusing to run`);
 }
 // esbuild is installed in the workflow's scratch folder, not in the checkout.
 const esbuildDir = process.env.ESBUILD_DIR || path.join(process.cwd(), 'probe-tools');
@@ -56,74 +57,77 @@ try {
       }));
     }}],
   });
-  const { deleteCacheEntry, isSafeUserPath } = await import(pathToFileURL(bundle));
+  const { deleteCacheEntry, isUnredirectedRoot } = await import(pathToFileURL(bundle));
+  assert.equal(typeof isUnredirectedRoot, 'function', 'The guard is missing from the bundle');
 
-  // A. A junction that is itself the deletion target.
-  const sandbox = path.join(work, 'a');
-  const realA = path.join(sandbox, 'real');
+  // A. Junction as the deletion target: must still be refused.
+  const sandboxA = path.join(work, 'a');
+  const realA = path.join(sandboxA, 'real');
   await mkdir(realA, { recursive: true });
   await writeFile(path.join(realA, 'sentinel.txt'), 'fixture');
-  const linkA = path.join(sandbox, 'junction');
+  const linkA = path.join(sandboxA, 'junction');
   await symlink(realA, linkA, 'junction');
-  const linkStat = await lstat(linkA);
-  results.junctionReportedAsLinkByLstat = linkStat.isSymbolicLink();
-  const direct = await deleteCacheEntry(linkA, sandbox);
+  results.junctionReportedAsLinkByLstat = (await lstat(linkA)).isSymbolicLink();
+  const direct = await deleteCacheEntry(linkA, sandboxA);
   results.junctionTargetRefused = direct.refused;
   results.junctionTargetSentinelSurvived = await exists(path.join(realA, 'sentinel.txt'));
 
-  // B. A cache root reached through a junction above it.
-  const sandboxB = path.join(work, 'b');
-  const realCache = path.join(sandboxB, 'real', 'cache');
-  await mkdir(realCache, { recursive: true });
-  await writeFile(path.join(realCache, 'sentinel.txt'), 'fixture');
-  await writeFile(path.join(sandboxB, 'real', 'outside-cache.txt'), 'fixture');
-  const alias = path.join(sandboxB, 'alias');
-  await symlink(path.join(sandboxB, 'real'), alias, 'junction');
-  const redirectedRoot = path.join(alias, 'cache');
-  const rootStat = await lstat(redirectedRoot);
-  results.redirectedRootLooksLikeDirectory = rootStat.isDirectory() && !rootStat.isSymbolicLink();
-  const through = await deleteCacheEntry(path.join(redirectedRoot, 'sentinel.txt'), redirectedRoot);
-  results.deletedThroughRedirectedRoot = !(await exists(path.join(realCache, 'sentinel.txt')));
-  results.siblingOutsideCacheSurvived = await exists(path.join(sandboxB, 'real', 'outside-cache.txt'));
-  results.redirectedRootResult = through;
-
-  // C. Ordinary cache deletion stays inside its root.
-  const sandboxC = path.join(work, 'c');
-  const cache = path.join(sandboxC, 'cache');
+  // B. Ordinary cache folder: the guard must allow cleaning, and deleting must
+  //    stay inside the root.
+  const cache = path.join(work, 'cache');
   await mkdir(path.join(cache, 'nested'), { recursive: true });
   await writeFile(path.join(cache, 'nested', 'junk.bin'), 'fixture');
-  await writeFile(path.join(sandboxC, 'keep.txt'), 'fixture');
+  await writeFile(path.join(work, 'keep.txt'), 'fixture');
+  const resolvedCache = path.resolve(cache);
+  const realCache = await (await import('node:fs/promises')).realpath(cache);
+  results.realpathEqualsResolveForNormalRoot = realCache === resolvedCache;
+  results.realpathValue = realCache;
+  results.resolvedValue = resolvedCache;
+  results.guardAcceptsPlainRoot = await isUnredirectedRoot(cache);
   const plain = await deleteCacheEntry(path.join(cache, 'nested'), cache);
-  results.plainCacheRemoved = plain.removed === 1;
+  results.plainCacheRemoved = plain.removed === 1 && plain.refused === false;
   results.plainCacheRootEmptied = (await readdir(cache)).length === 0;
-  results.neighbourSurvived = await exists(path.join(sandboxC, 'keep.txt'));
+  results.neighbourSurvived = await exists(path.join(work, 'keep.txt'));
 
-  // D. Lexical path guard on real Windows paths.
-  const home = os.homedir();
-  // isSafeUserPath returns true when deletion is ALLOWED, so protected paths
-  // must come back false.
-  results.guardAllowsWindowsSystem = isSafeUserPath('C:\\Windows\\System32\\drivers\\etc\\hosts');
-  results.guardAllowsDesktop = isSafeUserPath(path.join(home, 'Desktop'));
-  results.guardAllowsSshKey = isSafeUserPath(path.join(home, '.ssh', 'id_rsa'));
-  results.guardAllowsOrdinaryUserFile = isSafeUserPath(path.join(home, 'sa6i-probe-fixture', 'notes.txt'));
-  results.guardAllowsRelativePath = isSafeUserPath('notes.txt');
+  // C. The same folder spelled with different letter case must still be cleaned:
+  //    Windows paths are case-insensitive even though realpath returns disk case.
+  const cacheCase = path.join(work, 'CaseCache');
+  await mkdir(cacheCase, { recursive: true });
+  await writeFile(path.join(cacheCase, 'old.tmp'), 'fixture');
+  const upperRoot = cacheCase.toUpperCase();
+  results.guardAcceptsUpperCasedRoot = await isUnredirectedRoot(upperRoot);
+  const upper = await deleteCacheEntry(path.join(upperRoot, 'old.tmp'), upperRoot);
+  results.uppercasedRootCleaned = upper.removed === 1 && upper.refused === false;
 
-  // One compact line is re-emitted as a GitHub annotation: job logs live in
-  // storage some environments cannot reach, annotations are readable via API.
+  // D. A cache root reached through a junction above it: the guard must refuse
+  //    and nothing behind the junction may be deleted.
+  const sandboxD = path.join(work, 'd');
+  const realD = path.join(sandboxD, 'real', 'cache');
+  await mkdir(realD, { recursive: true });
+  await writeFile(path.join(realD, 'sentinel.txt'), 'fixture');
+  await writeFile(path.join(sandboxD, 'real', 'outside-cache.txt'), 'fixture');
+  const alias = path.join(sandboxD, 'alias');
+  await symlink(path.join(sandboxD, 'real'), alias, 'junction');
+  const redirectedRoot = path.join(alias, 'cache');
+  results.redirectedRootLooksLikeDirectory = (await lstat(redirectedRoot)).isDirectory();
+  results.guardRejectsRedirectedRoot = (await isUnredirectedRoot(redirectedRoot)) === false;
+  const through = await deleteCacheEntry(path.join(redirectedRoot, 'sentinel.txt'), redirectedRoot);
+  results.redirectedDeletionRefused = through.refused;
+  results.redirectedSentinelSurvived = await exists(path.join(realD, 'sentinel.txt'));
+  results.siblingOutsideCacheSurvived = await exists(path.join(sandboxD, 'real', 'outside-cache.txt'));
+
   console.log('PROBE_RESULT=' + JSON.stringify(results));
   console.log(JSON.stringify(results, null, 2));
-  // Only a regression of the documented guard fails the run. The redirected-root
-  // result is an observation for SAFETY-REVIEW.md, not an assertion about safety.
-  if (!results.junctionTargetRefused || !results.junctionTargetSentinelSurvived) {
-    throw new Error('Upstream guard no longer refuses a junction deletion target');
-  }
-  if (!results.plainCacheRemoved || !results.neighbourSurvived || !results.plainCacheRootEmptied) {
-    throw new Error('Ordinary cache deletion behaved unexpectedly');
-  }
-  if (results.guardAllowsWindowsSystem || results.guardAllowsDesktop || results.guardAllowsSshKey
-      || !results.guardAllowsOrdinaryUserFile || results.guardAllowsRelativePath) {
-    throw new Error('Lexical path guard behaved unexpectedly');
-  }
+
+  const failures = [];
+  if (!results.junctionTargetRefused || !results.junctionTargetSentinelSurvived) failures.push('junction target not refused');
+  if (!results.guardAcceptsPlainRoot || !results.plainCacheRemoved || !results.plainCacheRootEmptied) failures.push('ordinary cache not cleaned');
+  if (!results.neighbourSurvived) failures.push('deletion escaped its root');
+  if (!results.guardAcceptsUpperCasedRoot || !results.uppercasedRootCleaned) failures.push('case-insensitive root refused');
+  if (!results.guardRejectsRedirectedRoot || !results.redirectedDeletionRefused) failures.push('redirected root not refused');
+  if (!results.redirectedSentinelSurvived || !results.siblingOutsideCacheSurvived) failures.push('data deleted through a redirect');
+  if (failures.length) throw new Error('Guard probe failed: ' + failures.join('; '));
+  console.log('Hardened guard behaved as intended on real NTFS.');
 } finally {
   await rm(work, { recursive: true, force: true });
 }
