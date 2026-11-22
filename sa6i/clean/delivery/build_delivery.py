@@ -36,6 +36,8 @@ PAYLOAD = (
     ("Apply Sa6i Clean Patch.cmd", f"{CLEAN_FOLDER}/Apply Sa6i Clean Patch.cmd"),
     ("Retarget-Sa6i-Clean-Digests.ps1", f"{CANDIDATE_FOLDER}/Retarget-Sa6i-Clean-Digests.ps1"),
     ("Sa6i-Link-Icon.ico", f"{CANDIDATE_FOLDER}/Sa6i-Link-Icon.ico"),
+    ("Make-Sa6i-Link-Shortcut.ps1", f"{CANDIDATE_FOLDER}/Make-Sa6i-Link-Shortcut.ps1"),
+    ("Make Sa6i Link Shortcut.cmd", f"{CANDIDATE_FOLDER}/Make Sa6i Link Shortcut.cmd"),
     ("Retarget Sa6i Clean.cmd", f"{CANDIDATE_FOLDER}/Retarget Sa6i Clean.cmd"),
     ("README.txt", "README.txt"),
 )

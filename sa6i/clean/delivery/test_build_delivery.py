@@ -264,6 +264,28 @@ class DeliveryFilesTest(unittest.TestCase):
         self.assertIn("2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74", code)
         self.assertIn("4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba", code)
 
+    def test_shortcut_script_uses_only_what_windows_has(self):
+        code = source("Make-Sa6i-Link-Shortcut.ps1")
+        self.assertIn("New-Object -ComObject WScript.Shell", code)
+        self.assertIn("$shortcut.IconLocation", code)
+        self.assertIn("$shortcut.WindowStyle = 7", code)
+        for banned in (".Dispose()", "Start-Job", "System.IO.Compression"):
+            self.assertNotIn(banned, code, banned)
+
+    def test_shortcut_script_keeps_the_batch_file_contents(self):
+        # That is the only view of what the batch file does; without it the
+        # batch file cannot be replaced by starting the executable directly.
+        code = source("Make-Sa6i-Link-Shortcut.ps1")
+        self.assertIn("[System.IO.File]::ReadAllLines($batch.FullName)", code)
+        self.assertIn("shortcut-log.txt", code)
+        self.assertIn("($_.Name -like 'Start*')", code)
+
+    def test_shortcut_script_is_delivered_with_the_candidate_files(self):
+        names = dict(build_delivery.PAYLOAD)
+        for name in ("Make-Sa6i-Link-Shortcut.ps1", "Make Sa6i Link Shortcut.cmd"):
+            self.assertIn(name, names)
+            self.assertTrue(names[name].startswith(build_delivery.CANDIDATE_FOLDER))
+
     def test_launchers_keep_the_window_open(self):
         for name in ("Apply Sa6i Clean Patch.cmd", "Retarget Sa6i Clean.cmd"):
             launcher = source(name)
