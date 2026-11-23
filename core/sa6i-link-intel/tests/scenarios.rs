@@ -72,6 +72,11 @@ struct Segment {
     volumes: Vec<VolumeSpec>,
     #[serde(default = "default_uptime")]
     uptime_days: f64,
+    /// Average seconds per disk transfer during this segment. Absent means the
+    /// scenario's machine cannot read the counter, which is what an old Windows
+    /// or a disabled PDH looks like.
+    #[serde(default)]
+    disk_seconds_per_transfer: Option<f32>,
     /// The processes on the machine during this segment. Absent means the
     /// scenario does not describe them, which keeps every older fixture honest.
     #[serde(default)]
@@ -193,7 +198,16 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         },
         memory: memory(segment),
         volumes: segment.volumes.iter().map(volume).collect(),
-        disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+        disk_io: match segment.disk_seconds_per_transfer {
+            Some(seconds) => DiskIoSample {
+                // The fixtures do not invent throughput: a scenario that describes
+                // a slow disk describes a slow disk and nothing else.
+                read_bytes_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                write_bytes_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                avg_seconds_per_transfer: MetricState::Value(seconds),
+            },
+            None => DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+        },
         gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
         processes: segment.processes.iter().map(process).collect(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
@@ -345,6 +359,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         }],
         uptime_days: 1.0,
         processes: Vec::new(),
+        disk_seconds_per_transfer: None,
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(

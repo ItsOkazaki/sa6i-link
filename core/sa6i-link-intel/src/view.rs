@@ -480,6 +480,7 @@ mod tests {
             disk_io: DiskIoSample {
                 read_bytes_per_second: bytes(8 * 1024 * 1024),
                 write_bytes_per_second: bytes(4 * 1024 * 1024),
+                avg_seconds_per_transfer: MetricState::Value(0.004),
             },
             gpu: MetricState::Value(GpuSample {
                 adapters: vec![GpuAdapter {

@@ -33,6 +33,10 @@ const WINDOW_MINUTES: (u64, u64) = (1, 24 * 60);
 /// An uptime threshold, in minutes: a day to a year.
 const UPTIME_MINUTES: (u64, u64) = (24 * 60, 365 * 24 * 60);
 
+/// A latency threshold, in milliseconds: 1 ms to 10 s. Above ten seconds per
+/// transfer the machine is not slow, it is broken.
+const SLOW_MS: (u64, u64) = (1, 10_000);
+
 /// A growth threshold, in mebibytes. Under a megabyte is not growth; over ten
 /// gibibytes is a machine that will page before the window ends, and a number that
 /// large is a typo in the units.
@@ -54,6 +58,9 @@ struct Entry {
     /// Growth in mebibytes, for the rule that measures a difference rather than a
     /// level.
     growth_mb: Option<u64>,
+    /// A latency threshold in milliseconds. Milliseconds because a thresholds file
+    /// that says `0.1` without saying of what is a units bug waiting to happen.
+    slow_ms: Option<u64>,
     sustained: Option<String>,
     long_after: Option<String>,
     /// The fixture that proves this rule fires, and the one that proves it does
@@ -166,6 +173,7 @@ impl RuleFile {
                 ("sustained", entry.sustained.is_some()),
                 ("long_after", entry.long_after.is_some()),
                 ("growth_mb", entry.growth_mb.is_some()),
+                ("slow_ms", entry.slow_ms.is_some()),
             ] {
                 if present && !allowed_keys(def.id).contains(&key) {
                     refusals.push(Refusal::NotThisRulesKey {
@@ -266,6 +274,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
         "memory.commit_pressure" => &["warn_percent", "sustained"],
         "process.runaway_cpu" => &["warn_percent", "sustained"],
         "process.memory_growth" => &["growth_mb", "sustained"],
+        "disk.slow_transfers" => &["slow_ms", "sustained"],
         "system.long_uptime" => &["long_after"],
         _ => &[],
     }
@@ -336,6 +345,16 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
                 limits.process_growth_window_ms = millis;
             }
         }
+        "disk.slow_transfers" => {
+            let slow = milliseconds(entry.slow_ms, id, "slow_ms", refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(millis) = slow {
+                limits.disk_slow_transfer_seconds = millis as f32 / 1000.0;
+            }
+            if let Some(millis) = window {
+                limits.disk_slow_sustained_ms = millis;
+            }
+        }
         "system.long_uptime" => {
             let window = period(entry.long_after.as_deref(), id, "long_after", UPTIME_MINUTES, refusals);
             if let Some(millis) = window {
@@ -375,6 +394,23 @@ fn megabytes(value: Option<u64>, id: &str, key: &'static str, refusals: &mut Vec
             value: value.to_string(),
             min_mb: GROWTH_MB.0,
             max_mb: GROWTH_MB.1,
+        });
+        None
+    }
+}
+
+/// A latency threshold in milliseconds, or the refusal that says why it cannot be.
+fn milliseconds(value: Option<u64>, id: &str, key: &'static str, refusals: &mut Vec<Refusal>) -> Option<u64> {
+    let value = value?;
+    if (SLOW_MS.0..=SLOW_MS.1).contains(&value) {
+        Some(value)
+    } else {
+        refusals.push(Refusal::OutOfMilliseconds {
+            id: id.to_owned(),
+            key,
+            value: value.to_string(),
+            min_ms: SLOW_MS.0,
+            max_ms: SLOW_MS.1,
         });
         None
     }
@@ -469,6 +505,14 @@ pub enum Refusal {
         min_mb: u64,
         max_mb: u64,
     },
+    /// A latency threshold outside [`SLOW_MS`].
+    OutOfMilliseconds {
+        id: String,
+        key: &'static str,
+        value: String,
+        min_ms: u64,
+        max_ms: u64,
+    },
     /// A warning threshold at or above the critical one.
     InvertedRange { id: &'static str, key: &'static str },
     /// A `firing` or `near_miss` naming a scenario that does not exist.
@@ -530,6 +574,13 @@ impl fmt::Display for Refusal {
                 min_mb,
                 max_mb,
             } => write!(f, "`{id}` {key} = {value} MiB is outside {min_mb}..={max_mb} MiB"),
+            Self::OutOfMilliseconds {
+                id,
+                key,
+                value,
+                min_ms,
+                max_ms,
+            } => write!(f, "`{id}` {key} = {value} ms is outside {min_ms}..={max_ms} ms"),
             Self::InvertedRange { id, key } => write!(
                 f,
                 "`{id}` has `{key}` at or below its warning threshold, so critical never happens"
@@ -557,6 +608,7 @@ mod tests {
     const COMMIT: &str = include_str!("../rules/commit.toml");
     const GROWTH: &str = include_str!("../rules/growth.toml");
     const PROCESS: &str = include_str!("../rules/process.toml");
+    const SLOW: &str = include_str!("../rules/slow.toml");
     const SYSTEM: &str = include_str!("../rules/system.toml");
 
     /// The scenario names the fixtures actually carry, read from the directory so
@@ -600,7 +652,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [DISK, MEMORY, COMMIT, GROWTH, PROCESS, SYSTEM] {
+        for text in [DISK, MEMORY, COMMIT, GROWTH, PROCESS, SLOW, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)

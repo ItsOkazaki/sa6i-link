@@ -44,6 +44,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
     Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
     Rule { def: PROCESS_MEMORY_GROWTH, evaluate: process_memory_growth },
+    Rule { def: DISK_SLOW_TRANSFERS, evaluate: disk_slow_transfers },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
 
@@ -73,6 +74,16 @@ const COMMIT_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 /// going to stop on its own.
 const RUNAWAY_CPU_PERCENT: f32 = 80.0;
 const RUNAWAY_CPU_SUSTAINED_MS: u64 = 10 * 60 * 1000;
+
+/// How long a disk transfer may take, and for how long, before the disk is the
+/// problem.
+///
+/// 100 ms per transfer. A solid state drive answers in a fraction of a millisecond
+/// and a mechanical one in a few; at a tenth of a second the disk is the queue and
+/// the machine is slow at everything that touches storage, whatever the CPU graph
+/// says.
+const SLOW_TRANSFER_SECONDS: f32 = 0.1;
+const SLOW_TRANSFER_SUSTAINED_MS: u64 = 10 * 60 * 1000;
 
 /// How much a process may grow, and over how long, before it is a leak.
 ///
@@ -110,6 +121,10 @@ pub struct Thresholds {
     pub process_cpu_percent: f32,
     /// …once it has held it this long.
     pub process_cpu_sustained_ms: u64,
+    /// A disk transfer taking at least this many seconds…
+    pub disk_slow_transfer_seconds: f32,
+    /// …for this long is a disk that is the reason everything is slow.
+    pub disk_slow_sustained_ms: u64,
     /// A process that grew by this much…
     pub process_growth_bytes: u64,
     /// …over this long is leaking rather than working.
@@ -131,6 +146,8 @@ impl Default for Thresholds {
             process_cpu_sustained_ms: RUNAWAY_CPU_SUSTAINED_MS,
             process_growth_bytes: GROWTH_BYTES,
             process_growth_window_ms: GROWTH_WINDOW_MS,
+            disk_slow_transfer_seconds: SLOW_TRANSFER_SECONDS,
+            disk_slow_sustained_ms: SLOW_TRANSFER_SUSTAINED_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
         }
     }
@@ -557,6 +574,70 @@ fn process_memory_growth(
     })
 }
 
+/// Disk transfers have taken a tenth of a second or more for ten minutes.
+///
+/// This is the rule that answers "the machine is slow but nothing is using the
+/// CPU". It is also the one that has to be careful about zero: `Avg. Disk
+/// sec/Transfer` reads 0 on an idle disk, and an idle disk is not a fast one -
+/// so zero is never a finding, and an idle stretch inside the window breaks the
+/// claim rather than averaging into it.
+pub const DISK_SLOW_TRANSFERS: RuleDef = RuleDef {
+    id: "disk.slow_transfers",
+    severity: Severity::Warning,
+    confidence: Confidence::Likely,
+    requires: &["disk.seconds_per_transfer"],
+};
+
+fn disk_slow_transfers(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let slow = limits.disk_slow_transfer_seconds;
+    let MetricState::Value(seconds) = snapshot.disk_io.avg_seconds_per_transfer else {
+        return None;
+    };
+    // Zero is "no transfers", which is an idle disk. An idle disk is not a slow
+    // one, and a rule that fired on it would fire on every quiet machine.
+    if seconds <= 0.0 || seconds < slow {
+        return None;
+    }
+    let window = store.held_for(limits.disk_slow_sustained_ms, |sample| {
+        sample
+            .disk_io
+            .avg_seconds_per_transfer
+            .value()
+            .is_some_and(|seconds| *seconds >= slow)
+    })?;
+    let millis = seconds * 1000.0;
+    Some(Finding {
+        id: format!("{}/system", DISK_SLOW_TRANSFERS.id),
+        rule: DISK_SLOW_TRANSFERS.id.to_owned(),
+        severity: DISK_SLOW_TRANSFERS.severity,
+        confidence: DISK_SLOW_TRANSFERS.confidence,
+        subject: "system".to_owned(),
+        title: "The disk is taking a long time per transfer".to_owned(),
+        explain: format!(
+            "Each disk transfer has averaged {millis:.0} ms for {} minutes, against the {:.0} ms \
+             a healthy disk stays under. At this rate the disk is the queue: opening a file, \
+             saving a document and starting a program all wait on it, which looks like a slow \
+             machine while the CPU sits idle. A failing disk, a queue that never drains and a \
+             backup running at full speed all look like this.",
+            window.held_for_ms / 60_000,
+            slow * 1000.0
+        ),
+        evidence: vec![
+            Evidence::new("disk.seconds_per_transfer", format!("{millis:.1} ms"))
+                .threshold(format!("{:.0} ms", slow * 1000.0))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
 /// The machine has not been restarted in a fortnight.
 pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     id: "system.long_uptime",
@@ -849,6 +930,33 @@ mod tests {
             findings_of(&store).is_empty(),
             "ten minutes of history is not half an hour of growth"
         );
+    }
+
+    #[test]
+    fn an_idle_disk_is_not_a_slow_one() {
+        // `Avg. Disk sec/Transfer` reads 0 when nothing is transferred. Zero is a
+        // fact about an idle machine, not an infinitely fast one, and it must
+        // never turn into a finding.
+        let store = series(1_200, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.disk_io.avg_seconds_per_transfer = MetricState::Value(0.0);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn a_tenth_of_a_second_per_transfer_for_ten_minutes_is_a_finding() {
+        let store = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.disk_io.avg_seconds_per_transfer = MetricState::Value(0.18);
+            snap
+        });
+        let findings = findings_of(&store);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "disk.slow_transfers");
+        assert_eq!(findings[0].evidence[0].metric, "disk.seconds_per_transfer");
+        assert_eq!(findings[0].evidence[0].observed, "180.0 ms");
     }
 
     #[test]

@@ -30,8 +30,10 @@ publishes:
 ```
 cpu.percent                        memory.percent_used
 cpu.core.{n}.percent               memory.total_bytes     memory.available_bytes
+memory.commit_used_bytes           memory.commit_limit_bytes
 volume.{letter}.percent_used       volume.{letter}.free_bytes   volume.{letter}.total_bytes
 disk.read_bytes_per_second         disk.write_bytes_per_second
+disk.seconds_per_transfer
 gpu.adapter.{n}.dedicated_used_bytes   gpu.adapter.{n}.dedicated_limit_bytes
 process.{pid}.working_set_bytes    process.{pid}.cpu_percent
 system.uptime_seconds
@@ -64,7 +66,7 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | **shipped**, identity included |
 | `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | **shipped**, 256 MiB of growth against the same stamp |
 | `memory.commit_pressure` | `memory.commit_used_bytes` / `memory.commit_limit_bytes` | 5 min | Warning | **shipped** |
-| `disk.slow_transfers` | `Avg. Disk sec/Transfer` | 10 min | Warning | needs one more PDH counter on the query already open |
+| `disk.slow_transfers` | `disk.seconds_per_transfer` | 10 min | Warning | **shipped**, read on the query that was already open |
 | `memory.paging` | `Pages Input/sec` | 5 min | Warning | needs a second PDH query (`Memory`) |
 
 ### The caveats that decide whether a rule is honest
@@ -250,7 +252,15 @@ rewrites the same line.
    "identity caveat" the catalogue used to carry is closed: the caveat was the rule
    claiming more than it could know, and now it does not.
 
-   What is left in this step is the disk counters.
+   `disk.slow_transfers` is *done* too: `Avg. Disk sec/Transfer` joined the PDH
+   query that was already open, so it costs one more counter on a query PDH was
+   sampling anyway rather than a second query. Two fixtures carry the weight: 99 ms
+   for twelve minutes stays quiet (one millisecond under, held past the window),
+   and six minutes slow, one idle, five slow, stays quiet too - sustained means
+   sustained, not averaged, which is the difference between a fault and a backup.
+
+   What is left in this step is `memory.paging`, which needs a second PDH query:
+   `Pages Input/sec` lives under the `Memory` object, not `PhysicalDisk`.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

@@ -23,6 +23,11 @@
 //! - `PDH_FMT_COUNTERVALUE { CStatus: u32, Anonymous: PDH_FMT_COUNTERVALUE_0 }`
 //!   with the union member `doubleValue: f64`
 //!
+//! `Avg. Disk sec/Transfer` is on the same query as the two throughput counters
+//! because PDH has already opened and sampled the `PhysicalDisk` object; a second
+//! query would double the per-sample cost to read a number from a counter that is
+//! sitting right there.
+//!
 //! A zero return is `ERROR_SUCCESS`; PDH also reports "*the call* worked but
 //! *the data* is invalid" through the counter's own `CStatus`, so both are
 //! checked before a number is believed.
@@ -45,6 +50,9 @@ mod imp {
     /// shows and what "the disk is busy" means to a person.
     const READ_PATH: &str = "\\PhysicalDisk(_Total)\\Disk Read Bytes/sec";
     const WRITE_PATH: &str = "\\PhysicalDisk(_Total)\\Disk Write Bytes/sec";
+    /// Seconds per transfer, not bytes: this is the counter that says whether the
+    /// disk is the slow thing or merely the busy one.
+    const TRANSFER_PATH: &str = "\\PhysicalDisk(_Total)\\Avg. Disk sec/Transfer";
 
     /// GPU counters exist from Windows 10 1709 (Fall Creators Update) and need a
     /// WDDM 2.0 driver; on older systems the counter set is simply absent, which
@@ -65,6 +73,7 @@ mod imp {
         query: PDH_HQUERY,
         read: PDH_HCOUNTER,
         write: PDH_HCOUNTER,
+        transfer: PDH_HCOUNTER,
         /// Whether a first collection has happened: a rate needs two points.
         collected_once: bool,
     }
@@ -81,19 +90,22 @@ mod imp {
             }
             let mut read = PDH_HCOUNTER::default();
             let mut write = PDH_HCOUNTER::default();
+            let mut transfer = PDH_HCOUNTER::default();
             let read_path = HSTRING::from(READ_PATH);
             let write_path = HSTRING::from(WRITE_PATH);
+            let transfer_path = HSTRING::from(TRANSFER_PATH);
             // SAFETY: the query is open; each counter handle is written into a
             // local that is moved into the struct, and the query closes them.
             unsafe {
                 if PdhAddEnglishCounterW(query, &read_path, 0, &mut read) != 0
                     || PdhAddEnglishCounterW(query, &write_path, 0, &mut write) != 0
+                    || PdhAddEnglishCounterW(query, &transfer_path, 0, &mut transfer) != 0
                 {
                     let _ = PdhCloseQuery(query);
                     return None;
                 }
             }
-            Some(Self { query, read, write, collected_once: false })
+            Some(Self { query, read, write, transfer, collected_once: false })
         }
 
         /// Collect once and read both counters.
@@ -113,6 +125,7 @@ mod imp {
             DiskIoSample {
                 read_bytes_per_second: formatted(self.read),
                 write_bytes_per_second: formatted(self.write),
+                avg_seconds_per_transfer: seconds(self.transfer),
             }
         }
     }
@@ -317,6 +330,30 @@ mod imp {
         } else {
             MetricState::Unknown(WhyUnknown::CollectorFailed)
         }
+    }
+}
+
+/// A duration counter, in seconds.
+///
+/// Same two checks as [`formatted`] - the call and the counter's own status - and
+/// one more: a negative or non-finite value is a broken counter, not a fast disk.
+/// Zero is kept, because "no transfers happened" is a real reading and the rules
+/// know what it means.
+#[allow(unsafe_code)]
+fn seconds(counter: PDH_HCOUNTER) -> MetricState<f32> {
+    let mut value = PDH_FMT_COUNTERVALUE::default();
+    // SAFETY: `value` is a valid writable PDH_FMT_COUNTERVALUE, and the union is
+    // read as the variant the requested format filled in.
+    let status = unsafe { PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, None, &mut value) };
+    if status != 0 || value.CStatus != 0 {
+        return MetricState::Unknown(WhyUnknown::CollectorFailed);
+    }
+    // SAFETY: `doubleValue` is the member PDH_FMT_DOUBLE fills.
+    let seconds = unsafe { value.Anonymous.doubleValue };
+    if seconds.is_finite() && seconds >= 0.0 {
+        MetricState::Value(seconds as f32)
+    } else {
+        MetricState::Unknown(WhyUnknown::CollectorFailed)
     }
 }
 

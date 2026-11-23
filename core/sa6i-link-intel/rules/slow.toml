@@ -1,0 +1,21 @@
+# The numbers the slow-disk rule decides with.
+#
+# The counter is `\PhysicalDisk(_Total)\Avg. Disk sec/Transfer`, read on the same
+# PDH query as the throughput counters. Its unit is seconds per transfer, and zero
+# means "no transfers happened" - an idle disk, which is not a fast one.
+
+[[rule]]
+id = "disk.slow_transfers"
+severity = "warning"
+confidence = "likely"
+requires = ["disk.seconds_per_transfer"]
+
+# 100 ms. A solid state drive answers in a fraction of a millisecond, a mechanical
+# one in a few; at a tenth of a second everything that touches storage waits.
+slow_ms = 100
+sustained = "10m"
+
+firing = "disk-slow-transfers-for-eleven-minutes"
+# The harder near-miss: slow, idle for a minute, slow again. Sustained means
+# sustained, not averaged.
+near_miss = "disk-slow-transfers-break-in-the-middle"

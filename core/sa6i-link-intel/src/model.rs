@@ -319,6 +319,18 @@ pub fn top_processes(mut processes: Vec<ProcessSample>, limit: usize) -> Vec<Pro
 pub struct DiskIoSample {
     pub read_bytes_per_second: MetricState<Bytes>,
     pub write_bytes_per_second: MetricState<Bytes>,
+    /// Average seconds per physical disk transfer, from Windows'
+    /// `Avg. Disk sec/Transfer`.
+    ///
+    /// This is the number that says whether the *disk* is the slow part. A solid
+    /// state drive answers in well under a tenth of a millisecond, a mechanical
+    /// one in a few, and a queue or a failing disk climbs past a tenth of a
+    /// second - at which point everything that touches storage waits and the CPU
+    /// looks idle while the machine feels broken.
+    ///
+    /// Zero means no transfers happened, not "instantaneous": a rule that fires on
+    /// zero would fire on every idle machine.
+    pub avg_seconds_per_transfer: MetricState<f32>,
 }
 
 impl DiskIoSample {
@@ -327,6 +339,7 @@ impl DiskIoSample {
         Self {
             read_bytes_per_second: MetricState::Unknown(reason),
             write_bytes_per_second: MetricState::Unknown(reason),
+            avg_seconds_per_transfer: MetricState::Unknown(reason),
         }
     }
 
@@ -462,6 +475,9 @@ impl Snapshot {
         if let MetricState::Value(write) = self.disk_io.write_bytes_per_second {
             out.push(("disk.write_bytes_per_second".to_owned(), write.0 as f64));
         }
+        if let MetricState::Value(seconds) = self.disk_io.avg_seconds_per_transfer {
+            out.push(("disk.seconds_per_transfer".to_owned(), f64::from(seconds)));
+        }
         if let MetricState::Value(gpu) = &self.gpu {
             for (index, adapter) in gpu.adapters.iter().enumerate() {
                 if let MetricState::Value(used) = adapter.dedicated_used {
@@ -519,6 +535,7 @@ pub const PUBLISHED_PATHS: &[&str] = &[
     "volume.*.total_bytes",
     "disk.read_bytes_per_second",
     "disk.write_bytes_per_second",
+    "disk.seconds_per_transfer",
     "gpu.adapter.*.dedicated_used_bytes",
     "gpu.adapter.*.dedicated_limit_bytes",
     "process.*.working_set_bytes",
@@ -756,6 +773,7 @@ mod tests {
             disk_io: DiskIoSample {
                 read_bytes_per_second: MetricState::Value(Bytes(4_096)),
                 write_bytes_per_second: MetricState::Unknown(WhyUnknown::CollectorFailed),
+                avg_seconds_per_transfer: MetricState::Value(0.004),
             },
             processes: Vec::new(),
             uptime: MetricState::Value(60),
