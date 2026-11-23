@@ -911,6 +911,24 @@ the results scroll away with the window that held them. It sets `$LASTEXITCODE`
 and `$Host.SetShouldExit($code)` now, so `powershell -File` still returns 1 on a
 failed criterion and an interactive session survives long enough to be read.
 
+The third was `$PSScriptRoot`, empty in the child process that ran it:
+
+```
+Split-Path : Impossible de lier l'argument au parametre "Path", car il a la valeur Null.
+Au niveau de scripts/verify-m1.ps1 : 58
++ $root = Split-Path -Parent $PSScriptRoot
+```
+
+It is an automatic variable and it is normally set, so from here I cannot say why
+it was not; what I can say is that the script should not have cared. It now
+collects four candidate directories - `$PSScriptRoot`, `$PSCommandPath`,
+`$MyInvocation.MyCommand.Path`, the current directory - and takes whichever has a
+`Cargo.toml` above it, and if none does it says so and names the four paths it
+tried. A script that needs to know where it is should find out, not assume.
+
+Check the pattern in the other scripts before blaming them: `check.ps1:33` and
+`package.ps1:29` use the same one-liner.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included

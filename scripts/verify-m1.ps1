@@ -55,7 +55,40 @@ param(
     [string]$OutFile = ""
 )
 $ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $PSScriptRoot
+
+# Where am I? $PSScriptRoot is the usual answer and was empty on the machine that
+# first ran this, so ask it four ways and then look for the repository instead of
+# assuming a layout: whichever candidate sits above a Cargo.toml wins.
+function Find-RepositoryRoot {
+    param([string[]]$Starts)
+    foreach ($start in $Starts) {
+        if (-not $start) { continue }
+        $dir = $start
+        while ($dir) {
+            if (Test-Path -LiteralPath (Join-Path $dir "Cargo.toml")) { return $dir }
+            $parent = Split-Path -Parent $dir
+            if (-not $parent -or $parent -eq $dir) { break }
+            $dir = $parent
+        }
+    }
+    return $null
+}
+
+$candidates = @()
+if ($PSScriptRoot) { $candidates += $PSScriptRoot }
+if ($PSCommandPath) { $candidates += (Split-Path -Parent $PSCommandPath) }
+if ($MyInvocation.MyCommand.Path) { $candidates += (Split-Path -Parent $MyInvocation.MyCommand.Path) }
+$candidates += (Get-Location).Path
+
+$root = Find-RepositoryRoot -Starts $candidates
+if (-not $root) {
+    Write-Host ""
+    Write-Host "  could not find the repository from here:" -ForegroundColor Red
+    foreach ($c in $candidates) { Write-Host "    $c" -ForegroundColor DarkGray }
+    Write-Host "  run it from the checkout, or pass the path to the checkout." -ForegroundColor Red
+    $Host.SetShouldExit(1)
+    return
+}
 Push-Location $root
 
 if (-not $OutFile) { $OutFile = Join-Path $root "target\m1-verification.md" }
