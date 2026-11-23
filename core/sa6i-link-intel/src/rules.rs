@@ -43,6 +43,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
     Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
+    Rule { def: PROCESS_MEMORY_GROWTH, evaluate: process_memory_growth },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
 
@@ -73,6 +74,15 @@ const COMMIT_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 const RUNAWAY_CPU_PERCENT: f32 = 80.0;
 const RUNAWAY_CPU_SUSTAINED_MS: u64 = 10 * 60 * 1000;
 
+/// How much a process may grow, and over how long, before it is a leak.
+///
+/// 256 MiB over half an hour: below that it is a cache filling, which is the
+/// machine doing its job. The window is longer than any other rule's because a
+/// leak is a trend, and half an hour is the shortest span that tells a leak from a
+/// file being loaded.
+const GROWTH_BYTES: u64 = 256 * 1024 * 1024;
+const GROWTH_WINDOW_MS: u64 = 30 * 60 * 1000;
+
 /// Uptime at which "have you restarted?" becomes worth saying.
 const UPTIME_LONG_SECONDS: u64 = 14 * 24 * 60 * 60;
 
@@ -100,6 +110,10 @@ pub struct Thresholds {
     pub process_cpu_percent: f32,
     /// …once it has held it this long.
     pub process_cpu_sustained_ms: u64,
+    /// A process that grew by this much…
+    pub process_growth_bytes: u64,
+    /// …over this long is leaking rather than working.
+    pub process_growth_window_ms: u64,
     pub uptime_long_seconds: u64,
 }
 
@@ -115,6 +129,8 @@ impl Default for Thresholds {
             memory_commit_sustained_ms: COMMIT_SUSTAINED_MS,
             process_cpu_percent: RUNAWAY_CPU_PERCENT,
             process_cpu_sustained_ms: RUNAWAY_CPU_SUSTAINED_MS,
+            process_growth_bytes: GROWTH_BYTES,
+            process_growth_window_ms: GROWTH_WINDOW_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
         }
     }
@@ -443,6 +459,104 @@ fn process_runaway_cpu(
     })
 }
 
+/// A process has grown by a quarter of a gigabyte in half an hour.
+///
+/// Growth is measured against the same process at the start of the window, which
+/// is why the creation stamp matters here as much as it does upstairs: "pid 5150
+/// grew from 300 MiB to 700 MiB" is only true if it was the same pid 5150 at both
+/// ends. A process that appeared ten minutes ago has no half-hour to answer for,
+/// and says nothing.
+pub const PROCESS_MEMORY_GROWTH: RuleDef = RuleDef {
+    id: "process.memory_growth",
+    severity: Severity::Notice,
+    confidence: Confidence::Likely,
+    requires: &["process.*.working_set_bytes"],
+};
+
+fn process_memory_growth(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let window_ms = limits.process_growth_window_ms;
+    // A window the history does not span cannot be answered; treating the start of
+    // history as the start of the window is how a spike becomes a trend.
+    if store.span_ms() < window_ms {
+        return None;
+    }
+    let start = snapshot.monotonic_ms.saturating_sub(window_ms);
+    // The first snapshot inside the window, which is the one a process has to
+    // appear in to have been there for the whole of it.
+    let first = store.samples().find(|sample| sample.monotonic_ms >= start)?;
+
+    let mut worst: Option<(&ProcessSample, u64, u64, u64)> = None;
+    for process in &snapshot.processes {
+        let Some(after) = process.working_set.value().map(|bytes| bytes.0) else {
+            continue;
+        };
+        let Some(created) = process.created.value().copied() else {
+            continue;
+        };
+        let Some(before) = first
+            .processes
+            .iter()
+            .find(|candidate| {
+                candidate.pid == process.pid
+                    && candidate.created.value().copied() == Some(created)
+                    && candidate.working_set.value().is_some()
+            })
+            .and_then(|candidate| candidate.working_set.value().map(|bytes| bytes.0))
+        else {
+            continue;
+        };
+        let grown = after.saturating_sub(before);
+        if grown < limits.process_growth_bytes {
+            continue;
+        }
+        if worst.as_ref().is_none_or(|(_, best, _, _)| grown > *best) {
+            worst = Some((process, before, after, grown));
+        }
+    }
+
+    let (process, before, after, grown) = worst?;
+    let pid = process.pid;
+    let name = if process.name.is_empty() {
+        format!("pid {pid}")
+    } else {
+        process.name.clone()
+    };
+    let minutes = snapshot.monotonic_ms.saturating_sub(first.monotonic_ms) / 60_000;
+    Some(Finding {
+        id: format!("{}/{pid}", PROCESS_MEMORY_GROWTH.id),
+        rule: PROCESS_MEMORY_GROWTH.id.to_owned(),
+        severity: PROCESS_MEMORY_GROWTH.severity,
+        confidence: PROCESS_MEMORY_GROWTH.confidence,
+        subject: format!("{name} ({pid})"),
+        title: format!("{name} keeps taking more memory"),
+        explain: format!(
+            "{name} (pid {pid}) has grown from {} to {} over {minutes} minutes - {} more, and it \
+             has not given any of it back. Steady growth that never comes down is a leak: the \
+             program will eventually be the reason this machine pages.",
+            render_bytes(before),
+            render_bytes(after),
+            render_bytes(grown)
+        ),
+        evidence: vec![
+            Evidence::new(format!("process.{pid}.working_set_bytes"), render_bytes(after))
+                .threshold(render_bytes(before))
+                .over(
+                    first.seq,
+                    snapshot.seq,
+                    snapshot.monotonic_ms.saturating_sub(first.monotonic_ms),
+                ),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
 /// The machine has not been restarted in a fortnight.
 pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     id: "system.long_uptime",
@@ -566,14 +680,18 @@ mod tests {
         snapshot.volumes[0].free = MetricState::Value(Bytes(free));
     }
 
-    fn busy_process(pid: u32, name: &str, created: u64, percent: f32) -> ProcessSample {
+    fn process_of(pid: u32, name: &str, created: u64, percent: f32, megabytes: u64) -> ProcessSample {
         ProcessSample {
             pid,
             name: name.to_owned(),
-            working_set: MetricState::Value(Bytes(200 * 1_000_000)),
+            working_set: MetricState::Value(Bytes(megabytes * 1_000_000)),
             cpu_percent: MetricState::Value(percent),
             created: MetricState::Value(created),
         }
+    }
+
+    fn busy_process(pid: u32, name: &str, created: u64, percent: f32) -> ProcessSample {
+        process_of(pid, name, created, percent, 200)
     }
 
     fn with_commit(snapshot: &mut Snapshot, percent: f32) {
@@ -695,6 +813,42 @@ mod tests {
             snap
         });
         assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn a_leak_is_measured_against_the_same_process_half_an_hour_ago() {
+        let store = series(1_860, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let megabytes = if s < 900 { 300 } else { 700 };
+            snap.processes = vec![process_of(5150, "sync.exe", 1_000, 5.0, megabytes)];
+            snap
+        });
+        let findings = findings_of(&store);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "process.memory_growth");
+        assert_eq!(findings[0].subject, "sync.exe (5150)");
+        // The evidence cites the size now and the size then, over the window the
+        // growth was measured across.
+        let evidence = &findings[0].evidence[0];
+        assert_eq!(evidence.metric, "process.5150.working_set_bytes");
+        // Half an hour of evidence, not one sample of it.
+        assert!(evidence.held_for_ms >= 30 * 60 * 1000, "{evidence:?}");
+        assert!(evidence.from_seq < evidence.to_seq, "{evidence:?}");
+    }
+
+    #[test]
+    fn a_process_that_started_inside_the_window_has_nothing_to_answer_for() {
+        let store = series(1_860, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            if s >= 1_200 {
+                snap.processes = vec![process_of(5150, "sync.exe", 1_000, 5.0, 900)];
+            }
+            snap
+        });
+        assert!(
+            findings_of(&store).is_empty(),
+            "ten minutes of history is not half an hour of growth"
+        );
     }
 
     #[test]

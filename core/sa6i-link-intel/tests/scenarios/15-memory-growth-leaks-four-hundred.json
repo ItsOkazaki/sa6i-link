@@ -1,0 +1,25 @@
+{
+  "name": "memory-growth-leaks-four-hundred",
+  "about": "sync.exe (pid 5150) holds 300 MiB for fifteen minutes, then 700 MiB for sixteen more: 400 MiB gained over half an hour and none of it given back.",
+  "segments": [
+    {
+      "minutes": 15,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 300, "created": 1000 }
+      ]
+    },
+    {
+      "minutes": 16,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 700, "created": 1000 }
+      ]
+    }
+  ],
+  "expect": [
+    { "rule": "process.memory_growth", "severity": "Notice", "subject": "sync.exe (5150)" }
+  ]
+}

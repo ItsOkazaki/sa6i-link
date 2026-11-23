@@ -33,6 +33,11 @@ const WINDOW_MINUTES: (u64, u64) = (1, 24 * 60);
 /// An uptime threshold, in minutes: a day to a year.
 const UPTIME_MINUTES: (u64, u64) = (24 * 60, 365 * 24 * 60);
 
+/// A growth threshold, in mebibytes. Under a megabyte is not growth; over ten
+/// gibibytes is a machine that will page before the window ends, and a number that
+/// large is a typo in the units.
+const GROWTH_MB: (u64, u64) = (1, 10 * 1024);
+
 /// One rule's numbers, as the file wrote them. Every field is optional: a file
 /// that names one threshold leaves the rest of that rule as the code has it.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -46,6 +51,9 @@ struct Entry {
     requires: Option<Vec<String>>,
     warn_percent: Option<f32>,
     critical_percent: Option<f32>,
+    /// Growth in mebibytes, for the rule that measures a difference rather than a
+    /// level.
+    growth_mb: Option<u64>,
     sustained: Option<String>,
     long_after: Option<String>,
     /// The fixture that proves this rule fires, and the one that proves it does
@@ -157,6 +165,7 @@ impl RuleFile {
                 ("critical_percent", entry.critical_percent.is_some()),
                 ("sustained", entry.sustained.is_some()),
                 ("long_after", entry.long_after.is_some()),
+                ("growth_mb", entry.growth_mb.is_some()),
             ] {
                 if present && !allowed_keys(def.id).contains(&key) {
                     refusals.push(Refusal::NotThisRulesKey {
@@ -256,6 +265,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
         "memory.pressure" => &["warn_percent", "sustained"],
         "memory.commit_pressure" => &["warn_percent", "sustained"],
         "process.runaway_cpu" => &["warn_percent", "sustained"],
+        "process.memory_growth" => &["growth_mb", "sustained"],
         "system.long_uptime" => &["long_after"],
         _ => &[],
     }
@@ -316,6 +326,16 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
                 limits.process_cpu_sustained_ms = millis;
             }
         }
+        "process.memory_growth" => {
+            let grown = megabytes(entry.growth_mb, id, "growth_mb", refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(megabytes) = grown {
+                limits.process_growth_bytes = megabytes * 1024 * 1024;
+            }
+            if let Some(millis) = window {
+                limits.process_growth_window_ms = millis;
+            }
+        }
         "system.long_uptime" => {
             let window = period(entry.long_after.as_deref(), id, "long_after", UPTIME_MINUTES, refusals);
             if let Some(millis) = window {
@@ -338,6 +358,23 @@ fn percent(value: Option<f32>, id: &str, key: &'static str, refusals: &mut Vec<R
             value: format!("{value}"),
             min: PERCENT.0,
             max: PERCENT.1,
+        });
+        None
+    }
+}
+
+/// A growth threshold in mebibytes, or the refusal that says why it cannot be one.
+fn megabytes(value: Option<u64>, id: &str, key: &'static str, refusals: &mut Vec<Refusal>) -> Option<u64> {
+    let value = value?;
+    if (GROWTH_MB.0..=GROWTH_MB.1).contains(&value) {
+        Some(value)
+    } else {
+        refusals.push(Refusal::OutOfGrowth {
+            id: id.to_owned(),
+            key,
+            value: value.to_string(),
+            min_mb: GROWTH_MB.0,
+            max_mb: GROWTH_MB.1,
         });
         None
     }
@@ -424,6 +461,14 @@ pub enum Refusal {
         min_minutes: u64,
         max_minutes: u64,
     },
+    /// A growth threshold outside [`GROWTH_MB`].
+    OutOfGrowth {
+        id: String,
+        key: &'static str,
+        value: String,
+        min_mb: u64,
+        max_mb: u64,
+    },
     /// A warning threshold at or above the critical one.
     InvertedRange { id: &'static str, key: &'static str },
     /// A `firing` or `near_miss` naming a scenario that does not exist.
@@ -478,6 +523,13 @@ impl fmt::Display for Refusal {
                 f,
                 "`{id}` {key} = {value} is outside {min_minutes}m..={max_minutes}m"
             ),
+            Self::OutOfGrowth {
+                id,
+                key,
+                value,
+                min_mb,
+                max_mb,
+            } => write!(f, "`{id}` {key} = {value} MiB is outside {min_mb}..={max_mb} MiB"),
             Self::InvertedRange { id, key } => write!(
                 f,
                 "`{id}` has `{key}` at or below its warning threshold, so critical never happens"
@@ -503,6 +555,7 @@ mod tests {
     const DISK: &str = include_str!("../rules/disk.toml");
     const MEMORY: &str = include_str!("../rules/memory.toml");
     const COMMIT: &str = include_str!("../rules/commit.toml");
+    const GROWTH: &str = include_str!("../rules/growth.toml");
     const PROCESS: &str = include_str!("../rules/process.toml");
     const SYSTEM: &str = include_str!("../rules/system.toml");
 
@@ -547,7 +600,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [DISK, MEMORY, COMMIT, PROCESS, SYSTEM] {
+        for text in [DISK, MEMORY, COMMIT, GROWTH, PROCESS, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)

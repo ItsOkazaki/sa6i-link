@@ -1,0 +1,21 @@
+# The numbers the memory-growth rule decides with.
+#
+# Growth is relative to the same process half an hour earlier, not to a fixed
+# size: a browser that has used 2 GB since it started is a browser, while one that
+# gained 400 MB and kept it is leaking.
+
+[[rule]]
+id = "process.memory_growth"
+severity = "notice"
+confidence = "likely"
+requires = ["process.*.working_set_bytes"]
+
+# Below a quarter of a gigabyte in half an hour is a cache filling, which is the
+# machine doing its job.
+growth_mb = 256
+sustained = "30m"
+
+firing = "memory-growth-leaks-four-hundred"
+# The same pid, twice, with a new creation stamp: two processes, neither of which
+# grew by 256 MB.
+near_miss = "memory-growth-pid-reused"

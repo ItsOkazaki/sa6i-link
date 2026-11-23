@@ -1,0 +1,23 @@
+{
+  "name": "memory-growth-just-under",
+  "about": "The same shape, 255 MiB instead of 400: a file being loaded and kept, which is what a cache looks like. One megabyte under the threshold, held for the whole window.",
+  "segments": [
+    {
+      "minutes": 15,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 300, "created": 1000 }
+      ]
+    },
+    {
+      "minutes": 16,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 555, "created": 1000 }
+      ]
+    }
+  ],
+  "quiets": ["process.memory_growth"]
+}
