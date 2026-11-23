@@ -749,7 +749,10 @@ depends on the API shape.
    looked at, and the failure modes I listed in its section are the ones to
    expect first (the cxx-qt handle type and `rust_mut`, the singleton
    registration, the `Canvas` calls).
-2. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
+2. Then M2: the TOML rule front-end and the twelve-plus Doctor rules. The audit
+   is written — `docs/plan/M2-RULES.md` sorts the plan's rule list into what the
+   collectors can answer today, what needs one more counter, and what needs a
+   privacy decision — so the gate opens on a plan rather than a blank page.
 
 (`sample_hourly` rollups stay unscheduled on purpose: they need a week of real
 data before the rollup can be checked against what it summarises.)
