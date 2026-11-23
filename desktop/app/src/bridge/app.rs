@@ -969,6 +969,7 @@ fn dispatch_jump_task(qt: &CxxQtThread<qobject::AppController>, action: String) 
                 "graphite" => Theme::Graphite,
                 "glass" => Theme::Glass,
                 "hive" => Theme::Hive,
+                "signal" => Theme::Signal,
                 _ => Theme::Bloom,
             };
             st.color_mode =

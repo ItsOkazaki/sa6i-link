@@ -15,7 +15,7 @@ Status: **done** · **partial** · **open**.
 | 8 | AI intelligence architecture | INTELLIGENCE-CORE §7 | done | deterministic core, model as explainer |
 | 9 | Visual identity and design system | [../design/SIGNAL-THEME.md](../design/SIGNAL-THEME.md) | done, **not applied** | extends `tokens.json`; no generator edits yet |
 | 10 | Screen inventory | [../design/SCREEN-INVENTORY.md](../design/SCREEN-INVENTORY.md) | done | 15 new screens, states and gaps |
-| 11 | Security and permission model | [../architecture/SECURITY-MODEL.md](../architecture/SECURITY-MODEL.md) | done | includes three live exposures (keystore) |
+| 11 | Security and permission model | [../architecture/SECURITY-MODEL.md](../architecture/SECURITY-MODEL.md) | done | includes the live signing-key custody gap (verified 2026-11-16) |
 | 12 | Testing strategy | [../plan/STAGE-E-PLAN.md](../plan/STAGE-E-PLAN.md) §1 | done | fixtures as the price of a rule |
 | 13 | Prioritised roadmap | STAGE-E-PLAN §2 | done | M0–M5 with exit criteria |
 | 14 | Risk assessment | STAGE-E-PLAN §3 | done | R1–R12 |
@@ -41,3 +41,10 @@ Status: **done** · **partial** · **open**.
 Implementation begins at **M0** only on explicit approval of Stages A–E. Until
 then this repository contains documentation, one SVG mark and one preview PNG —
 no product code, no token changes, no generator edits.
+
+## M0 status
+
+M0 is delivered except the two checks that need a machine with cargo and Qt; see
+[../plan/M0-REPORT.md](../plan/M0-REPORT.md). Signal is a selectable theme, not
+yet the default, and the app icon is staged rather than swapped — both are open
+questions 1 and 4 above.

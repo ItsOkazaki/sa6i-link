@@ -27,8 +27,11 @@ Estimates are focused-work ranges; they assume no unexpected platform blocker.
 
 ### M0 — Hygiene (1–2 days) — *prerequisite, no new features*
 
-- Rotate or remove the Android signing key from the public Drive folder; move to
-  a secret store. ([SECURITY-MODEL](SECURITY-MODEL.md) §7)
+- Take the Android signing key out of Google Drive custody: move it and its
+  password to a secret store plus an offline copy, confirm 2FA, and write the
+  rotation decision tree. The key is **not** publicly shared (verified
+  2026-11-16), so this is custody work, not an incident.
+  ([SIGNING-KEY](../operations/SIGNING-KEY.md))
 - Apply the Signal theme: `tokens.json` + `validate()` list + `render_kotlin()` +
   `cargo xtask tokens`, green `--check`.
 - Regenerate the mark `.rgba` set and icon pipeline from the SVG.
@@ -107,7 +110,7 @@ module that can be honestly marked partial at that point.
 | R6 | An action damages a machine or deletes data | Critical | Low | risk ≤ 1 in the first slice, allowlists, dry run, rollback, audit |
 | R7 | Clean scope creep toward hosted-cleaner parity | Medium | High | module ships in slices; parity is explicitly not promised |
 | R8 | Licence contamination (GPL into MPL core) | High | Low | `deny.toml`, existing exceptions, no vendoring of BleachBit/LibreHardwareMonitor |
-| R9 | Signing key exposure (already true today) | Critical | Certain | M0 first task |
+| R9 | Signing key custody (single account, password in plaintext beside it) | Critical | Low for leak, high for loss | secret store + offline copy, 2FA, rotation plan; no key rotation unless compromise is suspected |
 | R10 | "Is it spying on me?" | High | Medium | local-only by default, payload preview, network capture in the demo |
 | R11 | Android/desktop token divergence | Low | Medium | `--check` in CI, generator edits in the same PR |
 | R12 | Demo fails on stage | High | Medium | offline-first demo path, `--demo` labelled fallback, pre-recorded clip |

@@ -86,9 +86,15 @@ binaries.
 
 ## 7. Known exposures outside the code (must be fixed, not documented away)
 
-1. **Android signing keystore and its plaintext password are on a public-by-link
-   Drive folder.** Anyone with the link can sign an update that devices accept.
-   Rotate the key or move it to a secret store; do not ship links to it.
+1. **The Android signing keystore is stored in Google Drive, and its password
+   sits beside it as a plaintext file.** Checked on 2026-11-16: neither file has
+   an `anyoneWithLink` grant and no parent folder shares them, so they are *not*
+   publicly reachable — but they are protected only by one Google account. A
+   compromise of that account (or of an OAuth client granted Drive scope) yields
+   the key, and with it the ability to sign an update that every installed device
+   would accept. Custody is therefore the issue, not a leaked link: move both to
+   a secret store, keep a second offline copy, confirm 2FA on the account, and
+   revoke app passwords that no longer need access.
 2. Candidate builds are distributed by public link, not signed releases, so users
    cannot verify what they run.
 3. The hosted cleaner runs unsandboxed with the user's rights and can delete data;

@@ -1,7 +1,9 @@
 # Stage D — Brand and UI system: the Signal theme
 
-Status: **proposal, not applied.** Nothing here is in `docs/design/tokens.json`
-yet; applying it changes generated files and is part of implementation.
+Status: **applied in M0** — `themes.signal` is in `docs/design/tokens.json`,
+validated and generated for both apps, and selectable on the desktop. What is
+still open: the default-theme decision, Manrope/JetBrains Mono, the Android
+picker, and the app icon. See [M0 report](../plan/M0-REPORT.md).
 
 The repository already has a working design system, and this document extends it
 rather than replacing it:
@@ -215,20 +217,21 @@ keyboard focus. Motion respects the reduced-motion switch. Hit targets ≥ 32 px
 desktop / 44 px touch. `UnknownBlock` and severity always carry text. Numbers are
 monospaced and right-aligned so columns can be read down.
 
-## 9. What applying this costs (implementation, post-approval)
+## 9. What applying this cost
 
-1. `tokens.json`: add `themes.signal` with `variants.midnight` / `.daylight`,
-   `fonts`, `shape`, `status`; add `"signal"` to the fixed-palette list in
-   `validate()`.
-2. `render_kotlin()`: emit `signalMidnight` / `signalDaylight` (Android otherwise
-   cannot see the theme).
-3. `cargo xtask tokens` → regenerate `Tokens.qml` and `Tokens.kt`; CI `--check`
-   proves it.
-4. `assets/fonts/`: add Manrope and JetBrains Mono with their OFL files; run
-   `cargo xtask notices`.
-5. Mark: regenerate `desktop/app/assets/mark/<size>.rgba` from the SVG, then the
-   installer icons and the shortcut icon.
-6. QML: `Theme.qml` gets a `signal` branch; no other file hard-codes colours.
+Done in M0 (see the [M0 report](../plan/M0-REPORT.md) for evidence):
 
-Steps 1–3 are a single small PR with a green `--check`, which is the cheapest
-possible way to prove the brand lands in both apps.
+1. `tokens.json`: `themes.signal` with `variants.midnight` / `.daylight`,
+   `brand`, `shape`, `label`, `rules`, `fonts`.
+2. `validate()`: `"signal"` added to the fixed-palette list, so the new palettes
+   are contrast-checked like the others.
+3. `render_kotlin()`: emits `signalMidnight` / `signalDaylight`.
+4. `Tokens.qml` and `Tokens.kt` regenerated (the generator is authoritative).
+5. `Theme.qml`: a `signal` branch for palette, status, cards, tiles, rail, shape
+   and label; `settings.rs` and `prefs.rs` know the name; Settings offers it.
+6. `tools/brand/mark_rgba.py` rasterises the mark to the ten icon sizes;
+   `assets/brand/mark-rgba/` is staged.
+
+Still open: Manrope and JetBrains Mono (needs the font pipeline plus a `notices`
+regeneration), the Android picker, whether Signal becomes the default, and
+swapping the app icon.

@@ -539,6 +539,7 @@ Item {
                                 options: [
                                     { value: "hive", label: qsTr("Hive") },
                                     { value: "bloom", label: qsTr("Bloom") },
+                                    { value: "signal", label: qsTr("Signal") },
                                     { value: "glass", label: qsTr("Glass") },
                                     { value: "graphite", label: qsTr("Graphite") }
                                 ]

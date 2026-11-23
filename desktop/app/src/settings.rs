@@ -21,6 +21,8 @@ pub enum Theme {
     Hive,
     Glass,
     Graphite,
+    /// The Sa6i ecosystem brand: Midnight and Deep Navy, electric violet on cyan.
+    Signal,
 }
 
 impl<'de> Deserialize<'de> for Theme {
@@ -30,6 +32,7 @@ impl<'de> Deserialize<'de> for Theme {
             "hive" => Theme::Hive,
             "graphite" => Theme::Graphite,
             "glass" | "blurry" => Theme::Glass,
+            "signal" => Theme::Signal,
             _ => Theme::Bloom,
         })
     }

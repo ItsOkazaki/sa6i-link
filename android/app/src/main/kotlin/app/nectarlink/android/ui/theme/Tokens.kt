@@ -307,6 +307,42 @@ object Tokens {
     const val COMB_PULSE_SECONDS = 4.5f
     const val COMB_FRAME_MS = 33L
 
+    val signalMidnight = Palette(
+        primary = Color(0xFFB3A0FF),
+        onPrimary = Color(0xFF1A0F45),
+        primaryContainer = Color(0xFF33246E),
+        onPrimaryContainer = Color(0xFFE6DEFF),
+        secondaryContainer = Color(0xFF123A45),
+        onSecondaryContainer = Color(0xFFBFEDF5),
+        surface = Color(0xFF0B1020),
+        surfaceContainerLow = Color(0xFF0E1426),
+        surfaceContainer = Color(0xFF131C32),
+        surfaceContainerHigh = Color(0xFF18223C),
+        surfaceContainerHighest = Color(0xFF1E2946),
+        onSurface = Color(0xFFF0F2FA),
+        onSurfaceVariant = Color(0xFFAAB5CC),
+        outline = Color(0xFF6C7893),
+        outlineVariant = Color(0xFF2A3654),
+    )
+
+    val signalDaylight = Palette(
+        primary = Color(0xFF5335C8),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFE4DCFF),
+        onPrimaryContainer = Color(0xFF1E0F4D),
+        secondaryContainer = Color(0xFFCDEDF4),
+        onSecondaryContainer = Color(0xFF05303A),
+        surface = Color(0xFFF7F8FC),
+        surfaceContainerLow = Color(0xFFF1F3F9),
+        surfaceContainer = Color(0xFFE9ECF5),
+        surfaceContainerHigh = Color(0xFFE1E5F0),
+        surfaceContainerHighest = Color(0xFFD9DEEB),
+        onSurface = Color(0xFF131C32),
+        onSurfaceVariant = Color(0xFF485470),
+        outline = Color(0xFF68748F),
+        outlineVariant = Color(0xFFC3CBDB),
+    )
+
     val warningLight = Color(0xFF7D5200)
     val warningDark = Color(0xFFF2C14E)
     val errorLight = Color(0xFFBA1A1A)

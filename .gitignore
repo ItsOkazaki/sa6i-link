@@ -72,3 +72,9 @@ google_drive/
 # ---- Sa6i Clean delivery staging (rebuilt by sa6i/clean/delivery/build_delivery.py) ----
 sa6i/clean/delivery/app.asar
 sa6i/clean/delivery/*.zip
+
+# Rasterised brand art, reproducible in seconds:
+#   python3 tools/brand/mark_rgba.py --dest assets/brand/mark-rgba
+# The sizes the app embeds (desktop/app/assets/mark) are committed, because
+# build.rs compiles them into the executable.
+/assets/brand/mark-rgba/

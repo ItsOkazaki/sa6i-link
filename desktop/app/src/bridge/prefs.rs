@@ -375,6 +375,7 @@ impl cxx_qt::Initialize for qobject::Preferences {
             Theme::Bloom => "bloom",
             Theme::Glass => "glass",
             Theme::Graphite => "graphite",
+            Theme::Signal => "signal",
         }));
         self.as_mut().set_seed(QString::from(&settings.seed));
         self.as_mut().set_color_mode(QString::from(match settings.color_mode {
@@ -760,6 +761,7 @@ impl qobject::Preferences {
             Theme::Bloom => "bloom",
             Theme::Glass => "glass",
             Theme::Graphite => "graphite",
+            Theme::Signal => "signal",
         });
         let disk_mode = QString::from(match disk.color_mode {
             ColorMode::System => "system",
@@ -1045,6 +1047,7 @@ impl qobject::Preferences {
                 "hive" => Theme::Hive,
                 "graphite" => Theme::Graphite,
                 "glass" | "blurry" => Theme::Glass,
+                "signal" => Theme::Signal,
                 _ => Theme::Bloom,
             },
             seed: String::from(&p.seed),
