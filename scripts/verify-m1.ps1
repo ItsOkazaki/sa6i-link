@@ -331,6 +331,11 @@ try {
     $eyes = @($results | Where-Object { $_.State -eq "eyes" })
     Write-Host ""
     Write-Host ("  {0} passed, {1} failed, {2} need eyes" -f @($results | Where-Object { $_.State -eq "pass" }).Count, $failed.Count, $eyes.Count)
-    if ($failed.Count -gt 0) { exit 1 }
-    exit 0
+    $code = if ($failed.Count -gt 0) { 1 } else { 0 }
+    $global:LASTEXITCODE = $code
+    # `exit` in a script called from a console closes that console, which reads as
+    # a crash and takes the results with it. Set the code the host will return
+    # instead: `powershell -File` still gets it, and the window survives long
+    # enough to read what happened.
+    $Host.SetShouldExit($code)
 }
