@@ -12,7 +12,7 @@ actions.
 | --- | --- | --- |
 | The machine model | `core/sa6i-link-intel/src/model.rs` | **done** — `MetricState`, `Snapshot`, CPU/memory/volumes/uptime |
 | Findings and evidence | `core/sa6i-link-intel/src/findings.rs` | **done** — severity, confidence, evidence, rendering |
-| The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
+| The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering, every threshold a value the caller supplies |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, the busiest processes with their CPU rate, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
@@ -713,6 +713,40 @@ because a recreated `Canvas` loses its paint state, which is visible.
 calls, whether the nested `Flickable`/`Grid`/`Repeater` layout produces the
 spacing the design asks for, and whether parsing one JSON frame a second is smooth
 in QML. Those are the three the build will answer.
+
+## Slice 17 — thresholds as data, so a rule can be run at someone else's numbers
+
+M1's three rules read their thresholds from constants. That was right for M1 and
+wrong for what comes next: the TOML front-end in `docs/plan/M2-RULES.md` exists to
+change a threshold, and a rule that reads a global cannot be *shown* to change.
+The fixtures would still pass, because nothing in them moves.
+
+So the six numbers are a struct now. `Thresholds` carries the disk warning and
+critical lines, the disk window, the memory line and window, and the uptime line;
+`Rule::evaluate` takes `&Thresholds`; and `evaluate()` — the function the CLI, the
+bridge and all eight golden scenarios already call — is a one-line wrapper over
+`evaluate_with(snapshot, store, &Thresholds::default())`. Every existing caller and
+every fixture is untouched, which is the point: if the refactor changed a verdict,
+the scenarios would say so.
+
+**One lie found and removed.** The uptime rule's evidence had `"14 days"` typed
+into it as a string. With a threshold that can move, that string would have kept
+saying fourteen while the rule fired at three — a finding citing a number it did
+not use, in the one place this product promises there are none. It is derived from
+the threshold now.
+
+**Two tests, chosen for what they would catch.** The first pins every default to
+the constant M1 shipped: a refactor that quietly moved a threshold would otherwise
+pass, because the fixtures are evaluated with whatever the code says. The second
+runs one 91 % volume for one ten-minute window at two thresholds — a finding at
+90 %, nothing at 95 % — and a three-and-a-half-day machine against a three-day
+line, asserting the evidence says `"3 days"` and that M1's fourteen-day line stays
+silent on the same machine.
+
+**Not done, on purpose:** no TOML, no parser, no new dependency, not one threshold
+changed, `Cargo.lock` untouched. The front-end needs the rule bodies to be
+parameterisable first; a file format on top of globals would have been a parser
+with nothing to parse.
 
 ## What the collectors do not do, on purpose
 

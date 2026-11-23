@@ -5,10 +5,11 @@
 //! cannot take an action, cannot read the disk, cannot call a model, and cannot
 //! report anything it did not measure — the signature is the policy.
 //!
-//! Slice 1 writes the rules in Rust with their thresholds as constants, so each
-//! one is a named, reviewable thing with fixtures. The TOML front-end described
-//! in `docs/architecture/INTELLIGENCE-CORE.md` §5 compiles into the same
-//! [`RuleDef`] plus predicate, so adding it later does not change this contract.
+//! The rules are written in Rust; the numbers they decide with live in
+//! [`Thresholds`], which every rule takes as an argument. Slice 1 read the
+//! constants directly, which made a rule impossible to test at a second
+//! threshold — and the TOML front-end in `docs/plan/M2-RULES.md` is exactly that
+//! test. [`Thresholds::default()`] is what M1 shipped, to the digit.
 
 use crate::findings::{
     Confidence, Evidence, Finding, Severity, render_bytes, render_percent,
@@ -33,7 +34,7 @@ pub struct RuleDef {
 pub struct Rule {
     pub def: RuleDef,
     /// Returns a finding, or `None` when the condition does not hold.
-    pub evaluate: fn(&Snapshot, &SampleStore) -> Option<Finding>,
+    pub evaluate: fn(&Snapshot, &SampleStore, &Thresholds) -> Option<Finding>,
 }
 
 /// The rules this build ships, in the order the UI should show them.
@@ -57,6 +58,38 @@ const MEMORY_SUSTAINED_MS: u64 = 2 * 60 * 1000;
 /// Uptime at which "have you restarted?" becomes worth saying.
 const UPTIME_LONG_SECONDS: u64 = 14 * 24 * 60 * 60;
 
+/// Every number a rule decides with, in one place.
+///
+/// The defaults are M1's constants, unchanged — a test says so — and a rule that
+/// takes this as an argument can be run at any other set without a machine. That
+/// is what the TOML front-end needs: a threshold change has to be *provable*, and
+/// a rule reading a global is a rule you can only believe.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Thresholds {
+    /// A local volume at or above this share of its size is nearly full.
+    pub disk_warn_percent: f32,
+    /// …and at or above this one, critical.
+    pub disk_critical_percent: f32,
+    /// How long it must stay nearly full before that is worth saying.
+    pub disk_sustained_ms: u64,
+    pub memory_warn_percent: f32,
+    pub memory_sustained_ms: u64,
+    pub uptime_long_seconds: u64,
+}
+
+impl Default for Thresholds {
+    fn default() -> Self {
+        Self {
+            disk_warn_percent: DISK_WARN_PERCENT,
+            disk_critical_percent: DISK_CRITICAL_PERCENT,
+            disk_sustained_ms: DISK_SUSTAINED_MS,
+            memory_warn_percent: MEMORY_WARN_PERCENT,
+            memory_sustained_ms: MEMORY_SUSTAINED_MS,
+            uptime_long_seconds: UPTIME_LONG_SECONDS,
+        }
+    }
+}
+
 /// A local volume is nearly full, and has been for ten minutes.
 pub const DISK_LOW_FREE_SPACE: RuleDef = RuleDef {
     id: "disk.low_free_space",
@@ -65,7 +98,12 @@ pub const DISK_LOW_FREE_SPACE: RuleDef = RuleDef {
     requires: &["volume.*.percent_used"],
 };
 
-fn disk_low_free_space(snapshot: &Snapshot, store: &SampleStore) -> Option<Finding> {
+fn disk_low_free_space(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.disk_warn_percent;
     // The worst volume that has been full for the whole window. One volume at a
     // time: three findings that say the same thing is noise, and the user acts
     // on the fullest one first.
@@ -77,15 +115,15 @@ fn disk_low_free_space(snapshot: &Snapshot, store: &SampleStore) -> Option<Findi
         let MetricState::Value(percent) = volume.percent_used() else {
             continue;
         };
-        if percent < DISK_WARN_PERCENT {
+        if percent < warn {
             continue;
         }
         let letter = volume.letter().to_owned();
-        let Some(window) = store.held_for(DISK_SUSTAINED_MS, move |sample| {
+        let Some(window) = store.held_for(limits.disk_sustained_ms, move |sample| {
             sample
                 .volume(&letter)
                 .and_then(|v| v.percent_used().value().copied())
-                .is_some_and(|p| p >= DISK_WARN_PERCENT)
+                .is_some_and(|p| p >= warn)
         }) else {
             continue;
         };
@@ -95,7 +133,7 @@ fn disk_low_free_space(snapshot: &Snapshot, store: &SampleStore) -> Option<Findi
     }
 
     let (volume, percent, window) = worst?;
-    let severity = if percent >= DISK_CRITICAL_PERCENT {
+    let severity = if percent >= limits.disk_critical_percent {
         Severity::Critical
     } else {
         DISK_LOW_FREE_SPACE.severity
@@ -118,13 +156,13 @@ fn disk_low_free_space(snapshot: &Snapshot, store: &SampleStore) -> Option<Findi
         title: format!("Drive {letter} is almost full"),
         explain: format!(
             "{free} free of {total} ({percent:.1} % used) and it has been above \
-             {DISK_WARN_PERCENT:.0} % for {} minutes. Windows needs headroom for the page file, \
+             {warn:.0} % for {} minutes. Windows needs headroom for the page file, \
              updates and temp files; below about 10 % free, several things slow down.",
             window.held_for_ms / 60_000
         ),
         evidence: vec![
             Evidence::new(format!("volume.{letter}.percent_used"), render_percent(percent))
-                .threshold(render_percent(DISK_WARN_PERCENT))
+                .threshold(render_percent(warn))
                 .over(window.from_seq, window.to_seq, window.held_for_ms),
             Evidence::new(
                 format!("volume.{letter}.free_bytes"),
@@ -149,20 +187,25 @@ pub const MEMORY_PRESSURE: RuleDef = RuleDef {
     requires: &["memory.percent_used"],
 };
 
-fn memory_pressure(snapshot: &Snapshot, store: &SampleStore) -> Option<Finding> {
+fn memory_pressure(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.memory_warn_percent;
     let MetricState::Value(percent) = snapshot.memory.percent_used() else {
         return None;
     };
-    if percent < MEMORY_WARN_PERCENT {
+    if percent < warn {
         return None;
     }
-    let window = store.held_for(MEMORY_SUSTAINED_MS, |sample| {
+    let window = store.held_for(limits.memory_sustained_ms, |sample| {
         sample
             .memory
             .percent_used()
             .value()
             .copied()
-            .is_some_and(|p| p >= MEMORY_WARN_PERCENT)
+            .is_some_and(|p| p >= warn)
     })?;
     let available = match snapshot.memory.available {
         MetricState::Value(bytes) => render_bytes(bytes.0),
@@ -177,13 +220,13 @@ fn memory_pressure(snapshot: &Snapshot, store: &SampleStore) -> Option<Finding> 
         title: "Memory is almost used up".to_owned(),
         explain: format!(
             "{percent:.1} % of physical memory is in use ({available} available) and it has been \
-             above {MEMORY_WARN_PERCENT:.0} % for {} minutes. Windows is paging, which is what \
+             above {warn:.0} % for {} minutes. Windows is paging, which is what \
              makes switching between apps feel slow.",
             window.held_for_ms / 60_000
         ),
         evidence: vec![
             Evidence::new("memory.percent_used", render_percent(percent))
-                .threshold(render_percent(MEMORY_WARN_PERCENT))
+                .threshold(render_percent(warn))
                 .over(window.from_seq, window.to_seq, window.held_for_ms),
             Evidence::new(
                 "memory.available_bytes",
@@ -208,14 +251,22 @@ pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     requires: &["system.uptime_seconds"],
 };
 
-fn system_long_uptime(snapshot: &Snapshot, _store: &SampleStore) -> Option<Finding> {
+fn system_long_uptime(
+    snapshot: &Snapshot,
+    _store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
     let MetricState::Value(seconds) = snapshot.uptime else {
         return None;
     };
-    if seconds < UPTIME_LONG_SECONDS {
+    if seconds < limits.uptime_long_seconds {
         return None;
     }
     let days = seconds / 86_400;
+    // The evidence names the threshold the rule was given, not the one it was
+    // written with: a finding that cites a number it did not use is a lie in the
+    // one place the product promises there are none.
+    let threshold = format!("{} days", limits.uptime_long_seconds / 86_400);
     Some(Finding {
         id: format!("{}/system", SYSTEM_LONG_UPTIME.id),
         rule: SYSTEM_LONG_UPTIME.id.to_owned(),
@@ -231,7 +282,7 @@ fn system_long_uptime(snapshot: &Snapshot, _store: &SampleStore) -> Option<Findi
             "system.uptime_seconds",
             format!("{days} days"),
         )
-        .threshold("14 days")],
+        .threshold(threshold)],
         actions: Vec::new(),
         first_seen: snapshot.taken_at,
         last_seen: snapshot.taken_at,
@@ -244,9 +295,22 @@ fn system_long_uptime(snapshot: &Snapshot, _store: &SampleStore) -> Option<Findi
 /// Findings without evidence are dropped rather than shown: `is_supported()` is
 /// a hard gate, not a style check.
 pub fn evaluate(snapshot: &Snapshot, store: &SampleStore) -> Vec<Finding> {
+    evaluate_with(snapshot, store, &Thresholds::default())
+}
+
+/// The same, at numbers of the caller's choosing.
+///
+/// This is the whole reason [`Thresholds`] exists: the golden fixtures can be run
+/// at M1's numbers *and* at a second set, so the front-end that will eventually
+/// supply those numbers can be believed rather than trusted.
+pub fn evaluate_with(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Vec<Finding> {
     let mut findings: Vec<Finding> = RULES
         .iter()
-        .filter_map(|rule| (rule.evaluate)(snapshot, store))
+        .filter_map(|rule| (rule.evaluate)(snapshot, store, limits))
         .filter(|finding| {
             if finding.is_supported() {
                 true
@@ -455,6 +519,61 @@ mod tests {
             findings.iter().map(|f| f.id.as_str()).collect::<Vec<_>>(),
             again.iter().map(|f| f.id.as_str()).collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn the_defaults_are_the_numbers_m1_shipped() {
+        // A refactor that quietly moved a threshold would change nothing in the
+        // fixtures if the fixtures were regenerated with it. This is the guard.
+        let limits = Thresholds::default();
+        assert_eq!(limits.disk_warn_percent, DISK_WARN_PERCENT);
+        assert_eq!(limits.disk_critical_percent, DISK_CRITICAL_PERCENT);
+        assert_eq!(limits.disk_sustained_ms, DISK_SUSTAINED_MS);
+        assert_eq!(limits.memory_warn_percent, MEMORY_WARN_PERCENT);
+        assert_eq!(limits.memory_sustained_ms, MEMORY_SUSTAINED_MS);
+        assert_eq!(limits.uptime_long_seconds, UPTIME_LONG_SECONDS);
+    }
+
+    #[test]
+    fn a_rule_runs_at_the_numbers_it_is_given() {
+        // The same 91 % volume for the same ten minutes, twice: at M1's numbers,
+        // and with the warning line moved above it.
+        let store = series(700, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_disk_used(&mut snap, 91.0);
+            snap
+        });
+        let snapshot = store.latest().expect("samples").clone();
+        assert!(
+            evaluate_with(&snapshot, &store, &Thresholds::default())
+                .iter()
+                .any(|f| f.rule == DISK_LOW_FREE_SPACE.id)
+        );
+        let strict = Thresholds { disk_warn_percent: 95.0, ..Thresholds::default() };
+        assert!(
+            evaluate_with(&snapshot, &store, &strict).is_empty(),
+            "a 95 % line is above a 91 % volume"
+        );
+
+        // A machine up for three and a half days, with the "restart?" line moved
+        // to three days: the finding has to cite the number it used, not the one
+        // the rule was written with.
+        let mut short = healthy(1, 0);
+        short.uptime = MetricState::Value(3 * 86_400 + 12 * 3_600);
+        let store = series(1, |_| short.clone());
+        let three_days = Thresholds { uptime_long_seconds: 3 * 86_400, ..Thresholds::default() };
+        let findings = evaluate_with(&short, &store, &three_days);
+        let uptime = findings
+            .iter()
+            .find(|f| f.rule == SYSTEM_LONG_UPTIME.id)
+            .expect("three and a half days passes a three-day line");
+        assert!(
+            uptime.evidence.iter().any(|e| e.threshold.as_deref() == Some("3 days")),
+            "{:?}",
+            uptime.evidence
+        );
+        // At M1's fourteen days the same machine says nothing.
+        assert!(evaluate_with(&short, &store, &Thresholds::default()).is_empty());
     }
 
     #[test]

@@ -34,7 +34,7 @@ pub use model::{
     Bytes, CpuSample, DiskIoSample, GpuAdapter, GpuSample, MemorySample, MetricState, ProcessSample,
     Snapshot, TOP_PROCESSES, Timestamp, VolumeKind, VolumeSample, WhyUnknown, top_processes,
 };
-pub use rules::{RULES, Rule, RuleDef, evaluate};
+pub use rules::{RULES, Rule, RuleDef, Thresholds, evaluate, evaluate_with};
 pub use store::{DEFAULT_CAPACITY, HeldWindow, SampleStore};
 pub use summary::{Average, WindowSummary};
 pub use view::{

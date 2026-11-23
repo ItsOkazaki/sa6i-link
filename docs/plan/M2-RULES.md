@@ -179,14 +179,18 @@ did not run, and why (`requires` unavailable), because "nothing found" and
 
 ## Order of work, once the gate opens
 
-1. **The loader and the validator**, with fixtures only — no new thresholds, the
+1. **The thresholds, as data** — *done in M1's slice 17*: `rules::Thresholds`
+   carries all six numbers, `Rule::evaluate` takes it, and `evaluate_with` runs the
+   fixtures at any other set. Nothing changed for callers: `evaluate` passes the
+   defaults.
+2. **The loader and the validator**, with fixtures only — no new thresholds, the
    three M1 rules expressed as TOML and proven to produce byte-identical findings
    from the same recipes. That is the test that the front-end did not change a
    verdict.
-2. **The three rules that need a `metrics()` line** (`memory.commit_pressure`,
+3. **The three rules that need a `metrics()` line** (`memory.commit_pressure`,
    plus publishing the process creation stamp), then the four that need nothing.
-3. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
-4. **The five-machine review**, then whatever the review changed.
+4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
+5. **The five-machine review**, then whatever the review changed.
 
 Dependencies: `toml` is already in `Cargo.lock` through the workspace, so the
 front-end should not add a crate — but the version in the lock is the version
