@@ -822,6 +822,25 @@ the compiler accepts the Win32, PDH, SQLite and cxx-qt calls as written, and
 whether the page lays out as designed. Everything that could be read has been read;
 the rest is the build's to answer.
 
+## Slice 21 — `--json --budget` was a silent no-op
+
+Reading the CLI's own control flow found a small lie of omission: `--json` returned
+before the verdict was computed, so `sa6i-link intel snapshot --json --budget`
+printed a JSON document and exited 0 whatever the sampler did. A flag that is
+accepted and ignored is worse than one that is refused, because a script cannot
+tell the difference from a passing run.
+
+The verdict is now computed once, before the output decision, and:
+
+- `--json --budget` gains a `budget` object in the payload (`Verdict` already
+  serialises) and exits 3 on a miss, so one document and one exit code say the same
+  thing;
+- the text path prints the same four lines as before, from the same verdict —
+  computed once, not twice.
+
+The standalone binary got the same treatment, because it is meant to be the
+headless twin and a twin that disagrees with itself is not one.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included

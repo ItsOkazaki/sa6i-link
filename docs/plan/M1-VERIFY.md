@@ -72,3 +72,10 @@ is one of two things, in this order:
 failure is the one to fix; the report's per-slice sections say which file owns
 each of them, and the whole point of keeping the slices small is that none of
 them is a rewrite.
+
+## If you would rather not read a table
+
+`sa6i-link intel snapshot --json --budget` exits 3 when the sampler misses its
+budget and puts the verdict inside the same JSON document as the snapshot, so a
+CI job can assert on one file and one exit code without parsing the block of text
+a person reads.

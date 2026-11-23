@@ -108,10 +108,17 @@ fn main() {
     let summary =
         average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
 
+    // The verdict is computed before the output choice, so `--budget` means the
+    // same thing in both formats and `--json --budget` is not a silent no-op.
+    let verdict = budget.then(|| Verdict::judge(samples, interval_ms, &cost));
+
     if json {
         let mut payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });
         if let Some(summary) = &summary {
             payload["summary"] = serde_json::json!(summary);
+        }
+        if let Some(verdict) = &verdict {
+            payload["budget"] = serde_json::json!(verdict);
         }
         match serde_json::to_string_pretty(&payload) {
             Ok(text) => println!("{text}"),
@@ -120,7 +127,10 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        return;
+        match verdict {
+            Some(verdict) if !verdict.passed() => std::process::exit(3),
+            _ => return,
+        }
     }
 
     println!("Sa6i — this machine, measured");
@@ -141,8 +151,7 @@ fn main() {
 
     // A miss is a result, not a crash: the numbers are printed either way and
     // the exit code is what a script (or CI, or the next person) reads.
-    if budget {
-        let verdict = Verdict::judge(samples, interval_ms, &cost);
+    if let Some(verdict) = verdict {
         for line in verdict.render() {
             println!("  {line}");
         }

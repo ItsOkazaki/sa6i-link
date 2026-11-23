@@ -2775,13 +2775,24 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
     }
 
     let summary = average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
+    // Judged before the output decision, so `--budget` means the same thing in
+    // both formats. Asking for JSON used to return before the verdict was
+    // computed, which made `--json --budget` silently ignore `--budget`.
+    let verdict = budget.then(|| Verdict::judge(samples, interval_ms, &cost));
     if *json {
         let mut payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });
         if let Some(summary) = &summary {
             payload["summary"] = serde_json::json!(summary);
         }
+        if let Some(verdict) = &verdict {
+            payload["budget"] = serde_json::json!(verdict);
+        }
         println!("{}", serde_json::to_string_pretty(&payload)?);
-        return Ok(0);
+        // The exit code is a result, not a formatting choice.
+        return Ok(match verdict {
+            Some(verdict) if !verdict.passed() => 3,
+            _ => 0,
+        });
     }
 
     println!("Sa6i — this machine, measured");
@@ -2799,10 +2810,9 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
     for line in report::findings_lines(snapshot, &findings, samples) {
         println!("{line}");
     }
-    if !*budget {
+    let Some(verdict) = verdict else {
         return Ok(0);
-    }
-    let verdict = Verdict::judge(samples, interval_ms, &cost);
+    };
     for line in verdict.render() {
         println!("  {line}");
     }
