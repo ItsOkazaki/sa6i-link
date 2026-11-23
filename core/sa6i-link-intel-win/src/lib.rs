@@ -79,6 +79,10 @@ pub struct WindowsCollector {
     /// not give us one, which is reported per sample rather than retried every
     /// second: a disabled counter set does not come back on its own.
     disk: Option<pdh::DiskCounters>,
+    /// The `Memory` counter query, which carries `Pages Input/sec`. Separate from
+    /// the disk query on purpose: one broken counter object should not take the
+    /// other's number with it.
+    paging: Option<pdh::MemoryCounters>,
     /// The GPU query, or the reason there is none. `Unsupported` is what an old
     /// Windows looks like — Windows 10 1709 added these counters — and it stays
     /// `Unsupported` for the life of the collector.
@@ -102,6 +106,7 @@ impl WindowsCollector {
             previous_cpu: None,
             previous_cores: None,
             disk: pdh::DiskCounters::new(),
+            paging: pdh::MemoryCounters::new(),
             gpu: pdh::GpuCounters::new(),
             process_cpu: ProcessCpu::default(),
             seq: 0,
@@ -120,7 +125,13 @@ impl Collector for WindowsCollector {
     fn sample(&mut self, seq: u64, monotonic_ms: u64) -> Snapshot {
         let taken_at = Timestamp::now();
         let cpu = self.cpu();
-        let memory = read_memory();
+        // Paging is a counter, not a member of `GlobalMemoryStatusEx`, so it is
+        // filled in here rather than in `read_memory`.
+        let mut memory = read_memory();
+        memory.pages_input_per_second = match self.paging.as_mut() {
+            Some(paging) => paging.read(),
+            None => MetricState::Unknown(WhyUnknown::CollectorFailed),
+        };
         let volumes = read_volumes();
         let disk_io = match self.disk.as_mut() {
             Some(disk) => disk.read(),
@@ -358,6 +369,9 @@ mod platform {
                 available: failed,
                 commit_limit: failed,
                 commit_used: failed,
+                // Paging comes from its own counter, which has not been read yet;
+                // the failure above is about physical memory specifically.
+                pages_input_per_second: failed,
             };
         }
         // `ullTotalPageFile` is the commit limit, `ullAvailPageFile` what is
@@ -369,6 +383,10 @@ mod platform {
             available: MetricState::Value(Bytes(status.ullAvailPhys)),
             commit_limit: MetricState::Value(Bytes(commit_limit)),
             commit_used: MetricState::Value(Bytes(commit_limit - commit_available)),
+            // Not `GlobalMemoryStatusEx`' business: the caller fills this from the
+            // `Memory` counter query, and `NotCollectedYet` is what it means when
+            // that query does not exist on this machine.
+            pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
         }
     }
 
@@ -616,6 +634,7 @@ mod platform {
             available: MetricState::Unsupported(REASON),
             commit_limit: MetricState::Unsupported(REASON),
             commit_used: MetricState::Unsupported(REASON),
+            pages_input_per_second: MetricState::Unsupported(REASON),
         }
     }
     pub(super) fn read_volumes() -> Vec<VolumeSample> {

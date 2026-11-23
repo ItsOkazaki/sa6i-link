@@ -1,0 +1,25 @@
+{
+  "name": "pages-input-broken-in-the-middle",
+  "about": "Three minutes of hard faults, one minute of quiet, three more minutes of hard faults: a program starting and settling, not a machine that has run out of memory. The window is not held for its whole length.",
+  "segments": [
+    {
+      "minutes": 3,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "pages_input_per_second": 150
+    },
+    {
+      "minutes": 1,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "pages_input_per_second": 5
+    },
+    {
+      "minutes": 3,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "pages_input_per_second": 150
+    }
+  ],
+  "quiets": ["memory.paging"]
+}

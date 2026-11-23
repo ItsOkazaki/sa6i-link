@@ -160,6 +160,15 @@ impl Bytes {
 pub struct MemorySample {
     /// Installed physical memory.
     pub total: MetricState<Bytes>,
+    /// Hard faults per second that had to be resolved by reading from disk, from
+    /// `\Memory\Pages Input/sec`.
+    ///
+    /// This is the counter that says memory is too small for what is running: an
+    /// idle machine reads a handful a second, opening a program spikes into the
+    /// thousands for a moment, and a machine that stays in the hundreds is one
+    /// whose working set no longer fits. Zero is a real reading - nothing
+    /// faulted - and a rule that fired on it would fire on every quiet machine.
+    pub pages_input_per_second: MetricState<f32>,
     /// Physically available right now.
     pub available: MetricState<Bytes>,
     /// Commit limit (physical plus page file).
@@ -458,6 +467,9 @@ impl Snapshot {
         if let MetricState::Value(limit) = self.memory.commit_limit {
             out.push(("memory.commit_limit_bytes".to_owned(), limit.0 as f64));
         }
+        if let MetricState::Value(pages) = self.memory.pages_input_per_second {
+            out.push(("memory.pages_input_per_second".to_owned(), f64::from(pages)));
+        }
         for volume in &self.volumes {
             if let MetricState::Value(p) = volume.percent_used() {
                 out.push((format!("volume.{}.percent_used", volume.letter()), f64::from(p)));
@@ -530,6 +542,7 @@ pub const PUBLISHED_PATHS: &[&str] = &[
     "memory.available_bytes",
     "memory.commit_used_bytes",
     "memory.commit_limit_bytes",
+    "memory.pages_input_per_second",
     "volume.*.percent_used",
     "volume.*.free_bytes",
     "volume.*.total_bytes",
@@ -630,6 +643,7 @@ mod tests {
                 available: MetricState::Unknown(WhyUnknown::CollectorFailed),
                 commit_limit: MetricState::Unknown(WhyUnknown::CollectorFailed),
                 commit_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
@@ -768,6 +782,7 @@ mod tests {
                 available: MetricState::Value(Bytes(900)),
                 commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
                 commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample {
@@ -808,6 +823,7 @@ mod tests {
                 available: MetricState::Value(Bytes(500)),
                 commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
                 commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
@@ -847,6 +863,7 @@ mod tests {
             available: MetricState::Value(Bytes(1)),
             commit_limit: MetricState::Unknown(WhyUnknown::CollectorFailed),
             commit_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
+            pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
         };
         assert_eq!(
             memory.percent_used(),
@@ -869,6 +886,7 @@ mod tests {
                 available: MetricState::Value(Bytes(4_000_000_000)),
                 commit_limit: MetricState::Value(Bytes(20_000_000_000)),
                 commit_used: MetricState::Value(Bytes(8_000_000_000)),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: vec![volume("C:\\", 1000, 100)],
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
@@ -923,6 +941,7 @@ mod tests {
                 available: MetricState::Value(Bytes(1)),
                 commit_limit: MetricState::Value(Bytes(2)),
                 commit_used: MetricState::Value(Bytes(1)),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: vec![volume("C:\\", 4, 1)],
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),

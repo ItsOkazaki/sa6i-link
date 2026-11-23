@@ -33,6 +33,10 @@ const WINDOW_MINUTES: (u64, u64) = (1, 24 * 60);
 /// An uptime threshold, in minutes: a day to a year.
 const UPTIME_MINUTES: (u64, u64) = (24 * 60, 365 * 24 * 60);
 
+/// Hard faults per second: 1 to 100 000. Above that the number is not a machine,
+/// it is a typo.
+const PAGES_PER_SECOND: (u64, u64) = (1, 100_000);
+
 /// A latency threshold, in milliseconds: 1 ms to 10 s. Above ten seconds per
 /// transfer the machine is not slow, it is broken.
 const SLOW_MS: (u64, u64) = (1, 10_000);
@@ -61,6 +65,9 @@ struct Entry {
     /// A latency threshold in milliseconds. Milliseconds because a thresholds file
     /// that says `0.1` without saying of what is a units bug waiting to happen.
     slow_ms: Option<u64>,
+    /// Hard faults per second, for the rule that watches memory falling back to
+    /// the disk.
+    pages_per_second: Option<u64>,
     sustained: Option<String>,
     long_after: Option<String>,
     /// The fixture that proves this rule fires, and the one that proves it does
@@ -174,6 +181,7 @@ impl RuleFile {
                 ("long_after", entry.long_after.is_some()),
                 ("growth_mb", entry.growth_mb.is_some()),
                 ("slow_ms", entry.slow_ms.is_some()),
+                ("pages_per_second", entry.pages_per_second.is_some()),
             ] {
                 if present && !allowed_keys(def.id).contains(&key) {
                     refusals.push(Refusal::NotThisRulesKey {
@@ -275,6 +283,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
         "process.runaway_cpu" => &["warn_percent", "sustained"],
         "process.memory_growth" => &["growth_mb", "sustained"],
         "disk.slow_transfers" => &["slow_ms", "sustained"],
+        "memory.paging" => &["pages_per_second", "sustained"],
         "system.long_uptime" => &["long_after"],
         _ => &[],
     }
@@ -284,8 +293,8 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
 fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Refusal>) {
     match id {
         "disk.low_free_space" => {
-            let warn = percent(entry.warn_percent, id, "warn_percent", refusals);
-            let critical = percent(entry.critical_percent, id, "critical_percent", refusals);
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
+            let critical = ranged_f32(entry.critical_percent, id, "critical_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let (Some(warn), Some(critical)) = (warn, critical) {
                 if warn >= critical {
@@ -306,7 +315,7 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
         }
         "memory.pressure" => {
-            let warn = percent(entry.warn_percent, id, "warn_percent", refusals);
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(warn) = warn {
                 limits.memory_warn_percent = warn;
@@ -316,7 +325,7 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
         }
         "memory.commit_pressure" => {
-            let warn = percent(entry.warn_percent, id, "warn_percent", refusals);
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(warn) = warn {
                 limits.memory_commit_warn_percent = warn;
@@ -326,7 +335,7 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
         }
         "process.runaway_cpu" => {
-            let warn = percent(entry.warn_percent, id, "warn_percent", refusals);
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(warn) = warn {
                 limits.process_cpu_percent = warn;
@@ -336,7 +345,7 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
         }
         "process.memory_growth" => {
-            let grown = megabytes(entry.growth_mb, id, "growth_mb", refusals);
+            let grown = ranged_u64(entry.growth_mb, id, "growth_mb", GROWTH_MB, " MiB", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(megabytes) = grown {
                 limits.process_growth_bytes = megabytes * 1024 * 1024;
@@ -346,13 +355,30 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
         }
         "disk.slow_transfers" => {
-            let slow = milliseconds(entry.slow_ms, id, "slow_ms", refusals);
+            let slow = ranged_u64(entry.slow_ms, id, "slow_ms", SLOW_MS, " ms", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(millis) = slow {
                 limits.disk_slow_transfer_seconds = millis as f32 / 1000.0;
             }
             if let Some(millis) = window {
                 limits.disk_slow_sustained_ms = millis;
+            }
+        }
+        "memory.paging" => {
+            let pages = ranged_u64(
+                entry.pages_per_second,
+                id,
+                "pages_per_second",
+                PAGES_PER_SECOND,
+                " pages/s",
+                refusals,
+            );
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(pages) = pages {
+                limits.memory_pages_per_second = pages as f32;
+            }
+            if let Some(millis) = window {
+                limits.memory_paging_sustained_ms = millis;
             }
         }
         "system.long_uptime" => {
@@ -365,52 +391,53 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
     }
 }
 
-/// A percentage, or the refusal that says why it cannot be one.
-fn percent(value: Option<f32>, id: &str, key: &'static str, refusals: &mut Vec<Refusal>) -> Option<f32> {
+/// A number inside the range it can mean, or the refusal that says what the range
+/// was.
+///
+/// One function per value type rather than one per unit. The units live at the call
+/// site, where the number's meaning is, and the expected range goes into the
+/// refusal as a sentence a user can act on: "outside 1..=99.9" is not a message,
+/// "`disk.low_free_space` warn_percent = 900 is outside 1..=99.9" is.
+fn ranged_f32(
+    value: Option<f32>,
+    id: &str,
+    key: &'static str,
+    bounds: (f32, f32),
+    unit: &str,
+    refusals: &mut Vec<Refusal>,
+) -> Option<f32> {
     let value = value?;
-    if (PERCENT.0..=PERCENT.1).contains(&value) {
+    if (bounds.0..=bounds.1).contains(&value) {
         Some(value)
     } else {
         refusals.push(Refusal::OutOfRange {
             id: id.to_owned(),
             key,
-            value: format!("{value}"),
-            min: PERCENT.0,
-            max: PERCENT.1,
+            value: value.to_string(),
+            expected: format!("{}..={}{unit}", bounds.0, bounds.1),
         });
         None
     }
 }
 
-/// A growth threshold in mebibytes, or the refusal that says why it cannot be one.
-fn megabytes(value: Option<u64>, id: &str, key: &'static str, refusals: &mut Vec<Refusal>) -> Option<u64> {
+/// The same, for a whole number of some unit.
+fn ranged_u64(
+    value: Option<u64>,
+    id: &str,
+    key: &'static str,
+    bounds: (u64, u64),
+    unit: &str,
+    refusals: &mut Vec<Refusal>,
+) -> Option<u64> {
     let value = value?;
-    if (GROWTH_MB.0..=GROWTH_MB.1).contains(&value) {
+    if (bounds.0..=bounds.1).contains(&value) {
         Some(value)
     } else {
-        refusals.push(Refusal::OutOfGrowth {
+        refusals.push(Refusal::OutOfRange {
             id: id.to_owned(),
             key,
             value: value.to_string(),
-            min_mb: GROWTH_MB.0,
-            max_mb: GROWTH_MB.1,
-        });
-        None
-    }
-}
-
-/// A latency threshold in milliseconds, or the refusal that says why it cannot be.
-fn milliseconds(value: Option<u64>, id: &str, key: &'static str, refusals: &mut Vec<Refusal>) -> Option<u64> {
-    let value = value?;
-    if (SLOW_MS.0..=SLOW_MS.1).contains(&value) {
-        Some(value)
-    } else {
-        refusals.push(Refusal::OutOfMilliseconds {
-            id: id.to_owned(),
-            key,
-            value: value.to_string(),
-            min_ms: SLOW_MS.0,
-            max_ms: SLOW_MS.1,
+            expected: format!("{}..={}{unit}", bounds.0, bounds.1),
         });
         None
     }
@@ -436,12 +463,11 @@ fn period(
     if (bounds.0 * 60_000..=bounds.1 * 60_000).contains(&millis) {
         Some(millis)
     } else {
-        refusals.push(Refusal::OutOfWindow {
+        refusals.push(Refusal::OutOfRange {
             id: id.to_owned(),
             key,
             value: text.to_owned(),
-            min_minutes: bounds.0,
-            max_minutes: bounds.1,
+            expected: format!("{}..={} minutes", bounds.0, bounds.1),
         });
         None
     }
@@ -481,37 +507,13 @@ pub enum Refusal {
     DisagreesWithCode { id: String, field: &'static str },
     /// A `requires` path that no snapshot publishes.
     UnpublishedPath { id: String, path: String },
-    /// A percentage outside [`PERCENT`].
+    /// A number outside the range its rule can mean. `expected` is the range,
+    /// rendered with its unit.
     OutOfRange {
         id: String,
         key: &'static str,
         value: String,
-        min: f32,
-        max: f32,
-    },
-    /// A duration outside the window the rule can mean.
-    OutOfWindow {
-        id: String,
-        key: &'static str,
-        value: String,
-        min_minutes: u64,
-        max_minutes: u64,
-    },
-    /// A growth threshold outside [`GROWTH_MB`].
-    OutOfGrowth {
-        id: String,
-        key: &'static str,
-        value: String,
-        min_mb: u64,
-        max_mb: u64,
-    },
-    /// A latency threshold outside [`SLOW_MS`].
-    OutOfMilliseconds {
-        id: String,
-        key: &'static str,
-        value: String,
-        min_ms: u64,
-        max_ms: u64,
+        expected: String,
     },
     /// A warning threshold at or above the critical one.
     InvertedRange { id: &'static str, key: &'static str },
@@ -551,36 +553,8 @@ impl fmt::Display for Refusal {
                 id,
                 key,
                 value,
-                min,
-                max,
-            } => write!(
-                f,
-                "`{id}` {key} = {value} is outside {min}..={max}; that is a typo, not a stricter rule"
-            ),
-            Self::OutOfWindow {
-                id,
-                key,
-                value,
-                min_minutes,
-                max_minutes,
-            } => write!(
-                f,
-                "`{id}` {key} = {value} is outside {min_minutes}m..={max_minutes}m"
-            ),
-            Self::OutOfGrowth {
-                id,
-                key,
-                value,
-                min_mb,
-                max_mb,
-            } => write!(f, "`{id}` {key} = {value} MiB is outside {min_mb}..={max_mb} MiB"),
-            Self::OutOfMilliseconds {
-                id,
-                key,
-                value,
-                min_ms,
-                max_ms,
-            } => write!(f, "`{id}` {key} = {value} ms is outside {min_ms}..={max_ms} ms"),
+                expected,
+            } => write!(f, "`{id}` {key} = {value} is outside {expected}"),
             Self::InvertedRange { id, key } => write!(
                 f,
                 "`{id}` has `{key}` at or below its warning threshold, so critical never happens"
@@ -608,6 +582,7 @@ mod tests {
     const COMMIT: &str = include_str!("../rules/commit.toml");
     const GROWTH: &str = include_str!("../rules/growth.toml");
     const PROCESS: &str = include_str!("../rules/process.toml");
+    const PAGING: &str = include_str!("../rules/paging.toml");
     const SLOW: &str = include_str!("../rules/slow.toml");
     const SYSTEM: &str = include_str!("../rules/system.toml");
 
@@ -652,7 +627,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [DISK, MEMORY, COMMIT, GROWTH, PROCESS, SLOW, SYSTEM] {
+        for text in [DISK, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)
@@ -761,7 +736,7 @@ sustained = "5m"
             assert!(
                 refused.iter().any(|refusal| matches!(
                     refusal,
-                    Refusal::OutOfWindow { .. } | Refusal::BadDuration { .. }
+                    Refusal::OutOfRange { .. } | Refusal::BadDuration { .. }
                 )),
                 "{bad} should be refused, got {refused:?}"
             );

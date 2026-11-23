@@ -31,6 +31,7 @@ publishes:
 cpu.percent                        memory.percent_used
 cpu.core.{n}.percent               memory.total_bytes     memory.available_bytes
 memory.commit_used_bytes           memory.commit_limit_bytes
+memory.pages_input_per_second
 volume.{letter}.percent_used       volume.{letter}.free_bytes   volume.{letter}.total_bytes
 disk.read_bytes_per_second         disk.write_bytes_per_second
 disk.seconds_per_transfer
@@ -67,7 +68,7 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | **shipped**, 256 MiB of growth against the same stamp |
 | `memory.commit_pressure` | `memory.commit_used_bytes` / `memory.commit_limit_bytes` | 5 min | Warning | **shipped** |
 | `disk.slow_transfers` | `disk.seconds_per_transfer` | 10 min | Warning | **shipped**, read on the query that was already open |
-| `memory.paging` | `Pages Input/sec` | 5 min | Warning | needs a second PDH query (`Memory`) |
+| `memory.paging` | `memory.pages_input_per_second` | 5 min | Warning | **shipped**, on its own `Memory` query |
 
 ### The caveats that decide whether a rule is honest
 
@@ -259,8 +260,17 @@ rewrites the same line.
    and six minutes slow, one idle, five slow, stays quiet too - sustained means
    sustained, not averaged, which is the difference between a fault and a backup.
 
-   What is left in this step is `memory.paging`, which needs a second PDH query:
-   `Pages Input/sec` lives under the `Memory` object, not `PhysicalDisk`.
+   `memory.paging` is *done* too, and it is the last counter M2 needed: `Pages
+   Input/sec` lives under the `Memory` object, so it has its own query rather than
+   riding the disk one — a machine whose `PhysicalDisk` counters fail should still
+   report paging, and the reverse. Three fixtures again, and the near-miss that
+   matters is the broken window: three minutes of faults, one quiet, three more, is
+   a program starting and settling rather than a machine out of memory.
+
+   That is every rule in the catalogue that did not need a decision from a person.
+   What is left of M2 is `disk.smart_readiness` (an explicitly `Unsupported` row),
+   the rules the plan deferred, and the five-machine review - which is the only
+   part no amount of sandbox work can do.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

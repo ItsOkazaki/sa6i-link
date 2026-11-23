@@ -1,0 +1,21 @@
+# The numbers the paging rule decides with.
+#
+# `\Memory\Pages Input/sec` counts hard faults that had to be resolved by reading
+# from disk: memory that was written out and fetched again. It is the counter that
+# says memory is too small for what is running, where `disk.slow_transfers` says
+# the disk is slow for its own reasons. A machine can have either one alone.
+
+[[rule]]
+id = "memory.paging"
+severity = "warning"
+confidence = "likely"
+requires = ["memory.pages_input_per_second"]
+
+# 100 pages a second. Opening a program hits thousands for a moment and is fine;
+# staying in the hundreds means the working set no longer fits.
+pages_per_second = 100
+sustained = "5m"
+
+firing = "pages-input-sustained"
+# Slow, idle for a minute, slow again: sustained means sustained.
+near_miss = "pages-input-broken-in-the-middle"

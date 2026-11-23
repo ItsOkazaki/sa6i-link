@@ -77,6 +77,10 @@ struct Segment {
     /// or a disabled PDH looks like.
     #[serde(default)]
     disk_seconds_per_transfer: Option<f32>,
+    /// Hard faults per second resolved from disk, from `Pages Input/sec`. Absent
+    /// means the scenario's machine cannot read the counter.
+    #[serde(default)]
+    pages_input_per_second: Option<f32>,
     /// The processes on the machine during this segment. Absent means the
     /// scenario does not describe them, which keeps every older fixture honest.
     #[serde(default)]
@@ -232,6 +236,10 @@ fn memory(segment: &Segment) -> MemorySample {
         available: MetricState::Value(Bytes(free)),
         commit_limit,
         commit_used,
+        pages_input_per_second: match segment.pages_input_per_second {
+            Some(pages) => MetricState::Value(pages),
+            None => MetricState::Unknown(WhyUnknown::NotCollectedYet),
+        },
     }
 }
 
@@ -360,6 +368,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         uptime_days: 1.0,
         processes: Vec::new(),
         disk_seconds_per_transfer: None,
+        pages_input_per_second: None,
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(

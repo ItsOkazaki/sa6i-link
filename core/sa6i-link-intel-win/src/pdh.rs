@@ -54,6 +54,10 @@ mod imp {
     /// disk is the slow thing or merely the busy one.
     const TRANSFER_PATH: &str = "\\PhysicalDisk(_Total)\\Avg. Disk sec/Transfer";
 
+    /// Hard faults resolved by reading from disk. The `Memory` object, not
+    /// `PhysicalDisk`, which is why it needs its own query.
+    const PAGES_PATH: &str = "\\Memory\\Pages Input/sec";
+
     /// GPU counters exist from Windows 10 1709 (Fall Creators Update) and need a
     /// WDDM 2.0 driver; on older systems the counter set is simply absent, which
     /// `reason_of` turns into an honest "not on this version".
@@ -125,8 +129,62 @@ mod imp {
             DiskIoSample {
                 read_bytes_per_second: formatted(self.read),
                 write_bytes_per_second: formatted(self.write),
-                avg_seconds_per_transfer: seconds(self.transfer),
+                avg_seconds_per_transfer: number(self.transfer),
             }
+        }
+    }
+
+    /// `\Memory\Pages Input/sec`: hard faults resolved from disk.
+    ///
+    /// Its own query rather than a counter added to the disk one. PDH would accept
+    /// both objects in a single query, but a machine whose `PhysicalDisk` counters
+    /// fail should still be able to report paging, and the reverse: one broken
+    /// object should not take the other's number with it. A second
+    /// `PdhCollectQueryData` per second costs microseconds.
+    #[derive(Debug)]
+    pub struct MemoryCounters {
+        query: PDH_HQUERY,
+        pages: PDH_HCOUNTER,
+        collected_once: bool,
+    }
+
+    impl MemoryCounters {
+        /// Open the query, or `None` if this machine will not give us one.
+        #[allow(unsafe_code)]
+        pub fn new() -> Option<Self> {
+            let mut query = PDH_HQUERY::default();
+            // SAFETY: a null data source means "this machine"; the query handle is
+            // owned by the returned struct and closed in `Drop`.
+            if unsafe { PdhOpenQueryW(PCWSTR::null(), 0, &mut query) } != 0 {
+                return None;
+            }
+            let mut pages = PDH_HCOUNTER::default();
+            let pages_path = HSTRING::from(PAGES_PATH);
+            // SAFETY: the query is open; the counter handle is written into a local
+            // that is moved into the struct, and the query closes it.
+            unsafe {
+                if PdhAddEnglishCounterW(query, &pages_path, 0, &mut pages) != 0 {
+                    let _ = PdhCloseQuery(query);
+                    return None;
+                }
+            }
+            Some(Self { query, pages, collected_once: false })
+        }
+
+        /// Collect once and read the counter, or say why not.
+        #[allow(unsafe_code)]
+        pub fn read(&mut self) -> MetricState<f32> {
+            // SAFETY: `query` is a live handle owned by `self`.
+            if unsafe { PdhCollectQueryData(self.query) } != 0 {
+                return MetricState::Unknown(WhyUnknown::CollectorFailed);
+            }
+            if !self.collected_once {
+                // A rate with no interval behind it is a rate PDH reports as 0,
+                // and 0 pages per second is what an idle machine looks like.
+                self.collected_once = true;
+                return MetricState::Unknown(WhyUnknown::NotSampledYet);
+            }
+            number(self.pages)
         }
     }
 
@@ -333,14 +391,18 @@ mod imp {
     }
 }
 
-/// A duration counter, in seconds.
+/// A formatted double counter, as `f32`.
 ///
-/// Same two checks as [`formatted`] - the call and the counter's own status - and
-/// one more: a negative or non-finite value is a broken counter, not a fast disk.
-/// Zero is kept, because "no transfers happened" is a real reading and the rules
-/// know what it means.
+/// The same two checks as [`formatted`] - the call and the counter's own status -
+/// and one more: a negative or non-finite value is a broken counter. Zero is kept,
+/// because "no transfers happened" and "nothing faulted" are real readings and the
+/// rules know what they mean.
+///
+/// It carries no unit in its name on purpose: it reads a duration in seconds and a
+/// rate in pages per second, and a function called `seconds` returning a rate is
+/// how a units bug gets written.
 #[allow(unsafe_code)]
-fn seconds(counter: PDH_HCOUNTER) -> MetricState<f32> {
+fn number(counter: PDH_HCOUNTER) -> MetricState<f32> {
     let mut value = PDH_FMT_COUNTERVALUE::default();
     // SAFETY: `value` is a valid writable PDH_FMT_COUNTERVALUE, and the union is
     // read as the variant the requested format filled in.
@@ -349,9 +411,9 @@ fn seconds(counter: PDH_HCOUNTER) -> MetricState<f32> {
         return MetricState::Unknown(WhyUnknown::CollectorFailed);
     }
     // SAFETY: `doubleValue` is the member PDH_FMT_DOUBLE fills.
-    let seconds = unsafe { value.Anonymous.doubleValue };
-    if seconds.is_finite() && seconds >= 0.0 {
-        MetricState::Value(seconds as f32)
+    let number = unsafe { value.Anonymous.doubleValue };
+    if number.is_finite() && number >= 0.0 {
+        MetricState::Value(number as f32)
     } else {
         MetricState::Unknown(WhyUnknown::CollectorFailed)
     }
@@ -377,6 +439,20 @@ mod imp {
 
     /// No performance counters off Windows, and `new` says so.
     #[derive(Debug)]
+    pub struct MemoryCounters;
+
+    impl MemoryCounters {
+        pub fn new() -> Option<Self> {
+            None
+        }
+
+        pub fn read(&mut self) -> MetricState<f32> {
+            MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion)
+        }
+    }
+
+    /// No performance counters off Windows, and `new` says so.
+    #[derive(Debug)]
     pub struct GpuCounters;
 
     impl GpuCounters {
@@ -390,4 +466,4 @@ mod imp {
     }
 }
 
-pub use imp::{DiskCounters, GpuCounters};
+pub use imp::{DiskCounters, GpuCounters, MemoryCounters};

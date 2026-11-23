@@ -124,6 +124,7 @@ mod tests {
                 available,
                 commit_limit: bytes(20 * 1024 * 1024 * 1024),
                 commit_used: bytes(9 * 1024 * 1024 * 1024),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),

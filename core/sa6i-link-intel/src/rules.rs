@@ -45,6 +45,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
     Rule { def: PROCESS_MEMORY_GROWTH, evaluate: process_memory_growth },
     Rule { def: DISK_SLOW_TRANSFERS, evaluate: disk_slow_transfers },
+    Rule { def: MEMORY_PAGING, evaluate: memory_paging },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
 
@@ -74,6 +75,16 @@ const COMMIT_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 /// going to stop on its own.
 const RUNAWAY_CPU_PERCENT: f32 = 80.0;
 const RUNAWAY_CPU_SUSTAINED_MS: u64 = 10 * 60 * 1000;
+
+/// Hard faults per second that make the disk stand in for memory, and for how
+/// long.
+///
+/// 100 pages a second for five minutes. A machine opening a program hits thousands
+/// for a moment, which is fine; a machine that *stays* in the hundreds is one
+/// whose working set no longer fits in RAM, and every one of those pages is a disk
+/// read on the critical path.
+const PAGING_PAGES_PER_SECOND: f32 = 100.0;
+const PAGING_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 
 /// How long a disk transfer may take, and for how long, before the disk is the
 /// problem.
@@ -121,6 +132,10 @@ pub struct Thresholds {
     pub process_cpu_percent: f32,
     /// …once it has held it this long.
     pub process_cpu_sustained_ms: u64,
+    /// Memory faulting at this many pages a second…
+    pub memory_pages_per_second: f32,
+    /// …for this long means the working set no longer fits.
+    pub memory_paging_sustained_ms: u64,
     /// A disk transfer taking at least this many seconds…
     pub disk_slow_transfer_seconds: f32,
     /// …for this long is a disk that is the reason everything is slow.
@@ -148,6 +163,8 @@ impl Default for Thresholds {
             process_growth_window_ms: GROWTH_WINDOW_MS,
             disk_slow_transfer_seconds: SLOW_TRANSFER_SECONDS,
             disk_slow_sustained_ms: SLOW_TRANSFER_SUSTAINED_MS,
+            memory_pages_per_second: PAGING_PAGES_PER_SECOND,
+            memory_paging_sustained_ms: PAGING_SUSTAINED_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
         }
     }
@@ -638,6 +655,67 @@ fn disk_slow_transfers(
     })
 }
 
+/// The disk has been making up for full memory for five minutes.
+///
+/// The companion to `disk.slow_transfers`, and they are not the same finding: a
+/// slow disk is slow for its own reasons, while this one says memory is too small
+/// for what is running and the disk is what pays. A machine can have this without
+/// a slow disk (a fast SSD absorbs it and the machine merely feels sluggish) and a
+/// slow disk without this.
+pub const MEMORY_PAGING: RuleDef = RuleDef {
+    id: "memory.paging",
+    severity: Severity::Warning,
+    confidence: Confidence::Likely,
+    requires: &["memory.pages_input_per_second"],
+};
+
+fn memory_paging(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let busy = limits.memory_pages_per_second;
+    let MetricState::Value(pages) = snapshot.memory.pages_input_per_second else {
+        return None;
+    };
+    // Zero hard faults is a machine with room to spare, not a fault-free disk.
+    if pages <= 0.0 || pages < busy {
+        return None;
+    }
+    let window = store.held_for(limits.memory_paging_sustained_ms, |sample| {
+        sample
+            .memory
+            .pages_input_per_second
+            .value()
+            .is_some_and(|pages| *pages >= busy)
+    })?;
+    Some(Finding {
+        id: format!("{}/system", MEMORY_PAGING.id),
+        rule: MEMORY_PAGING.id.to_owned(),
+        severity: MEMORY_PAGING.severity,
+        confidence: MEMORY_PAGING.confidence,
+        subject: "system".to_owned(),
+        title: "The disk is doing memory's work".to_owned(),
+        explain: format!(
+            "{pages:.0} pages a second have been read back from disk for {} minutes. Those are \
+             hard faults: memory that had to be written out and fetched again, so the disk is \
+             standing in for RAM. Everything that touches that memory waits on the disk, and on a \
+             mechanical drive the machine feels far worse than this number looks. More memory, or \
+             fewer programs open at once, is the fix.",
+            window.held_for_ms / 60_000
+        ),
+        evidence: vec![
+            Evidence::new("memory.pages_input_per_second", format!("{pages:.0} pages/s"))
+                .threshold(format!("{busy:.0} pages/s"))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
 /// The machine has not been restarted in a fortnight.
 pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     id: "system.long_uptime",
@@ -740,6 +818,7 @@ mod tests {
                 available: MetricState::Value(Bytes(8 * 1_000_000_000)),
                 commit_limit: MetricState::Value(Bytes(24 * 1_000_000_000)),
                 commit_used: MetricState::Value(Bytes(9 * 1_000_000_000)),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: vec![VolumeSample {
                 mount: "C:\\".to_owned(),
@@ -957,6 +1036,28 @@ mod tests {
         assert_eq!(findings[0].rule, "disk.slow_transfers");
         assert_eq!(findings[0].evidence[0].metric, "disk.seconds_per_transfer");
         assert_eq!(findings[0].evidence[0].observed, "180.0 ms");
+    }
+
+    #[test]
+    fn paging_is_faults_that_stay_high_never_zero() {
+        let busy = series(360, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.memory.pages_input_per_second = MetricState::Value(150.0);
+            snap
+        });
+        let findings = findings_of(&busy);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "memory.paging");
+        assert_eq!(findings[0].evidence[0].metric, "memory.pages_input_per_second");
+
+        // A machine with room to spare faults nothing, and zero pages is a
+        // reading about the machine, not a rate about the disk.
+        let quiet = series(360, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.memory.pages_input_per_second = MetricState::Value(0.0);
+            snap
+        });
+        assert!(findings_of(&quiet).is_empty());
     }
 
     #[test]

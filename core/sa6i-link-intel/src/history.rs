@@ -290,6 +290,7 @@ mod tests {
                 available: MetricState::Value(Bytes(500)),
                 commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
                 commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: vec![VolumeSample {
                 mount: "C:\\".to_owned(),
