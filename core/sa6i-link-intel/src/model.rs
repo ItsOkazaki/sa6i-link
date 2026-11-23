@@ -6,7 +6,10 @@
 //! confuse with "0 %", "0 bytes" or "no problem found" — every consumer has to
 //! match on it before it can display anything.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    cmp::Ordering,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -250,6 +253,11 @@ pub struct ProcessSample {
     /// Resident memory (the working set), which is what "using 1.2 GB" means to
     /// a person looking at Task Manager.
     pub working_set: MetricState<Bytes>,
+    /// Percent of one core over the interval since the previous snapshot — the
+    /// number Task Manager's Processes tab shows. A process with several busy
+    /// threads may read above 100, and a process seen for the first time reads
+    /// [`WhyUnknown::NotSampledYet`], because a rate needs two moments.
+    pub cpu_percent: MetricState<f32>,
 }
 
 /// How many processes a snapshot carries. Enough to see the problem, few enough
@@ -260,15 +268,32 @@ fn working_set_bytes(process: &ProcessSample) -> u64 {
     process.working_set.value().map_or(0, |bytes| bytes.0)
 }
 
-/// The `limit` heaviest processes, heaviest first.
+/// The `limit` processes worth showing, busiest first.
 ///
-/// Pure and total, so the order is testable without a machine: heaviest first,
-/// then by pid, so two runs over the same machine produce the same list and a
-/// screenshot can be compared with a log. A process whose memory could not be
-/// read sorts last rather than pretending to be 0 B.
+/// Pure and total, so the order is testable without a machine. The rule is: the
+/// busiest by CPU first (a process using a core is the answer to "what is
+/// happening"), then the heaviest by memory (the answer to "what is using my
+/// RAM"), then by pid, so two runs over the same machine produce the same list
+/// and a screenshot can be compared with a log. On an idle machine every rate is
+/// about zero and the list is the heaviest by memory, which is what Task Manager
+/// defaults to as well.
+///
+/// A process whose memory could not be read sorts last rather than pretending to
+/// be 0 B, and one whose CPU is not known yet — the first sample after it
+/// appeared — sorts below processes that were measured: an unmeasured cost is
+/// not a cheap one, but it is not a claim either.
 pub fn top_processes(mut processes: Vec<ProcessSample>, limit: usize) -> Vec<ProcessSample> {
+    let cpu_of = |process: &ProcessSample| process.cpu_percent.value().copied();
     processes.sort_by(|a, b| {
-        working_set_bytes(b).cmp(&working_set_bytes(a)).then_with(|| a.pid.cmp(&b.pid))
+        let busiest = match (cpu_of(a), cpu_of(b)) {
+            (Some(one), Some(two)) => two.partial_cmp(&one).unwrap_or(Ordering::Equal),
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => Ordering::Equal,
+        };
+        busiest
+            .then_with(|| working_set_bytes(b).cmp(&working_set_bytes(a)))
+            .then_with(|| a.pid.cmp(&b.pid))
     });
     processes.truncate(limit);
     processes
@@ -369,7 +394,7 @@ pub struct Snapshot {
     /// rather than empty on a machine whose counters do not exist (Windows 8.1
     /// and older, or a driver with no WDDM 2.0 GPU counters).
     pub gpu: MetricState<GpuSample>,
-    /// The heaviest processes, see [`TOP_PROCESSES`]. Empty when processes were
+    /// The busiest (then heaviest) processes, see [`TOP_PROCESSES`]. Empty when processes were
     /// not collected at all.
     pub processes: Vec<ProcessSample>,
     /// Seconds since the machine booted.
@@ -430,6 +455,16 @@ impl Snapshot {
                 }
             }
         }
+        for process in &self.processes {
+            if let MetricState::Value(bytes) = process.working_set {
+                let path = format!("process.{}.working_set_bytes", process.pid);
+                out.push((path, bytes.0 as f64));
+            }
+            if let MetricState::Value(percent) = process.cpu_percent {
+                let path = format!("process.{}.cpu_percent", process.pid);
+                out.push((path, f64::from(percent)));
+            }
+        }
         if let MetricState::Value(uptime) = self.uptime {
             out.push(("system.uptime_seconds".to_owned(), uptime as f64));
         }
@@ -462,7 +497,7 @@ mod tests {
         assert_eq!(unknown.why(), Some(WhyUnknown::NeedsElevation));
         assert_eq!(unknown.value(), None);
         // The only way to get a number is to ask for one explicitly.
-        let snapshot = Snapshot {
+        let mut snapshot = Snapshot {
             seq: 1,
             taken_at: Timestamp(0),
             monotonic_ms: 0,
@@ -483,6 +518,17 @@ mod tests {
             uptime: MetricState::Unknown(WhyUnknown::CollectorFailed),
         };
         assert!(snapshot.metrics().is_empty(), "unknown metrics must not become numbers");
+        // A process row is no different: its rate is published under its pid
+        // only once it has been measured, and the process that has only been
+        // seen once publishes its memory and no rate at all.
+        snapshot.processes = vec![process(400, 64), busy(401, 1, 3.5)];
+        let metrics = snapshot.metrics();
+        assert!(metrics.contains(&("process.401.cpu_percent".to_owned(), 3.5)));
+        assert!(metrics.contains(&("process.400.working_set_bytes".to_owned(), 64.0 * 1024.0 * 1024.0)));
+        assert!(
+            metrics.iter().all(|(path, _)| path != "process.400.cpu_percent"),
+            "{metrics:?}"
+        );
     }
 
     fn process(pid: u32, megabytes: u64) -> ProcessSample {
@@ -490,17 +536,37 @@ mod tests {
             pid,
             name: format!("proc{pid}.exe"),
             working_set: MetricState::Value(Bytes(megabytes * 1024 * 1024)),
+            cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
         }
     }
 
+    fn busy(pid: u32, megabytes: u64, percent: f32) -> ProcessSample {
+        ProcessSample { cpu_percent: MetricState::Value(percent), ..process(pid, megabytes) }
+    }
+
     #[test]
-    fn the_heaviest_processes_come_first_and_ties_are_broken_by_pid() {
+    fn with_no_rate_known_the_heaviest_processes_come_first() {
         let processes = vec![process(4, 100), process(9, 900), process(2, 100)];
         let top = top_processes(processes, TOP_PROCESSES);
         let pids: Vec<u32> = top.iter().map(|p| p.pid).collect();
         // 9 is heaviest; 4 and 2 tie, and the lower pid wins, so the list is the
         // same on every run and a screenshot can be compared with a log.
         assert_eq!(pids, vec![9, 2, 4]);
+    }
+
+    #[test]
+    fn a_busy_process_outranks_a_big_idle_one() {
+        // 900 MB idle versus 10 MB using most of a core: the list is about what
+        // is happening now, and the CPU column is how that is read.
+        let top = top_processes(vec![busy(3, 900, 0.2), busy(8, 10, 87.5)], TOP_PROCESSES);
+        assert_eq!(top[0].pid, 8);
+        assert_eq!(top[1].pid, 3);
+        // Two equally busy processes fall back to memory, then to pid.
+        let top = top_processes(vec![busy(1, 10, 5.0), busy(2, 20, 5.0)], TOP_PROCESSES);
+        assert_eq!(top[0].pid, 2);
+        // A measured rate beats an unknown one, whatever the memory.
+        let top = top_processes(vec![process(4, 5_000), busy(6, 1, 0.0)], TOP_PROCESSES);
+        assert_eq!(top[0].pid, 6);
     }
 
     #[test]
@@ -518,6 +584,7 @@ mod tests {
             pid: 1,
             name: "protected.exe".to_owned(),
             working_set: MetricState::Unknown(WhyUnknown::NeedsElevation),
+            cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
         };
         let top = top_processes(vec![mystery, process(7, 10)], TOP_PROCESSES);
         assert_eq!(top[0].pid, 7);

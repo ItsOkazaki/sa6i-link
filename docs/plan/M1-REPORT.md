@@ -14,18 +14,19 @@ actions.
 | Findings and evidence | `core/sa6i-link-intel/src/findings.rs` | **done** — severity, confidence, evidence, rendering |
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
-| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
+| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, the busiest processes with their CPU rate, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
 | Sampling verdict | `core/sa6i-link-intel/src/budget.rs` | **done** — rate, per-sample cost and CPU share judged against a stated budget, tested with invented timings |
 | Report wording | `core/sa6i-link-intel-win/src/report.rs` | **done** — one copy of the sentences, printed by both `sa6i-link intel snapshot` and the standalone binary |
 | Window averages | `core/sa6i-link-intel/src/summary.rs` | **done** — mean of what was measured, with the counts; unknown excluded, never averaged in as zero |
-| Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
+| Process CPU | `core/sa6i-link-intel/src/cpu.rs` | **done** — a rate per process, keyed by pid *and* creation stamp, so a recycled pid starts over; 6 tests, no machine needed |
+| Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process rows with memory and CPU, volume rows; words chosen here, Qt only places them |
 | Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, Overview (tiles, sparklines) and Detail (cores, volumes, processes, limits); needs a machine with Qt |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
 | Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
-| Monitor page, TOML rules, disk/GPU/process collectors | — | **not started** (see below) |
+| TOML rules, Doctor rules, actions | — | **not started** (M2, see below) |
 
 ```powershell
 cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot
@@ -574,13 +575,61 @@ The switch is page state, not a route: both views read the same frame, and the
 sampler does not care which one is showing. Nothing about the thread, the JSON
 or the tests changes.
 
+## Slice 14 — per-process CPU, and what "busiest" means
+
+Slice 6 deferred this in as many words: a rate needs two samples keyed by
+something that survives pid reuse, a map that outlives a snapshot, and a rule for
+a process that appears mid-interval. This is that slice, done before the two
+machine checks because the Detail view could otherwise answer only "what is using
+my RAM" while the question people arrive with is "what is using my CPU".
+
+**Identity first, arithmetic second.** `core/sa6i-link-intel/src/cpu.rs` holds
+`ProcessCpu`, a map from `ProcessKey { pid, created }` to the last reading.
+`percent(key, at_ms, cpu_ms)` answers `NotSampledYet` for a process it has not
+seen — never 0 — `NotSampledYet` again for two reads in the same millisecond
+(a span of zero is not a rate), and `0.0` for a counter that went backwards.
+`retain()` forgets processes that exited, so a machine that opens a program a
+minute does not grow a map for ever. A recycled pid is a *different* key, so the
+new process starts over instead of inheriting the old one's CPU: that is the bug
+this type exists to prevent, and there is a test named after it.
+
+**One more call on a handle already open.** `GetProcessTimes` runs on the same
+`PROCESS_QUERY_LIMITED_INFORMATION` handle as the memory query: kernel plus user
+time in 100 ns ticks, plus the creation stamp that makes the key. No new
+privilege, no new API family; a failure is `CollectorFailed` on that row rather
+than a dropped row or a zero. `TICKS_PER_MS` names the unit once.
+
+**Percent of one core, like Task Manager.** A process with four busy threads reads
+400 %, and the page does not divide by the core count behind your back. If a share
+of the whole machine is ever wanted, it will be a second column with its own
+label.
+
+**The list changed, and so did its name.** `top_processes` orders busiest first,
+then heaviest, then by pid: on a machine doing something the CPU column is the
+answer, and on an idle one every rate is near zero and the list is the memory
+hogs, which is what Task Manager shows by default too. A process whose rate is not
+known yet sorts *below* measured ones rather than being called cheap. The Detail
+card is now **Busiest processes**, with a CPU column, a dash for a process seen
+once and a caption that says why; the Limits card's closing line drops
+"per-process CPU" and keeps temperatures.
+
+**On the wire** `processes[].cpu` is a number or `null`, under the same rule as
+every other field: `null` for a process seen once, `12.5` for one measured. The
+report line became `8 busiest: msedge.exe 1.2 GB 12.5 %, …`, and `metrics()`
+publishes `process.{pid}.cpu_percent` only when there is a rate to publish.
+
+Uncompiled, like the rest. The new risk is one signature: `GetProcessTimes` takes
+the handle and four `&mut FILETIME` out-parameters, modelled on the existing call
+in `desktop/app/src/win/mod.rs` rather than recalled.
+
 ## What the collectors do not do, on purpose
 
-Everything the plan listed for M1.1 is collected now. What is still absent is
-absent for a reason: temperatures need a kernel driver, and per-process CPU is a
-rate that needs a two-sample map keyed by pid and creation time. Adding either
-without fixtures would be guessing with a UI attached. (`GetPerformanceInfo` for
-a process count was evaluated and not shipped: nothing uses it yet.)
+Everything the plan listed for M1.1 is collected now, per-process CPU included
+since slice 14. What is still absent is absent for a reason: temperatures need a
+kernel driver: reading them without one means shipping a driver, and reading them
+with one means shipping something no monitoring app should ask of a user.
+(`GetPerformanceInfo` for a process count was evaluated and not shipped: nothing
+uses it yet.)
 
 Evaluated but not shipped: `GetPerformanceInfo` for a process count (easy, but
 nothing yet uses it) and `GetVolumeInformationW` for filesystem names (only
@@ -598,6 +647,9 @@ per-core numbers should not also be the machine whose PDH query is suspect.
 | Rule thresholds | Firing case and near-miss case per rule, including "network drive ignored", "worst volume wins", "unreadable volume is silent" |
 | CPU maths | Tick deltas including an idle machine, a backwards counter, and a kernel/idle disagreement |
 | Ordering | Worst-first, and identical ids across two evaluations of the same store |
+| Process CPU identity | `cpu::tests`: first reading `NotSampledYet`, a recycled pid is a new process, a zero span is not a rate, a backwards counter is 0 % and not negative, exited processes are forgotten |
+| Process ranking | `model::tests`: a busy 10 MB process above a 900 MB idle one, ties falling back to memory then pid, a measured rate above an unmeasured one |
+| Process rate on the wire | `view::tests`: `processes[].cpu` is `null` for a process seen once and `12.5` for a measured one, and `metrics()` publishes no rate for the unmeasured row |
 | Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
 | Dependency graph | Both intel closures were recomputed independently in Python from the same lock — 62 and 74 crates, zero network-capable, which is what the Rust test asserts |
@@ -651,7 +703,10 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-   Then the two checks the CLI can answer without Qt: `sa6i-link intel snapshot
+   Then the two checks the CLI can answer without Qt — and, while the CLI is
+   running, the one new line in the process list: a second `sa6i-intel-snapshot`
+   run should show a rate for every process that was in the first sample, and a
+   process that started between the two should show a dash rather than 0 %: `sa6i-link intel snapshot
    --samples 60 --interval-ms 1000 --average` beside Task Manager's Performance
    tab, and `--samples 1800 --interval-ms 1000 --budget` for the half hour. Two
    of M1's six exit criteria close that way, with the desktop app still unbuilt.

@@ -69,20 +69,29 @@ fn describe_gpu(gpu: &MetricState<GpuSample>) -> String {
     }
 }
 
-/// `"msedge.exe 1.2 GB, chrome.exe 900 MB"` for the heaviest few, or why not.
+/// `"msedge.exe 1.2 GB 12.5 %, chrome.exe 900 MB 0.4 %"` for the busiest few — the
+/// rate is left out for a process that has only been seen once — or `"none measured"`.
 fn describe_processes(processes: &[ProcessSample]) -> String {
     let described: Vec<String> = processes
         .iter()
         .take(3)
-        .map(|process| match process.working_set {
-            MetricState::Value(bytes) => format!("{} {}", process.name, render_bytes(bytes.0)),
-            _ => format!("{} (size not readable)", process.name),
+        .map(|process| {
+            let memory = match process.working_set {
+                MetricState::Value(bytes) => render_bytes(bytes.0),
+                _ => "(size not readable)".to_owned(),
+            };
+            match process.cpu_percent {
+                MetricState::Value(percent) => {
+                    format!("{} {} {}", process.name, memory, render_percent(percent))
+                }
+                _ => format!("{} {}", process.name, memory),
+            }
         })
         .collect();
     if described.is_empty() {
         return "none measured".to_owned();
     }
-    format!("{} heaviest: {}", processes.len(), described.join(", "))
+    format!("{} busiest: {}", processes.len(), described.join(", "))
 }
 
 /// `"— (requires administrator rights)"`, or a dash when nothing is wrong.

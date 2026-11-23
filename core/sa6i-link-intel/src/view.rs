@@ -187,6 +187,10 @@ pub struct ProcessRow {
     pub memory: String,
     /// Percent of installed memory, when both numbers are known.
     pub share: Option<f32>,
+    /// Percent of one core since the previous sample, when this process has been
+    /// seen twice. `null` — not 0 — for a process that is new to the list or
+    /// whose CPU could not be read.
+    pub cpu: Option<f32>,
     pub known: bool,
 }
 
@@ -403,7 +407,8 @@ fn process_row(process: &ProcessSample, memory_total: Option<Bytes>) -> ProcessR
         None => (NO_VALUE.to_owned(), None, false),
     };
     let name = if process.name.is_empty() { "unknown".to_owned() } else { process.name.clone() };
-    ProcessRow { pid: process.pid, name, memory, share, known }
+    let cpu = process.cpu_percent.value().copied();
+    ProcessRow { pid: process.pid, name, memory, share, cpu, known }
 }
 
 fn volume_row(volume: &VolumeSample) -> VolumeRow {
@@ -483,11 +488,13 @@ mod tests {
                     pid: 4242,
                     name: "msedge.exe".to_owned(),
                     working_set: bytes(1024 * 1024 * 1024),
+                    cpu_percent: MetricState::Value(12.5),
                 },
                 ProcessSample {
                     pid: 88,
                     name: "System".to_owned(),
                     working_set: MetricState::Unknown(WhyUnknown::NeedsElevation),
+                    cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
                 },
             ],
             uptime: MetricState::Value(3 * 3600),
@@ -611,12 +618,14 @@ mod tests {
         let edge = &view.processes[0];
         assert_eq!((edge.pid, edge.name.as_str(), edge.memory.as_str()), (4242, "msedge.exe", "1.0 GB"));
         assert_eq!(edge.share, Some(6.25));
+        assert_eq!(edge.cpu, Some(12.5));
         assert!(edge.known);
         // The row is there — it exists on this machine — but its number is not
         // a number, and its share is not 0 %.
         let system = &view.processes[1];
         assert_eq!(system.memory, NO_VALUE);
         assert_eq!(system.share, None);
+        assert_eq!(system.cpu, None, "an unmeasured CPU is not 0 %");
         assert!(!system.known);
         assert_eq!(view.summary, "One thing needs attention.");
     }
@@ -632,6 +641,10 @@ mod tests {
         assert_eq!(cpu["fraction"], serde_json::Value::Null);
         assert_eq!(cpu["note"], WhyUnknown::NotSampledYet.explain());
         assert_eq!(cpu["missing"], "not_sampled_yet");
+        // The same rule holds for the process table: the row is on the wire, its
+        // rate is null.
+        assert_eq!(json["processes"][1]["cpu"], serde_json::Value::Null);
+        assert_eq!(json["processes"][0]["cpu"], 12.5);
         // Gaps survive the trip: null stays null rather than becoming zero.
         assert_eq!(json["cpu"], serde_json::json!([serde_json::Value::Null]));
         assert_eq!(json["tiles"][1]["value"], "50.0 %");

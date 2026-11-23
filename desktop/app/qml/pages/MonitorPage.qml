@@ -350,7 +350,13 @@ Item {
                 }
             }
 
-            // ---- The heaviest processes ----
+            // ---- The busiest processes ----
+            //
+            // Busiest first, then the heaviest: on a machine doing something
+            // the CPU column is the answer, and on an idle one every rate is
+            // near zero and the list is the memory hogs. A dash in that column
+            // means the process has only been seen once — a rate needs two
+            // samples — not that it used nothing.
             Card {
                 visible: !page.showingOverview
                 width: parent.width
@@ -359,7 +365,13 @@ Item {
                     id: processesColumn
                     width: parent.width
                     spacing: 2
-                    Txt { text: qsTr("Heaviest processes"); role: "label"; muted: true }
+                    Txt { text: qsTr("Busiest processes"); role: "label"; muted: true }
+                    Txt {
+                        width: parent.width
+                        text: qsTr("A dash is a process seen once: a rate needs two samples.")
+                        role: "caption"
+                        muted: true
+                    }
                     Repeater {
                         model: page.processes
                         delegate: Item {
@@ -367,13 +379,27 @@ Item {
                             height: 30
                             readonly property string shareText: page.has(modelData.share)
                                 ? modelData.share.toFixed(1) + " %" : ""
+                            readonly property string cpuText: page.has(modelData.cpu)
+                                ? modelData.cpu.toFixed(1) + " %" : "—"
                             Txt {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - 240
+                                width: parent.width - 330
                                 text: modelData.name
                                 role: "body"
+                                elide: Text.ElideRight
                             }
                             Txt {
+                                anchors.right: memoryLabel.left
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 80
+                                horizontalAlignment: Text.AlignRight
+                                text: cpuText
+                                role: "body"
+                                muted: !page.has(modelData.cpu)
+                            }
+                            Txt {
+                                id: memoryLabel
                                 anchors.right: shareLabel.left
                                 anchors.rightMargin: 16
                                 anchors.verticalCenter: parent.verticalCenter
@@ -442,7 +468,8 @@ Item {
                     }
                     Txt {
                         width: parent.width
-                        text: qsTr("Temperatures and per-process CPU are not collected.")
+                        text: qsTr("Temperatures are not collected.")
+                            + " " + qsTr("A process's CPU begins at its second sample.")
                         role: "caption"
                         muted: true
                     }

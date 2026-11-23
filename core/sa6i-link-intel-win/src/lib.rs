@@ -8,7 +8,9 @@
 //! attempted and failing mysteriously.
 //!
 //! Slice 1 covers CPU, memory, volumes and uptime; slice 4 adds per-core CPU,
-//! slice 6 the heaviest processes, slice 7 disk throughput (see the `pdh` module).
+//! slice 6 the process list, slice 7 disk throughput (see the `pdh` module) and
+//! slice 14 the per-process CPU rate, whose arithmetic lives in the core crate's
+//! `cpu` module because it is a pure function of two readings.
 //!
 //! GPU memory is still missing on purpose: `QueryVideoMemoryInfo` answers for
 //! the calling process on an adapter, not for the machine, so it needs the PDH
@@ -25,8 +27,9 @@
 use std::time::{Duration, Instant};
 
 use sa6i_link_intel::{
-    Bytes, Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessSample,
-    SampleStore, Snapshot, TOP_PROCESSES, Timestamp, VolumeSample, WhyUnknown, top_processes,
+    Bytes, Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessCpu,
+    ProcessKey, ProcessSample, SampleStore, Snapshot, TOP_PROCESSES, Timestamp, VolumeSample,
+    WhyUnknown, top_processes,
 };
 
 mod pdh;
@@ -80,6 +83,9 @@ pub struct WindowsCollector {
     /// Windows looks like — Windows 10 1709 added these counters — and it stays
     /// `Unsupported` for the life of the collector.
     gpu: Result<pdh::GpuCounters, WhyUnknown>,
+    /// The previous CPU reading of each process, so the next one is a rate.
+    /// Keyed by pid *and* creation stamp: Windows recycles pids.
+    process_cpu: ProcessCpu,
     seq: u64,
 }
 
@@ -97,6 +103,7 @@ impl WindowsCollector {
             previous_cores: None,
             disk: pdh::DiskCounters::new(),
             gpu: pdh::GpuCounters::new(),
+            process_cpu: ProcessCpu::default(),
             seq: 0,
         }
     }
@@ -123,7 +130,7 @@ impl Collector for WindowsCollector {
             Ok(counters) => counters.read(),
             Err(reason) => MetricState::Unsupported(*reason),
         };
-        let processes = platform::read_processes();
+        let processes = platform::read_processes(&mut self.process_cpu, monotonic_ms);
         let uptime = read_uptime();
         Snapshot {
             seq,
@@ -245,7 +252,7 @@ mod platform {
         GetSystemTimes, GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
     };
     use windows::Win32::System::Threading::{
-        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        GetProcessTimes, OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
         QueryFullProcessImageNameW,
     };
     use windows::Wdk::System::SystemInformation::{
@@ -256,6 +263,9 @@ mod platform {
     fn ticks(time: FILETIME) -> u64 {
         (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime)
     }
+
+    /// A millisecond in `FILETIME` units: the API counts 100 ns ticks.
+    const TICKS_PER_MS: u64 = 10_000;
 
     #[allow(unsafe_code)]
     pub(super) fn read_cpu_times() -> Option<CpuTimes> {
@@ -439,7 +449,7 @@ mod platform {
         }
     }
 
-    /// The heaviest processes a standard user can open.
+    /// The processes a standard user can open, with their CPU cost.
     ///
     /// Each process is opened with `PROCESS_QUERY_LIMITED_INFORMATION` only —
     /// that is what makes this run without an administrator. A process that
@@ -447,7 +457,7 @@ mod platform {
     /// `System` and other users' sessions are simply absent, which is the
     /// honest version of "no admin prompt".
     #[allow(unsafe_code)]
-    pub(super) fn read_processes() -> Vec<ProcessSample> {
+    pub(super) fn read_processes(cpu: &mut ProcessCpu, now_ms: u64) -> Vec<ProcessSample> {
         const WIDEST: usize = 65_536;
         let mut capacity = 1024usize;
         loop {
@@ -471,13 +481,36 @@ mod platform {
                 continue;
             }
             pids.truncate(count);
-            let processes: Vec<ProcessSample> = pids.into_iter().filter_map(process_of).collect();
+            let mut processes = Vec::new();
+            let mut keys = Vec::new();
+            for pid in pids {
+                let Some((mut sample, key, cpu_ms)) = process_of(pid) else { continue };
+                match key {
+                    Some(key) => {
+                        sample.cpu_percent = cpu.percent(key, now_ms, cpu_ms);
+                        keys.push(key);
+                    }
+                    // The timing call failed for this process: it is still a
+                    // row, and its CPU column says the reading failed.
+                    None => sample.cpu_percent = MetricState::Unknown(WhyUnknown::CollectorFailed),
+                }
+                processes.push(sample);
+            }
+            // A process that exited must not leave its reading behind for a
+            // future process that inherits the pid.
+            cpu.retain(keys);
             return top_processes(processes, TOP_PROCESSES);
         }
     }
 
+    /// One process, its identity and its CPU time — or nothing, for the ones a
+    /// standard user cannot open.
+    ///
+    /// `None` for the CPU key means `GetProcessTimes` refused, which is not the
+    /// same as a process using nothing: the row is kept and its rate is
+    /// `CollectorFailed`.
     #[allow(unsafe_code)]
-    fn process_of(pid: u32) -> Option<ProcessSample> {
+    fn process_of(pid: u32) -> Option<(ProcessSample, Option<ProcessKey>, u64)> {
         if pid == 0 {
             // The idle process: a name and a size that would both be invented.
             return None;
@@ -503,6 +536,19 @@ mod platform {
                 std::ptr::from_mut(&mut counters).cast::<PROCESS_MEMORY_COUNTERS>(),
                 counters.cb,
             );
+            // The same handle answers for CPU: kernel plus user time, in 100 ns
+            // units, and the creation stamp that makes a pid unique.
+            let mut creation = FILETIME::default();
+            let mut exit = FILETIME::default();
+            let mut kernel = FILETIME::default();
+            let mut user = FILETIME::default();
+            let timed = GetProcessTimes(
+                handle,
+                &mut creation,
+                &mut exit,
+                &mut kernel,
+                &mut user,
+            );
             let _ = CloseHandle(handle);
             if named.is_err() && measured.is_err() {
                 return None;
@@ -518,7 +564,19 @@ mod platform {
             } else {
                 MetricState::Unknown(WhyUnknown::CollectorFailed)
             };
-            Some(ProcessSample { pid, name, working_set })
+            let (key, cpu_ms) = if timed.is_ok() {
+                let used = ticks(kernel).saturating_add(ticks(user));
+                (Some(ProcessKey { pid, created: ticks(creation) }), used / TICKS_PER_MS)
+            } else {
+                (None, 0)
+            };
+            let sample = ProcessSample {
+                pid,
+                name,
+                working_set,
+                cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+            };
+            Some((sample, key, cpu_ms))
         }
     }
 
@@ -553,7 +611,7 @@ mod platform {
     pub(super) fn read_volumes() -> Vec<VolumeSample> {
         Vec::new()
     }
-    pub(super) fn read_processes() -> Vec<ProcessSample> {
+    pub(super) fn read_processes(_cpu: &mut ProcessCpu, _now_ms: u64) -> Vec<ProcessSample> {
         Vec::new()
     }
     pub(super) fn read_uptime() -> MetricState<u64> {
@@ -640,7 +698,9 @@ mod tests {
     }
 
     #[test]
-    fn the_process_list_is_bounded_named_and_heaviest_first() {
+    fn the_process_list_is_bounded_named_and_unmeasured_at_first() {
+        // The order itself — busiest, then heaviest — is tested without a
+        // machine in `model::top_processes`, where the numbers can be chosen.
         let mut collector = WindowsCollector::new();
         let snapshot = collector.next_snapshot();
         assert!(snapshot.processes.len() <= TOP_PROCESSES);
@@ -648,13 +708,15 @@ mod tests {
             // The idle process has no real name or size, so it is never listed.
             assert_ne!(process.pid, 0);
             assert!(!process.name.is_empty());
+            // A rate needs two readings, so the first snapshot has none — and
+            // "none" is a reason, never a zero.
+            assert_eq!(
+                process.cpu_percent,
+                MetricState::Unknown(WhyUnknown::NotSampledYet),
+                "{} on the first sample",
+                process.name
+            );
         }
-        let sizes: Vec<u64> = snapshot
-            .processes
-            .iter()
-            .map(|process| process.working_set.value().map_or(0, |bytes| bytes.0))
-            .collect();
-        assert!(sizes.windows(2).all(|pair| pair[0] >= pair[1]), "{sizes:?}");
         // On a machine with a process table this must actually find something;
         // elsewhere the collector is honest and returns nothing.
         #[cfg(windows)]
