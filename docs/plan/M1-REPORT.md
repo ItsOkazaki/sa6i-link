@@ -919,8 +919,14 @@ Au niveau de scripts/verify-m1.ps1 : 58
 + $root = Split-Path -Parent $PSScriptRoot
 ```
 
-It is an automatic variable and it is normally set, so from here I cannot say why
-it was not; what I can say is that the script should not have cared. It now
+I said at the time that I could not explain it. The next run explained it: the
+machine is **Windows 7 SP1 with PowerShell 2.0**, and `$PSScriptRoot` arrived in
+PowerShell 3.0. It was not a mystery, it was a version - and `Get-CimInstance`, which
+took the OS, CPU, core count and memory rows down with it, is 3.0 too. A script
+written on a modern PowerShell and run on the machine it was written *for* is a
+portability test I had not thought to run.
+
+The script now
 collects four candidate directories - `$PSScriptRoot`, `$PSCommandPath`,
 `$MyInvocation.MyCommand.Path`, the current directory - and takes whichever has a
 `Cargo.toml` above it, and if none does it says so and names the four paths it

@@ -48,6 +48,21 @@ cannot start looks exactly like a broken project:
 (Get-WmiObject Win32_OperatingSystem).Version
 ```
 
+### The first machine measured: Windows 7 SP1, PowerShell 2.0
+
+`6.1.7601`, Professional, PowerShell `2.0`. That answers three things at once:
+
+- `Get-CimInstance` and `$PSScriptRoot` are PowerShell **3.0**; on 2.0 they are not
+  missing values, they do not exist. The first two runs died on this.
+- `cargo build` exits `-1073741511` and `cargo --version` prints nothing. That is
+  the toolchain below failing to load, not a compiler finding.
+- So this machine **cannot build the project**, and it is also the machine
+  criterion 3 is about ("runs on Windows 7"). It can run a binary; it cannot make
+  one.
+
+That leaves a scope question the plan does not answer, and M2 should not start
+before it does: see the Windows 7 row in the exit-criteria table.
+
 rustc 1.78 and later require **Windows 10**. On Windows 7 or 8.1 the build exits
 with `-1073741511`, which is `0xC0000139 STATUS_ENTRYPOINT_NOT_FOUND`: the loader
 could not resolve a DLL, so `cargo.exe` never ran a line of anything. `cargo
