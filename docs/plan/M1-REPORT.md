@@ -17,6 +17,7 @@ actions.
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, no admin |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
+| Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
 | Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
 | Monitor page, TOML rules, disk/GPU/process collectors | — | **not started** (see below) |
 
@@ -217,6 +218,52 @@ That is the value of the audit: nothing in the sandbox could compile it, and
 CI would have gone red on a technicality that took ten seconds to fix once it
 was seen.
 
+## Slice 5 — the promises, as tests
+
+Two of M1's exit criteria are properties of the code rather than of a run:
+"nothing leaves the machine" and the layering rules in
+`docs/architecture/MODULE-MAP.md` §1. Both are now read out of `Cargo.lock` by
+`core/sa6i-link-intel/tests/privacy.rs` instead of being asserted in prose.
+
+**The socket check.** Every crate reachable from `sa6i-link-intel` *and* from
+`sa6i-link-intel-win` is compared against a list of crates that can open a
+socket or a TLS session. Today both closures are clean (62 and 74 crates). The
+list is a ratchet, not a proof against every name the ecosystem will invent —
+so adding a network stack to a core crate now requires editing the list, which
+is exactly the visible, deliberate act it should be.
+
+**The layering check.** The same closure proves `sa6i-link-intel` is the bottom
+of the stack: no `sa6i-link-core`, no protocol, no `windows`, no CLI.
+
+Three details make the test trustworthy rather than decorative:
+
+- It builds the graph **by name**, ignoring versions. A check that cannot name
+  a version has to keep every candidate edge; dropping one because the lock
+  spelled `"log"` instead of `"log 0.4.29"` is how such a test passes while a
+  network crate is linked.
+- The pieces that must be present (`serde`, `tracing`, `rusqlite`) are asserted
+  before the absence check, so a parser that silently stopped parsing fails
+  loudly instead of passing vacuously.
+- The parser itself is tested on a miniature lock that includes a versioned
+  edge, in the real format.
+
+## Where M1 stands against its exit criteria
+
+M1 exits when these hold. The plan's wording, and what would demonstrate it:
+
+| Exit criterion | Demonstrated by | State |
+| --- | --- | --- |
+| Numbers within ±3 % of Task Manager | a side-by-side run on a real machine | **needs your PC** |
+| 1 Hz for 30 min under budget | `--samples 1800` with a stopwatch and a CPU reading | **needs your PC** |
+| Win7 renders `Unsupported`, with reasons | the `cfg(not(windows))` collector and the reason strings already do this on any non-Windows build; a real Win7 pass is still owed | **partly demonstrable** |
+| CLI JSON stable and tested | `tests/scenarios.rs`: field names, `Unknown` encoding, exact finding sets | **done** |
+| No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
+| Nothing leaves the machine | `tests/privacy.rs`: no socket-capable crate in either intel closure | **done** |
+
+Two of six need a machine, one needs an old one, and the Monitor page (M1.3) is
+not started. Which means M2's rules should wait for the two-machine run rather
+than stack more rules on numbers nobody has compared.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -246,6 +293,7 @@ query is suspect.
 | Ordering | Worst-first, and identical ids across two evaluations of the same store |
 | Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
+| Dependency graph | Both intel closures were recomputed independently in Python from the same lock — 62 and 74 crates, zero network-capable, which is what the Rust test asserts |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 
@@ -283,9 +331,26 @@ depends on the API shape.
 
 ## Next
 
+0. **Stop and compile.** Six commits of Win32 calls, SQLite calls and a new
+   dependency have never been through `rustc`. Until they have, every further
+   collector is written on top of assumptions nobody has checked, and the cost
+   of finding out grows with each one:
+
+   ```powershell
+   cargo fmt --all
+   cargo test --locked -p sa6i-link-intel -p sa6i-link-intel-win
+   cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
+   ```
+
 1. **M1.1, the rest:** disk throughput (PDH, English counters), GPU memory, and
    a per-process top-N snapshot. Each gets its own slice and its own fixture,
    for the same reason slice 4 was one collector and not four.
+   - PDH is deliberately not written yet. The `windows` crate is not in this
+     sandbox, and I could not confirm from documentation whether
+     `PdhOpenQueryW` returns `WIN32_ERROR` or `PDH_STATUS` in 0.62 — two
+     plausible signatures, and one of them is a compile error in a crate that
+     cannot be compiled here. Guessing that is worse than waiting for one
+     `cargo check`.
    - GPU memory needs a decision before code: `QueryVideoMemoryInfo` answers for
      *the calling process* on an adapter, not for the machine, so using it as
      "GPU memory pressure" would be a true number answering the wrong question.
