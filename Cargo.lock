@@ -2499,6 +2499,8 @@ dependencies = [
  "libc",
  "material-colors",
  "sa6i-link-core",
+ "sa6i-link-intel",
+ "sa6i-link-intel-win",
  "sa6i-vcam",
  "pkg-config",
  "qrcode",

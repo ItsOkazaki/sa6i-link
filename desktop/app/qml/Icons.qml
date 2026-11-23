@@ -51,6 +51,8 @@ QtObject {
     // A cable plug: the phone is connected over USB.
     readonly property string usb: "M10 3v4M14 3v4M7 7h10v5a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2zM12 14v7"
     readonly property string signal: "M4.5 19v-2M9.5 19v-6M14.5 19v-10M19.5 19V5"
+    // A measured line with a beat in it: the Monitor.
+    readonly property string pulse: "M3 12h3.5l2.5-7 4 14 2.5-7H21"
     readonly property string clipboardList: "M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8.5 11h7M8.5 14.5h7M8.5 18h4.5"
     readonly property string battery: "M4 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM21.5 10v4"
     readonly property string phone: "M7.5 2h9A2.5 2.5 0 0 1 19 4.5v15a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 19.5v-15A2.5 2.5 0 0 1 7.5 2zM10 18.5h4"

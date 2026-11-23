@@ -1025,6 +1025,12 @@ fn build_candidates() -> Vec<PaletteCandidate> {
         ("calls", "Go to Calls", "Call history, contacts, and dialpad", "call"),
         ("photos", "Go to Photos", "Recent photos, screenshots, and videos from your phone", "photo"),
         ("apps", "Go to Apps & Mirroring", "Mirror your phone screen or open individual apps", "apps"),
+        (
+            "monitor",
+            "Go to Monitor",
+            "This PC, measured once a second: CPU, memory, disks, GPU, processes",
+            "pulse",
+        ),
         ("deck", "Go to Media & Deck", "Now Playing controls and audio output switcher", "deck"),
         ("timeline", "Go to Timeline", "Unified history of files, photos, clips, and calls", "history"),
         (

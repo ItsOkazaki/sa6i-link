@@ -16,6 +16,8 @@ pub mod devices;
 #[allow(unsafe_code)]
 pub mod history;
 #[allow(unsafe_code)]
+pub mod intel;
+#[allow(unsafe_code)]
 pub mod media;
 #[allow(unsafe_code)]
 pub mod messages;

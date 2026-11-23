@@ -268,6 +268,7 @@ A rule or action without tests is not merged; demo data exists only behind a
 | Contract | Slice 1 | Why |
 | --- | --- | --- |
 | §4 data model | `Snapshot` carries CPU (total and per-core), memory, volumes, disk throughput, GPU adapters, uptime and the eight heaviest processes; frequency and thermal are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §5 Monitor host | `IntelHost` runs one sampling thread and pushes a `MonitorView` frame as JSON to QML; the thread is owned by the page, not the app | a Monitor that samples while its page is closed is a battery cost nobody asked for, and a re-used run flag leaves two samplers after a quick stop/start |
 | §5 Monitor view | `view::monitor_view` builds the page's tiles and sparklines in the core crate, not in QML or the FFI layer | a rule that cannot be unit-tested is a rule that will be broken by a binding; "never render Unknown as 0" needed a test, not a code review |
 | §4 GPU | per-adapter dedicated VRAM from the `GPU Adapter Memory` counters, not `QueryVideoMemoryInfo` | that call answers for the calling *process* on one adapter; using it as machine-wide pressure would be a true number answering the wrong question |
 | §4 disk io | `Snapshot.disk_io` is machine-wide throughput from `PhysicalDisk(_Total)`, not per volume | a volume spanning two disks has no single throughput, and per-volume numbers would invite adding them up. Per-physical-disk detail arrives with the Monitor page's disk view, if it needs it |

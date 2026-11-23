@@ -680,6 +680,17 @@ NativeWindow {
                 onClicked: window.page = "apps"
             }
             NavItem {
+                iconPath: Icons.pulse
+                text: qsTr("Monitor")
+                selected: window.page === "monitor"
+                activeHover: rail.hoveredNav === "monitor"
+                onHoveredChanged: {
+                    if (hovered) rail.hoveredNav = "monitor"
+                    else if (rail.hoveredNav === "monitor") rail.hoveredNav = ""
+                }
+                onClicked: window.page = "monitor"
+            }
+            NavItem {
                 iconPath: Icons.deck
                 text: qsTr("Deck")
                 selected: window.page === "deck"
@@ -758,6 +769,7 @@ NativeWindow {
                     : window.page === "calls" ? qsTr("Calls")
                     : window.page === "photos" ? qsTr("Photos")
                     : window.page === "apps" ? qsTr("Apps")
+                    : window.page === "monitor" ? qsTr("Monitor")
                     : window.page === "deck" ? qsTr("Deck")
                     : window.page === "guide" ? qsTr("Features guide")
                     : qsTr("Settings")
@@ -973,6 +985,7 @@ NativeWindow {
                     case "calls": return "qrc:/qt/qml/sa6i/link/qml/pages/CallsPage.qml"
                     case "photos": return "qrc:/qt/qml/sa6i/link/qml/pages/PhotosPage.qml"
                     case "apps": return "qrc:/qt/qml/sa6i/link/qml/pages/AppsPage.qml"
+                    case "monitor": return "qrc:/qt/qml/sa6i/link/qml/pages/MonitorPage.qml"
                     case "deck": return "qrc:/qt/qml/sa6i/link/qml/pages/DeckPage.qml"
                     case "guide": return "qrc:/qt/qml/sa6i/link/qml/pages/FeaturesGuidePage.qml"
                     case "settings": return "qrc:/qt/qml/sa6i/link/qml/pages/SettingsPage.qml"

@@ -17,6 +17,7 @@ actions.
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
 | Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
+| Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, tiles and sparklines; needs a machine with Qt |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -262,10 +263,9 @@ M1 exits when these hold. The plan's wording, and what would demonstrate it:
 | No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
 | Nothing leaves the machine | `tests/privacy.rs`: no socket-capable crate in either intel closure | **done** |
 
-Two of six need a machine, one needs an old one. The Monitor page's data is
-built and tested; the Qt surface in front of it is not written yet. Which means
-M2's rules should wait for the two-machine run rather than stack more rules on
-numbers nobody has compared.
+Two of six need a machine, one needs an old one, and the Monitor page now exists
+with nothing having compiled it. Which means M2's rules should wait for the
+two-machine run rather than stack more rules on numbers nobody has compared.
 
 ## Slice 6 — the heaviest processes
 
@@ -416,6 +416,59 @@ reports its memory in use and the note "shared memory; no dedicated VRAM",
 because it owns none. There is a value and no percentage, which is the honest
 pair for that hardware.
 
+## Slice 10 — the Monitor page
+
+M1.3's surface: a `Monitor` destination in the rail, the command palette and the
+title bar, and a page built from four tiles, two minute-long sparklines, the
+logical processors, the volumes and the eight heaviest processes.
+
+**The host.** `IntelHost` (`desktop/app/src/bridge/intel.rs`) is a cxx-qt
+singleton with one job: run one thread that samples once a second, evaluate the
+rules against the ring it keeps (so a finding's window is minutes long even
+though a frame is one second), and hand the page a finished `MonitorView` as
+JSON. Four properties: the frame, `live`, `samples`, `intervalMs`. The thread
+owns the collector because the handles inside it belong to the thread that
+opened them, and it sleeps in 50 ms slices so `stop()` is felt immediately
+rather than up to a second later.
+
+Two ownership details worth naming, because both are bugs in waiting:
+
+- The run flag is an `Arc<AtomicBool>` **replaced** on every `start()`, not
+  reused. A thread still winding down keeps the old flag, which is already
+  false, so a quick stop-and-start cannot end with two samplers writing frames.
+- The page stops sampling when it is destroyed. The rail is a `Loader`; leaving
+  the page tears it down, and a Monitor that samples the machine while nobody
+  is looking is exactly the kind of thing this project should not do.
+
+**Why JSON.** `MonitorView` is already the finished frame, and one string
+property means one binding to re-evaluate per tick rather than a dozen — and no
+cxx-qt struct bridging to get right blind. The cost is a `JSON.parse` a second
+over a few kilobytes, which is what several existing pages already do. The wire
+format is pinned by a test: `missing` arrives as `"not_sampled_yet"`, `fraction`
+as `null`, and a gap in the sparkline as `null` rather than `0`.
+
+**The line is drawn by `Sparkline.qml`, in a `Canvas`, and it breaks at gaps.**
+It walks the points, and on a `null` it strokes what it has and starts a new
+path, so nothing is drawn across a missing sample. One measured moment is a dot,
+because a single point is not a line and nothing at all would look like a
+failure of the page.
+
+**What the page does not do:** it has no arithmetic — every string, every `0..1`
+fill and every reason sentence is already decided in `view.rs` — and it never
+shows `0` for something it did not measure. The tiles show a dash and the reason;
+an unmeasured core is an empty bar with a dash above it; a volume with no free
+space figure says why.
+
+**Honest state:** this is the only slice in the project that no check here can
+touch. There is no Qt and no Rust toolchain in this sandbox, CI builds the app on
+a machine that has both, and the things I could not verify are specific: that
+`cxx_qt::CxxQtThread<IntelHost>` is the right handle type in 0.10, that
+`rust_mut()` projects the run flag the way `history.rs` projects its rows, that a
+`#[qml_singleton]` in a new file in `build.rs`'s `files([…])` list is registered
+by name, and that the `Canvas` drawing calls I used exist in Qt 6's 2D context.
+Everything else — the view, the wire format, the gap rule, the share arithmetic —
+is tested.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now. What is still absent is
@@ -493,10 +546,12 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-1. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt) sampling once a second on
-   its own thread and pushing a `MonitorView` across, then `MonitorPage.qml`
-   with the Overview tiles and the sparklines. The data behind it is slice 9;
-   what is left is the Qt, which is also what nobody here can compile.
+1. **Build the app.** `cargo build -p sa6i-link` on a machine with Qt and the
+   Rust toolchain, then open Monitor and watch it for a minute. This is now the
+   gate in front of everything else: M1.3 is the first slice that has never been
+   looked at, and the failure modes I listed in its section are the ones to
+   expect first (the cxx-qt handle type and `rust_mut`, the singleton
+   registration, the `Canvas` calls).
 2. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
 
 (`sample_hourly` rollups stay unscheduled on purpose: they need a week of real

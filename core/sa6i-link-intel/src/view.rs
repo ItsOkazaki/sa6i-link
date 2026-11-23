@@ -14,6 +14,8 @@
 //! - A moment that was never sampled is a gap in the line, not a point at the
 //!   bottom. A dropped sample and an idle machine look identical otherwise.
 
+use serde::Serialize;
+
 use crate::findings::{all_clear_sentence, render_bytes, render_percent};
 use crate::model::{
     Bytes, DiskIoSample, GpuSample, MemorySample, MetricState, ProcessSample, Snapshot, Timestamp,
@@ -36,7 +38,8 @@ fn clamp_fraction(percent: f32) -> f32 {
 }
 
 /// Which number a tile shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TileId {
     Cpu,
     Memory,
@@ -71,7 +74,8 @@ impl TileId {
 /// `value` and `note` are finished strings: the page never formats a number.
 /// When `missing` is set the tile has no reading, `value` is [`NO_VALUE`], and
 /// `note` is the reason in plain words.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Tile {
     pub id: TileId,
     pub label: &'static str,
@@ -103,7 +107,8 @@ impl Tile {
 /// A `None` is a moment that was never measured. It stays a gap through
 /// [`Sparkline::normalized`], so the drawing can leave a hole rather than
 /// invent a value.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[serde(transparent)]
 pub struct Sparkline {
     values: Vec<Option<f32>>,
 }
@@ -164,7 +169,8 @@ impl Sparkline {
 }
 
 /// One logical processor, as a bar.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CoreBar {
     pub index: usize,
     /// `None` when that core was not measured — the bar draws empty, not idle.
@@ -172,7 +178,8 @@ pub struct CoreBar {
 }
 
 /// One row of the process table.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessRow {
     pub pid: u32,
     pub name: String,
@@ -184,7 +191,8 @@ pub struct ProcessRow {
 }
 
 /// One row of the volume list.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VolumeRow {
     /// `"C:"` for the mount `"C:\\"`.
     pub mount: String,
@@ -198,7 +206,11 @@ pub struct VolumeRow {
 }
 
 /// Everything the Monitor page needs for one frame.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// This is also the wire format: the Qt host serializes it to JSON once a
+/// second, so the page never receives a number it has to format itself.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MonitorView {
     /// The snapshot this was built from.
     pub seq: u64,
@@ -607,6 +619,22 @@ mod tests {
         assert_eq!(system.share, None);
         assert!(!system.known);
         assert_eq!(view.summary, "One thing needs attention.");
+    }
+
+    #[test]
+    fn the_wire_format_keeps_unknown_out_of_the_numbers() {
+        let mut broken = snapshot(1);
+        broken.cpu.percent = MetricState::Unknown(WhyUnknown::NotSampledYet);
+        let json = serde_json::to_value(monitor_view(&broken, &[broken.clone()], 0)).expect("serializes");
+        let cpu = &json["tiles"][0];
+        assert_eq!(cpu["id"], "cpu");
+        assert_eq!(cpu["value"], NO_VALUE);
+        assert_eq!(cpu["fraction"], serde_json::Value::Null);
+        assert_eq!(cpu["note"], WhyUnknown::NotSampledYet.explain());
+        assert_eq!(cpu["missing"], "not_sampled_yet");
+        // Gaps survive the trip: null stays null rather than becoming zero.
+        assert_eq!(json["cpu"], serde_json::json!([serde_json::Value::Null]));
+        assert_eq!(json["tiles"][1]["value"], "50.0 %");
     }
 
     #[test]
