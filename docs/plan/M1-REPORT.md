@@ -904,6 +904,13 @@ part of its interface. And the sandbox's inability to run anything was never the
 only gap: this file was read three times by me and never executed, which is exactly
 the class of defect that only an execution finds.
 
+The second thing that run found is the same lesson in another form: the script
+ended with `exit`, and `exit` in a script called from a console **closes that
+console**. From the caller's side a finished run and a crash look identical, and
+the results scroll away with the window that held them. It sets `$LASTEXITCODE`
+and `$Host.SetShouldExit($code)` now, so `powershell -File` still returns 1 on a
+failed criterion and an interactive session survives long enough to be read.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
