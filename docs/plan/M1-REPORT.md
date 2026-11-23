@@ -263,7 +263,7 @@ M1 exits when these hold. The plan's wording, and what would demonstrate it:
 | --- | --- | --- |
 | Numbers within ±3 % of Task Manager | `--samples 60 --interval-ms 1000 --average` next to Task Manager's Performance tab | **needs your PC, measurable now** |
 | 1 Hz for 30 min under budget | `--samples 1800 --interval-ms 1000 --budget`: prints the rate, the per-sample cost and this process's CPU share, and exits 3 on a miss | **needs your PC, measurable now** |
-| Win7 renders `Unsupported`, with reasons | the `cfg(not(windows))` collector and the reason strings already do this on any non-Windows build; a real Win7 pass is still owed | **partly demonstrable** |
+| On Win7 the CLI reports unreadable metrics as `Unknown`, with reasons | `sa6i-link intel snapshot` built for `x86_64-win7-windows-msvc` and run on the Windows 7 machine. **Reworded**: Qt 6 supports Windows 10 1809+ only, so the *window* cannot run there at all - see [`WIN7.md`](WIN7.md) | **open, and now plannable** |
 | CLI JSON stable and tested | `tests/scenarios.rs`: field names, `Unknown` encoding, exact finding sets; the same payload from `sa6i-link intel snapshot --json` | **done, one payload shared by two front-ends** |
 | No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
 | Nothing leaves the machine | `tests/privacy.rs`: no socket-capable crate in either intel closure | **done** |

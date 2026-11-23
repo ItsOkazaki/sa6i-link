@@ -6,10 +6,19 @@ now and expensive to discover halfway through: which rules the current collector
 can actually answer, which need one more counter, and which would need a new kind
 of reading with a privacy cost attached.
 
-**The gate still holds.** Nothing here is built until M1's six exit criteria are
-closed on a real PC (`docs/plan/M1-VERIFY.md`). A rule is a sentence about a
-machine; writing twelve of them against numbers nobody has compared with Task
-Manager is how a diagnostics tool ends up confidently wrong. What this page
+**The gate still holds, with one exception.** No new rule is built until M1's
+six exit criteria are closed on a real PC (`docs/plan/M1-VERIFY.md`). A rule is a
+sentence about a machine; writing twelve of them against numbers nobody has
+compared with Task Manager is how a diagnostics tool ends up confidently wrong.
+
+The exception is **item 2 below, the loader**, and it is granted for a narrow
+reason: the loader's proof is that the same recipes produce *byte-identical
+findings* at the same numbers. It changes no verdict, adds no threshold, and its
+test needs no machine. Waiving the gate for a change that cannot move a number is
+different from waiving it for a change that decides one. The first machine turned
+out to be Windows 7 SP1, which cannot build the toolchain at all
+([`WIN7.md`](WIN7.md)), so "wait for a real PC" and "wait forever" had become the
+same instruction. What this page
 settles is *which* twelve, with what evidence, and what each one costs.
 
 ## What M1 can be asked today

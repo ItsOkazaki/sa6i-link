@@ -60,8 +60,10 @@ cannot start looks exactly like a broken project:
   criterion 3 is about ("runs on Windows 7"). It can run a binary; it cannot make
   one.
 
-That leaves a scope question the plan does not answer, and M2 should not start
-before it does: see the Windows 7 row in the exit-criteria table.
+That leaves a scope question the plan does not answer — answered now, in
+[`WIN7.md`](WIN7.md): Windows 7 is kept for the CLI through the nightly
+`x86_64-win7-windows-msvc` target, and dropped for the Qt window, because Qt 6
+requires Windows 10 1809 and cxx-qt 0.10 generates Qt 6 code.
 
 rustc 1.78 and later require **Windows 10**. On Windows 7 or 8.1 the build exits
 with `-1073741511`, which is `0xC0000139 STATUS_ENTRYPOINT_NOT_FOUND`: the loader
