@@ -20,7 +20,7 @@ actions.
 | Report wording | `core/sa6i-link-intel-win/src/report.rs` | **done** — one copy of the sentences, printed by both `sa6i-link intel snapshot` and the standalone binary |
 | Window averages | `core/sa6i-link-intel/src/summary.rs` | **done** — mean of what was measured, with the counts; unknown excluded, never averaged in as zero |
 | Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
-| Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, tiles and sparklines; needs a machine with Qt |
+| Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, Overview (tiles, sparklines) and Detail (cores, volumes, processes, limits); needs a machine with Qt |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -553,6 +553,26 @@ the standalone binary, and returns `3` when the budget missed.
 hand-edited dependency entries in `Cargo.lock` (`cargo --locked` will notice
 within a second if I got the latter wrong). The arithmetic and the wording are
 tested.
+
+## Slice 13 — Overview and Detail
+
+M1's plan says the Monitor has an Overview *and* a Detail; slice 10 built one
+scrolling page, which is neither. This splits it with the app's own `Segmented`
+control: **Overview** is the four tiles and the two minute-long lines, **Detail**
+is the logical processors, the volumes, the heaviest processes, and a card the
+first version lacked.
+
+That last card is the reason this is a slice and not a layout tweak. It is called
+*Limits*, and it says two things: which tiles have no reading and why (the same
+sentences the tiles carry, collected where someone diagnosing a machine goes
+looking), and what this build does not collect at all — temperatures and
+per-process CPU. A measurement page that stays silent about its blind spots reads
+as complete, and the whole point of the reasons in this codebase is that it
+should not.
+
+The switch is page state, not a route: both views read the same frame, and the
+sampler does not care which one is showing. Nothing about the thread, the JSON
+or the tests changes.
 
 ## What the collectors do not do, on purpose
 

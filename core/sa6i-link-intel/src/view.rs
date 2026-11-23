@@ -638,6 +638,25 @@ mod tests {
     }
 
     #[test]
+    fn the_detail_view_gets_the_fields_it_reads() {
+        let mut partly = snapshot(1);
+        partly.cpu.per_core =
+            vec![MetricState::Value(20.0), MetricState::Unknown(WhyUnknown::CollectorFailed)];
+        let json =
+            serde_json::to_value(monitor_view(&partly, &[partly.clone()], 0)).expect("serializes");
+        // A core that was not measured arrives as null, not as zero: the bar is
+        // drawn empty either way, but only one of them is a lie.
+        assert_eq!(json["cores"][0]["percent"], 20.0);
+        assert_eq!(json["cores"][1]["percent"], serde_json::Value::Null);
+        // A volume carries its share for the bar and its words for the row.
+        assert_eq!(json["volumes"][0]["usedPercent"], 90.0);
+        assert_eq!(json["volumes"][0]["kind"], "fixed");
+        // A process whose memory could not be read is still a row, and says so.
+        assert_eq!(json["processes"][1]["known"], false);
+        assert_eq!(json["processes"][1]["memory"], NO_VALUE);
+    }
+
+    #[test]
     fn volumes_are_listed_with_their_share_and_kind() {
         let mut unknown = snapshot(1);
         unknown.volumes[0].free = MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion);

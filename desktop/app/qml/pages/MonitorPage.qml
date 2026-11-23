@@ -23,9 +23,15 @@ Item {
     readonly property var cores: frame && frame.cores ? frame.cores : []
     readonly property var processes: frame && frame.processes ? frame.processes : []
     readonly property var volumes: frame && frame.volumes ? frame.volumes : []
+    /// Overview: the four numbers and the last minute. Detail: the cores, the
+    /// volumes, the processes, and what this page cannot see.
+    property string currentSection: "overview"
     readonly property var cpuPoints: frame && frame.cpu ? frame.cpu : []
     readonly property var memoryPoints: frame && frame.memory ? frame.memory : []
     readonly property string summary: frame && frame.summary ? frame.summary : ""
+    /// The tiles that have no reading, for the Detail view's list of reasons.
+    readonly property var unmeasured: tiles.filter(tile => tile && has(tile.missing))
+    readonly property bool showingOverview: currentSection !== "detail"
     readonly property string liveText: IntelHost.live
         ? qsTr("Every %1 s · %2 samples").arg(IntelHost.intervalMs / 1000).arg(IntelHost.samples)
         : qsTr("Paused")
@@ -60,19 +66,30 @@ Item {
             spacing: 12
 
             // ---- What the rules make of what is on screen ----
-            Row {
+            Txt {
                 width: parent.width
-                height: 28
-                spacing: 10
+                text: page.summary
+                role: "title"
+            }
 
-                Txt {
+            Item {
+                width: parent.width
+                height: 36
+
+                Segmented {
+                    id: viewSwitch
+                    anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - liveChip.width - parent.spacing
-                    text: page.summary
-                    role: "title"
+                    options: [
+                        { value: "overview", label: qsTr("Overview") },
+                        { value: "detail", label: qsTr("Detail") }
+                    ]
+                    value: page.currentSection
+                    onPicked: (picked) => page.currentSection = picked
                 }
                 Rectangle {
                     id: liveChip
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     width: liveRow.width + 20
                     height: 26
@@ -120,6 +137,7 @@ Item {
             // ---- The four numbers ----
             Grid {
                 id: tileGrid
+                visible: page.showingOverview
                 width: parent.width
                 columns: width >= 860 ? 4 : (width >= 440 ? 2 : 1)
                 spacing: 12
@@ -172,6 +190,7 @@ Item {
 
             // ---- The last minute ----
             Row {
+                visible: page.showingOverview
                 width: parent.width
                 spacing: 12
 
@@ -214,6 +233,7 @@ Item {
 
             // ---- Cores ----
             Card {
+                visible: !page.showingOverview
                 width: parent.width
                 height: coresColumn.height + 32
                 Column {
@@ -269,6 +289,7 @@ Item {
 
             // ---- Volumes ----
             Card {
+                visible: !page.showingOverview
                 width: parent.width
                 height: volumesColumn.height + 32
                 Column {
@@ -331,6 +352,7 @@ Item {
 
             // ---- The heaviest processes ----
             Card {
+                visible: !page.showingOverview
                 width: parent.width
                 height: processesColumn.height + 32
                 Column {
@@ -372,6 +394,57 @@ Item {
                                 muted: true
                             }
                         }
+                    }
+                }
+            }
+
+            // ---- What this page cannot see ----
+            //
+            // A measurement page that stays silent about its blind spots reads
+            // as complete. This one says which tiles have no reading and what
+            // the build does not collect at all.
+            Card {
+                visible: !page.showingOverview
+                width: parent.width
+                height: limitsColumn.height + 32
+                Column {
+                    id: limitsColumn
+                    width: parent.width
+                    spacing: 6
+                    Txt { text: qsTr("Limits"); role: "label"; muted: true }
+                    Txt {
+                        width: parent.width
+                        visible: page.frame !== null && page.unmeasured.length === 0
+                        text: qsTr("Every measurement this build makes was read.")
+                        role: "bodySmall"
+                        muted: true
+                    }
+                    Repeater {
+                        model: page.unmeasured
+                        delegate: Item {
+                            width: limitsColumn.width
+                            height: 26
+                            Txt {
+                                anchors.left: parent.left
+                                width: 120
+                                text: modelData.label
+                                role: "body"
+                            }
+                            Txt {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 120
+                                width: parent.width - 120
+                                text: modelData.note
+                                role: "caption"
+                                muted: true
+                            }
+                        }
+                    }
+                    Txt {
+                        width: parent.width
+                        text: qsTr("Temperatures and per-process CPU are not collected.")
+                        role: "caption"
+                        muted: true
                     }
                 }
             }
