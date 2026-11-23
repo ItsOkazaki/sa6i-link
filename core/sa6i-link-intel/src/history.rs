@@ -296,6 +296,7 @@ mod tests {
                 total: MetricState::Value(Bytes(100)),
                 free: MetricState::Value(Bytes(50)),
             }],
+            processes: Vec::new(),
             uptime: MetricState::Value(60),
         }
     }

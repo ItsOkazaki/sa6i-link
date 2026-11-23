@@ -285,6 +285,7 @@ mod tests {
                 total: MetricState::Value(Bytes(500 * 1_000_000_000)),
                 free: MetricState::Value(Bytes(250 * 1_000_000_000)),
             }],
+            processes: Vec::new(),
             uptime: MetricState::Value(3600),
         }
     }

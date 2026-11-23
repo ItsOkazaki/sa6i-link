@@ -13,8 +13,8 @@
 use std::{path::Path, thread::sleep, time::Duration};
 
 use sa6i_link_intel::{
-    History, MetricState, SampleStore, Timestamp, all_clear_sentence, evaluate, human_duration,
-    render_bytes, render_percent,
+    History, MetricState, ProcessSample, SampleStore, Timestamp, all_clear_sentence, evaluate,
+    human_duration, render_bytes, render_percent,
 };
 use sa6i_link_intel_win::WindowsCollector;
 
@@ -34,6 +34,22 @@ fn describe_cores(cores: &[MetricState<f32>]) -> String {
         known.len(),
         render_percent(busiest)
     )
+}
+
+/// `"msedge.exe 1.2 GB, chrome.exe 900 MB"` for the heaviest few, or why not.
+fn describe_processes(processes: &[ProcessSample]) -> String {
+    let described: Vec<String> = processes
+        .iter()
+        .take(3)
+        .map(|process| match process.working_set {
+            MetricState::Value(bytes) => format!("{} {}", process.name, render_bytes(bytes.0)),
+            _ => format!("{} (size not readable)", process.name),
+        })
+        .collect();
+    if described.is_empty() {
+        return "none measured".to_owned();
+    }
+    format!("{} heaviest: {}", processes.len(), described.join(", "))
 }
 
 /// `"— (requires administrator rights)"`, or the value if there is one.
@@ -149,6 +165,9 @@ fn main() {
     }
     if !snapshot.cpu.per_core.is_empty() {
         println!("  cores      {}", describe_cores(&snapshot.cpu.per_core));
+    }
+    if !snapshot.processes.is_empty() {
+        println!("  processes  {}", describe_processes(&snapshot.processes));
     }
 
     match (snapshot.memory.percent_used(), snapshot.memory.total) {

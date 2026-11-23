@@ -25,8 +25,8 @@ pub use findings::{
 };
 pub use history::{History, HistoryError, RECORD_INTERVAL_MS};
 pub use model::{
-    Bytes, CpuSample, MemorySample, MetricState, Snapshot, Timestamp, VolumeKind, VolumeSample,
-    WhyUnknown,
+    Bytes, CpuSample, MemorySample, MetricState, ProcessSample, Snapshot, TOP_PROCESSES, Timestamp,
+    VolumeKind, VolumeSample, WhyUnknown, top_processes,
 };
 pub use rules::{RULES, Rule, RuleDef, evaluate};
 pub use store::{DEFAULT_CAPACITY, HeldWindow, SampleStore};

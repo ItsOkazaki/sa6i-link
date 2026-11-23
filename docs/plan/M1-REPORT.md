@@ -14,7 +14,7 @@ actions.
 | Findings and evidence | `core/sa6i-link-intel/src/findings.rs` | **done** — severity, confidence, evidence, rendering |
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
-| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, no admin |
+| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, heaviest processes, no admin |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -264,6 +264,39 @@ Two of six need a machine, one needs an old one, and the Monitor page (M1.3) is
 not started. Which means M2's rules should wait for the two-machine run rather
 than stack more rules on numbers nobody has compared.
 
+## Slice 6 — the heaviest processes
+
+`Snapshot.processes` carries the eight heaviest processes by working set, with
+pid and executable name. This is the answer to "what is using my RAM", which is
+the question the Monitor page gets asked most.
+
+**Memory first, because memory is instantaneous.** Working set is a fact about
+one moment; CPU per process is a rate, and a rate needs two samples keyed by
+something that survives a pid being reused — which means pid *and* creation
+time, a map that outlives a snapshot, and a rule about what to show when a
+process appears mid-interval. That is a slice of its own, and pretending
+otherwise would put a number on a page that means something different from what
+it says.
+
+**The sort is in the core, not the collector.** `top_processes` is a pure
+function on `Vec<ProcessSample>`: heaviest first, ties broken by pid so the list
+is identical across runs and a screenshot can be compared with a log, shorter
+lists cut to the limit, and a process whose memory could not be read sorted last
+rather than pretending to be 0 B. Three tests, no machine needed.
+
+**A process it cannot open is absent, not zero.** Every open uses
+`PROCESS_QUERY_LIMITED_INFORMATION` — no elevation, ever — which is also why
+`System` and other users' sessions are simply not on the list. The alternative
+is a row called "System" with 0 MB next to it, which is a worse lie than an
+absence.
+
+One detail worth recording: the return value of `EnumProcesses` is deliberately
+ignored (`let _status = …`) because the count of bytes written is what says
+whether the call worked. That also means the collector does not care whether
+this crate models the call as `BOOL` or `Result<()>` — a distinction I could not
+settle from documentation, and one that would otherwise have been a guess
+compiled into the code.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -277,10 +310,10 @@ Evaluated but not shipped: `GetPerformanceInfo` for a process count (easy, but
 nothing yet uses it) and `GetVolumeInformationW` for filesystem names (only
 useful once the UI shows them).
 
-Disk throughput, GPU memory and per-process detail are still open — see
-`## Next`. They were left out of slice 4 rather than bundled with it so that a
-machine that reports bad per-core numbers cannot also be a machine whose PDH
-query is suspect.
+Disk throughput and GPU memory are still open — see `## Next` — and per-process
+CPU is deliberately absent from slice 6 for the reason given there. They were
+left out rather than bundled so that a machine reporting bad per-core numbers
+cannot also be a machine whose PDH query is suspect.
 
 ## Verification
 
@@ -342,9 +375,10 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-1. **M1.1, the rest:** disk throughput (PDH, English counters), GPU memory, and
-   a per-process top-N snapshot. Each gets its own slice and its own fixture,
-   for the same reason slice 4 was one collector and not four.
+1. **M1.1, the rest:** disk throughput (PDH, English counters) and GPU memory.
+   Each gets its own slice and its own fixture, for the same reason slice 4 was
+   one collector and not four. Per-process CPU joins them once there is a
+   two-sample map keyed by pid and creation time.
    - PDH is deliberately not written yet. The `windows` crate is not in this
      sandbox, and I could not confirm from documentation whether
      `PdhOpenQueryW` returns `WIN32_ERROR` or `PDH_STATUS` in 0.62 — two

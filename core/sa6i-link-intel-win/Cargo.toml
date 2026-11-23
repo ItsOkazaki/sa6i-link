@@ -18,7 +18,10 @@ tracing.workspace = true
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem",
+    # Process enumeration and per-process memory: the heaviest processes.
+    "Win32_System_ProcessStatus",
     "Win32_System_SystemInformation",
+    "Win32_System_Threading",
     # NtQuerySystemInformation, for per-processor counters: the Win32 surface
     # has no per-core equivalent of GetSystemTimes.
     "Wdk_System_SystemInformation",

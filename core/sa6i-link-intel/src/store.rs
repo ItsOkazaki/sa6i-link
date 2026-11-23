@@ -171,6 +171,7 @@ mod tests {
                 total: MetricState::Value(Bytes(100)),
                 free: MetricState::Value(Bytes((100.0 - disk_used) as u64)),
             }],
+            processes: Vec::new(),
             uptime: MetricState::Value(60),
         }
     }

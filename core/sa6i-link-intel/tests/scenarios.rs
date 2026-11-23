@@ -159,6 +159,9 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         },
         memory: memory(segment.memory_percent),
         volumes: segment.volumes.iter().map(volume).collect(),
+        // The fixtures describe a whole machine; processes arrive when a rule
+        // needs them.
+        processes: Vec::new(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
     }
 }
@@ -283,7 +286,10 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         uptime_days: 1.0,
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
-    assert_eq!(names(&json), ["cpu", "memory", "monotonic_ms", "seq", "taken_at", "uptime", "volumes"]);
+    assert_eq!(
+        names(&json),
+        ["cpu", "memory", "monotonic_ms", "processes", "seq", "taken_at", "uptime", "volumes"]
+    );
     assert_eq!(names(&json["cpu"]), ["percent"]);
     assert_eq!(names(&json["memory"]), ["available", "commit_limit", "commit_used", "total"]);
     assert_eq!(names(&json["volumes"][0]), ["free", "kind", "mount", "total"]);

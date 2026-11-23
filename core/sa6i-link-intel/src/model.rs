@@ -237,6 +237,43 @@ impl VolumeSample {
     }
 }
 
+/// One process, as much of it as a standard user can see.
+///
+/// Processes the user cannot open (the System process, other users' sessions)
+/// are absent rather than listed with zeros — the promise is that nothing here
+/// needs an administrator, so the list is honestly what that costs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessSample {
+    pub pid: u32,
+    /// Executable file name, e.g. `"msedge.exe"`. Empty when it could not be read.
+    pub name: String,
+    /// Resident memory (the working set), which is what "using 1.2 GB" means to
+    /// a person looking at Task Manager.
+    pub working_set: MetricState<Bytes>,
+}
+
+/// How many processes a snapshot carries. Enough to see the problem, few enough
+/// that a page can show them all.
+pub const TOP_PROCESSES: usize = 8;
+
+fn working_set_bytes(process: &ProcessSample) -> u64 {
+    process.working_set.value().map_or(0, |bytes| bytes.0)
+}
+
+/// The `limit` heaviest processes, heaviest first.
+///
+/// Pure and total, so the order is testable without a machine: heaviest first,
+/// then by pid, so two runs over the same machine produce the same list and a
+/// screenshot can be compared with a log. A process whose memory could not be
+/// read sorts last rather than pretending to be 0 B.
+pub fn top_processes(mut processes: Vec<ProcessSample>, limit: usize) -> Vec<ProcessSample> {
+    processes.sort_by(|a, b| {
+        working_set_bytes(b).cmp(&working_set_bytes(a)).then_with(|| a.pid.cmp(&b.pid))
+    });
+    processes.truncate(limit);
+    processes
+}
+
 /// Everything measured at one moment.
 ///
 /// `PartialEq` is derived so tests can assert on whole snapshots, and `seq`
@@ -253,6 +290,9 @@ pub struct Snapshot {
     pub cpu: CpuSample,
     pub memory: MemorySample,
     pub volumes: Vec<VolumeSample>,
+    /// The heaviest processes, see [`TOP_PROCESSES`]. Empty when processes were
+    /// not collected at all.
+    pub processes: Vec<ProcessSample>,
     /// Seconds since the machine booted.
     pub uptime: MetricState<u64>,
 }
@@ -340,9 +380,50 @@ mod tests {
                 commit_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
             },
             volumes: Vec::new(),
+            processes: Vec::new(),
             uptime: MetricState::Unknown(WhyUnknown::CollectorFailed),
         };
         assert!(snapshot.metrics().is_empty(), "unknown metrics must not become numbers");
+    }
+
+    fn process(pid: u32, megabytes: u64) -> ProcessSample {
+        ProcessSample {
+            pid,
+            name: format!("proc{pid}.exe"),
+            working_set: MetricState::Value(Bytes(megabytes * 1024 * 1024)),
+        }
+    }
+
+    #[test]
+    fn the_heaviest_processes_come_first_and_ties_are_broken_by_pid() {
+        let processes = vec![process(4, 100), process(9, 900), process(2, 100)];
+        let top = top_processes(processes, TOP_PROCESSES);
+        let pids: Vec<u32> = top.iter().map(|p| p.pid).collect();
+        // 9 is heaviest; 4 and 2 tie, and the lower pid wins, so the list is the
+        // same on every run and a screenshot can be compared with a log.
+        assert_eq!(pids, vec![9, 2, 4]);
+    }
+
+    #[test]
+    fn a_process_list_is_cut_to_the_limit_and_never_grows() {
+        let processes: Vec<ProcessSample> = (1..=20).map(|pid| process(pid, u64::from(pid))).collect();
+        assert_eq!(top_processes(processes.clone(), TOP_PROCESSES).len(), TOP_PROCESSES);
+        assert_eq!(top_processes(processes.clone(), 0).len(), 0);
+        assert_eq!(top_processes(processes, 100).len(), 20);
+        assert!(top_processes(Vec::new(), TOP_PROCESSES).is_empty());
+    }
+
+    #[test]
+    fn a_process_whose_memory_is_unknown_sorts_last_rather_than_looking_empty() {
+        let mystery = ProcessSample {
+            pid: 1,
+            name: "protected.exe".to_owned(),
+            working_set: MetricState::Unknown(WhyUnknown::NeedsElevation),
+        };
+        let top = top_processes(vec![mystery, process(7, 10)], TOP_PROCESSES);
+        assert_eq!(top[0].pid, 7);
+        assert_eq!(top[1].pid, 1);
+        assert_eq!(top[1].working_set, MetricState::Unknown(WhyUnknown::NeedsElevation));
     }
 
     #[test]
@@ -366,6 +447,7 @@ mod tests {
                 commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
+            processes: Vec::new(),
             uptime: MetricState::Value(60),
         };
         let paths: Vec<String> = snapshot.metrics().into_iter().map(|(path, _)| path).collect();
@@ -424,6 +506,7 @@ mod tests {
                 commit_used: MetricState::Value(Bytes(8_000_000_000)),
             },
             volumes: vec![volume("C:\\", 1000, 100)],
+            processes: Vec::new(),
             uptime: MetricState::Value(3600),
         };
         let metrics = snapshot.metrics();
@@ -464,6 +547,7 @@ mod tests {
                 commit_used: MetricState::Value(Bytes(1)),
             },
             volumes: vec![volume("C:\\", 4, 1)],
+            processes: Vec::new(),
             uptime: MetricState::Value(1),
         };
         let json = serde_json::to_string(&snapshot).unwrap();

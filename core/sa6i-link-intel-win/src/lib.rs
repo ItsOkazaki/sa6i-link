@@ -7,7 +7,8 @@
 //! elevation is reported as [`WhyUnknown::NeedsElevation`] instead of being
 //! attempted and failing mysteriously.
 //!
-//! Slice 1 covers CPU, memory, volumes and uptime; slice 4 adds per-core CPU.
+//! Slice 1 covers CPU, memory, volumes and uptime; slice 4 adds per-core CPU,
+//! slice 6 the heaviest processes.
 //! Disk throughput, GPU memory and per-process detail need APIs that are either
 //! heavier (`PdhAddEnglishCounter`) or version-gated (`QueryVideoMemoryInfo`),
 //! and land in their own slices with their own fixtures.
@@ -22,8 +23,8 @@
 use std::time::Instant;
 
 use sa6i_link_intel::{
-    Bytes, Collector, CpuSample, MemorySample, MetricState, Snapshot, Timestamp, VolumeSample,
-    WhyUnknown,
+    Bytes, Collector, CpuSample, MemorySample, MetricState, ProcessSample, Snapshot, TOP_PROCESSES,
+    Timestamp, VolumeSample, WhyUnknown, top_processes,
 };
 
 /// A Windows collector. Keeps the previous CPU sample, because a rate needs two.
@@ -66,6 +67,7 @@ impl Collector for WindowsCollector {
         let cpu = self.cpu();
         let memory = read_memory();
         let volumes = read_volumes();
+        let processes = platform::read_processes();
         let uptime = read_uptime();
         Snapshot {
             seq,
@@ -74,6 +76,7 @@ impl Collector for WindowsCollector {
             cpu,
             memory,
             volumes,
+            processes,
             uptime,
         }
     }
@@ -173,12 +176,19 @@ mod platform {
     use super::*;
     use sa6i_link_intel::VolumeKind;
 
-    use windows::Win32::Foundation::FILETIME;
+    use windows::Win32::Foundation::{CloseHandle, FILETIME};
     use windows::Win32::Storage::FileSystem::{
         GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDriveStringsW,
     };
+    use windows::Win32::System::ProcessStatus::{
+        EnumProcesses, GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX,
+    };
     use windows::Win32::System::SystemInformation::{
         GetSystemTimes, GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
+    };
+    use windows::Win32::System::Threading::{
+        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        QueryFullProcessImageNameW,
     };
     use windows::Wdk::System::SystemInformation::{
         NtQuerySystemInformation, SystemProcessorPerformanceInformation,
@@ -371,6 +381,87 @@ mod platform {
         }
     }
 
+    /// The heaviest processes a standard user can open.
+    ///
+    /// Each process is opened with `PROCESS_QUERY_LIMITED_INFORMATION` only —
+    /// that is what makes this run without an administrator. A process that
+    /// cannot be opened is left out of the list rather than listed with zeros:
+    /// `System` and other users' sessions are simply absent, which is the
+    /// honest version of "no admin prompt".
+    #[allow(unsafe_code)]
+    pub(super) fn read_processes() -> Vec<ProcessSample> {
+        const WIDEST: usize = 65_536;
+        let mut capacity = 1024usize;
+        loop {
+            let mut pids = vec![0u32; capacity];
+            let mut written = 0u32;
+            let bytes = u32::try_from(pids.len() * std::mem::size_of::<u32>()).unwrap_or(u32::MAX);
+            // The return value is deliberately not matched: the number of bytes
+            // written is what says whether the call worked, and that shape has
+            // changed between versions of this crate once already.
+            let _status = unsafe { EnumProcesses(pids.as_mut_ptr(), bytes, &mut written) };
+            let per_pid = std::mem::size_of::<u32>();
+            let count = (written as usize / per_pid).min(pids.len());
+            if count == 0 {
+                return Vec::new();
+            }
+            // A full buffer means there may be more processes than we asked for.
+            if count == pids.len() && capacity < WIDEST {
+                capacity *= 4;
+                continue;
+            }
+            pids.truncate(count);
+            let processes: Vec<ProcessSample> = pids.into_iter().filter_map(process_of).collect();
+            return top_processes(processes, TOP_PROCESSES);
+        }
+    }
+
+    #[allow(unsafe_code)]
+    fn process_of(pid: u32) -> Option<ProcessSample> {
+        if pid == 0 {
+            // The idle process: a name and a size that would both be invented.
+            return None;
+        }
+        // SAFETY: the handle is `PROCESS_QUERY_LIMITED_INFORMATION` only and is
+        // closed on every path below; a failed open is `None`, not a guess.
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+            let mut buffer = [0u16; 260];
+            let mut len = buffer.len() as u32;
+            let named = QueryFullProcessImageNameW(
+                handle,
+                PROCESS_NAME_WIN32,
+                windows::core::PWSTR(buffer.as_mut_ptr()),
+                &mut len,
+            );
+            let mut counters = PROCESS_MEMORY_COUNTERS_EX {
+                cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS_EX>() as u32,
+                ..Default::default()
+            };
+            let measured = GetProcessMemoryInfo(
+                handle,
+                std::ptr::from_mut(&mut counters).cast::<PROCESS_MEMORY_COUNTERS>(),
+                counters.cb,
+            );
+            let _ = CloseHandle(handle);
+            if named.is_err() && measured.is_err() {
+                return None;
+            }
+            let name = if named.is_ok() && len > 0 {
+                let full = String::from_utf16_lossy(&buffer[..len as usize]);
+                full.rsplit('\\').next().unwrap_or(&full).to_owned()
+            } else {
+                format!("pid {pid}")
+            };
+            let working_set = if measured.is_ok() {
+                MetricState::Value(Bytes(counters.WorkingSetSize as u64))
+            } else {
+                MetricState::Unknown(WhyUnknown::CollectorFailed)
+            };
+            Some(ProcessSample { pid, name, working_set })
+        }
+    }
+
     #[allow(unsafe_code)]
     pub(super) fn read_uptime() -> MetricState<u64> {
         // SAFETY: no arguments, no state.
@@ -400,6 +491,9 @@ mod platform {
         }
     }
     pub(super) fn read_volumes() -> Vec<VolumeSample> {
+        Vec::new()
+    }
+    pub(super) fn read_processes() -> Vec<ProcessSample> {
         Vec::new()
     }
     pub(super) fn read_uptime() -> MetricState<u64> {
@@ -483,6 +577,28 @@ mod tests {
         let states = core_states(Some(&previous), &current);
         assert_eq!(states[0], MetricState::Value(50.0));
         assert_eq!(states[1], MetricState::Unknown(WhyUnknown::CollectorFailed));
+    }
+
+    #[test]
+    fn the_process_list_is_bounded_named_and_heaviest_first() {
+        let mut collector = WindowsCollector::new();
+        let snapshot = collector.next_snapshot();
+        assert!(snapshot.processes.len() <= TOP_PROCESSES);
+        for process in &snapshot.processes {
+            // The idle process has no real name or size, so it is never listed.
+            assert_ne!(process.pid, 0);
+            assert!(!process.name.is_empty());
+        }
+        let sizes: Vec<u64> = snapshot
+            .processes
+            .iter()
+            .map(|process| process.working_set.value().map_or(0, |bytes| bytes.0))
+            .collect();
+        assert!(sizes.windows(2).all(|pair| pair[0] >= pair[1]), "{sizes:?}");
+        // On a machine with a process table this must actually find something;
+        // elsewhere the collector is honest and returns nothing.
+        #[cfg(windows)]
+        assert!(!snapshot.processes.is_empty(), "a Windows machine always has processes");
     }
 
     #[test]
