@@ -17,6 +17,10 @@ use sa6i_link_core::{
     features::{Effort, FEATURES, Role, UnsupportedReason, Upgrade, UpgradeAction},
     notify_limits,
 };
+use sa6i_link_intel::{
+    Finding, History, SampleStore, Timestamp, Verdict, WindowSummary, evaluate,
+};
+use sa6i_link_intel_win::{report, sample_window};
 use tokio::sync::broadcast::error::RecvError;
 
 #[derive(Parser, Debug)]
@@ -91,6 +95,13 @@ struct Cli {
 enum Command {
     /// Print this device's ID and addresses.
     Id,
+    /// Measure this PC: CPU, memory, disks, GPU, processes, and the rules' findings.
+    ///
+    /// Runs without a node, a network or a data directory.
+    Intel {
+        #[command(subcommand)]
+        action: IntelArg,
+    },
     /// Show a pairing code and wait for a device to pair.
     Pair,
     /// Pair with a device using its pairing link.
@@ -534,6 +545,34 @@ enum Command {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Subcommand, Debug)]
+enum IntelArg {
+    /// Print one sample, or a window of them, as text or JSON.
+    Snapshot {
+        /// How many samples to take.
+        #[arg(long, default_value_t = 1)]
+        samples: u32,
+        /// Milliseconds between samples.
+        #[arg(long, default_value_t = 1000)]
+        interval_ms: u64,
+        /// Print the snapshot and the findings as JSON.
+        #[arg(long)]
+        json: bool,
+        /// Leave the findings out.
+        #[arg(long)]
+        no_findings: bool,
+        /// Print the window's mean cpu and memory, which is what Task Manager shows.
+        #[arg(long)]
+        average: bool,
+        /// Print what sampling cost and whether it held; exits 3 on a miss.
+        #[arg(long)]
+        budget: bool,
+        /// Write the samples to this history file.
+        #[arg(long, value_name = "PATH")]
+        history: Option<PathBuf>,
+    },
+}
+
 enum Power {
     Basic,
     Assist,
@@ -2567,6 +2606,10 @@ fn main() -> Result<()> {
                     .with_writer(std::io::stderr)
                     .init();
 
+                if let Command::Intel { action } = &cli.command {
+                    return run_intel(action);
+                }
+
                 if let Command::NotifyWhen { title, device, target } = &cli.command {
                     return Box::pin(run_notify_when(&cli, title.as_deref(), device.as_deref(), target))
                         .await;
@@ -2707,8 +2750,97 @@ fn node_power(cli: &Cli) -> PowerLevel {
     }
 }
 
+/// `sa6i intel`: measure this machine.
+///
+/// Deliberately finished before the node starts: measuring a PC must not need an
+/// identity, a socket or a data directory, and the promise that nothing leaves
+/// the machine is easier to keep when there is nothing running that could.
+fn run_intel(action: &IntelArg) -> Result<i32> {
+    let IntelArg::Snapshot {
+        samples,
+        interval_ms,
+        json,
+        no_findings,
+        average,
+        budget,
+        history,
+    } = action;
+    let samples = (*samples).max(1);
+    let interval_ms = (*interval_ms).max(1);
+    let (store, cost) = sample_window(samples, Duration::from_millis(interval_ms), *budget);
+    let snapshot = store.latest().context("no sample was taken")?;
+    let findings = if *no_findings { Vec::new() } else { evaluate(snapshot, &store) };
+
+    if let Some(path) = history {
+        record_history(path, &store, &findings)?;
+    }
+
+    let summary = average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
+    if *json {
+        let mut payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });
+        if let Some(summary) = &summary {
+            payload["summary"] = serde_json::json!(summary);
+        }
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Ok(0);
+    }
+
+    println!("Sa6i — this machine, measured");
+    println!(
+        "  sample {} of {} (history covers {} s)",
+        snapshot.seq,
+        samples,
+        store.span_ms() / 1000
+    );
+    println!();
+    for line in report::report_lines(snapshot, summary.as_ref()) {
+        println!("{line}");
+    }
+    println!();
+    for line in report::findings_lines(snapshot, &findings, samples) {
+        println!("{line}");
+    }
+    if !*budget {
+        return Ok(0);
+    }
+    let verdict = Verdict::judge(samples, interval_ms, &cost);
+    for line in verdict.render() {
+        println!("  {line}");
+    }
+    Ok(if verdict.passed() { 0 } else { 3 })
+}
+
+/// Writes the window to a history file, saying what landed there.
+fn record_history(path: &std::path::Path, store: &SampleStore, findings: &[Finding]) -> Result<()> {
+    let open = |error| anyhow::anyhow!("can't open {}: {error}", path.display());
+    let mut history = History::open(path).map_err(open)?;
+    let mut stored = 0usize;
+    for sample in store.samples() {
+        let recorded = history.record(sample).map_err(|error| anyhow::anyhow!("{error}"))?;
+        if recorded {
+            stored += 1;
+        }
+    }
+    if let Err(error) = history.record_findings(findings) {
+        eprintln!("history: findings not stored: {error}");
+    }
+    let pruned = history.prune(Timestamp::now()).unwrap_or(0);
+    let counts = history.counts().map_err(|error| anyhow::anyhow!("{error}"))?;
+    eprintln!(
+        "history: {stored} of {} sample(s) stored, {pruned} pruned — {} sample(s), {} finding(s) in {}",
+        store.len(),
+        counts.0,
+        counts.1,
+        path.display()
+    );
+    Ok(())
+}
+
 async fn run(cli: &Cli, node: &Node) -> Result<()> {
     match &cli.command {
+        // Reached only if the early dispatch in `main` loses this arm: `intel`
+        // measures the machine and starts no node.
+        Command::Intel { .. } => bail!("intel runs before the node starts"),
         Command::Id => {
             println!("Device ID: {}", node.device_id());
             for addr in node.direct_addrs().await {

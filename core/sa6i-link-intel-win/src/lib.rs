@@ -22,14 +22,48 @@
 //! `SAFETY:` note on every block. Nothing else in the crate is allowed to be
 //! unsafe, which is the point of doing it per function rather than per crate.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use sa6i_link_intel::{
-    Bytes, Collector, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessSample, Snapshot,
-    TOP_PROCESSES, Timestamp, VolumeSample, WhyUnknown, top_processes,
+    Bytes, Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessSample,
+    SampleStore, Snapshot, TOP_PROCESSES, Timestamp, VolumeSample, WhyUnknown, top_processes,
 };
 
 mod pdh;
+pub mod report;
+
+/// Take `samples` snapshots `interval` apart, timing each one when `timed`.
+///
+/// The one sampling loop both front-ends run — the standalone binary and
+/// `sa6i-link intel snapshot` — so a cost measured in one is the same cost the other
+/// would see. Timing is opt-in: measuring every run would time the tool rather
+/// than the machine.
+pub fn sample_window(samples: u32, interval: Duration, timed: bool) -> (SampleStore, Cost) {
+    let mut collector = WindowsCollector::new();
+    let mut store = SampleStore::default();
+    let mut per_sample_ms: Vec<f64> = Vec::new();
+    let cpu_before = timed.then(report::process_cpu_time).flatten();
+    let started = Instant::now();
+    for index in 0..samples.max(1) {
+        if index > 0 {
+            std::thread::sleep(interval);
+        }
+        let begin = Instant::now();
+        let snapshot = collector.next_snapshot();
+        if timed {
+            per_sample_ms.push(begin.elapsed().as_secs_f64() * 1000.0);
+        }
+        store.push(snapshot);
+    }
+    let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let cpu_ms = match (cpu_before, timed.then(report::process_cpu_time).flatten()) {
+        (Some(before), Some(after)) => {
+            after.checked_sub(before).map(|cpu| cpu.as_secs_f64() * 1000.0)
+        }
+        _ => None,
+    };
+    (store, Cost { elapsed_ms, per_sample_ms, cpu_ms })
+}
 
 /// A Windows collector. Keeps the previous CPU sample, because a rate needs two.
 #[derive(Debug)]

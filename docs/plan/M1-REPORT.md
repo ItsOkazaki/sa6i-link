@@ -16,6 +16,8 @@ actions.
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
+| Sampling verdict | `core/sa6i-link-intel/src/budget.rs` | **done** — rate, per-sample cost and CPU share judged against a stated budget, tested with invented timings |
+| Report wording | `core/sa6i-link-intel-win/src/report.rs` | **done** — one copy of the sentences, printed by both `sa6i-link intel snapshot` and the standalone binary |
 | Window averages | `core/sa6i-link-intel/src/summary.rs` | **done** — mean of what was measured, with the counts; unknown excluded, never averaged in as zero |
 | Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
 | Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, tiles and sparklines; needs a machine with Qt |
@@ -260,7 +262,7 @@ M1 exits when these hold. The plan's wording, and what would demonstrate it:
 | Numbers within ±3 % of Task Manager | `--samples 60 --interval-ms 1000 --average` next to Task Manager's Performance tab | **needs your PC, measurable now** |
 | 1 Hz for 30 min under budget | `--samples 1800 --interval-ms 1000 --budget`: prints the rate, the per-sample cost and this process's CPU share, and exits 3 on a miss | **needs your PC, measurable now** |
 | Win7 renders `Unsupported`, with reasons | the `cfg(not(windows))` collector and the reason strings already do this on any non-Windows build; a real Win7 pass is still owed | **partly demonstrable** |
-| CLI JSON stable and tested | `tests/scenarios.rs`: field names, `Unknown` encoding, exact finding sets | **done** |
+| CLI JSON stable and tested | `tests/scenarios.rs`: field names, `Unknown` encoding, exact finding sets; the same payload from `sa6i-link intel snapshot --json` | **done, one payload shared by two front-ends** |
 | No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
 | Nothing leaves the machine | `tests/privacy.rs`: no socket-capable crate in either intel closure | **done** |
 
@@ -514,6 +516,44 @@ twitchy reading. And the timing half measures the Windows collector at 1 Hz,
 which is what the plan's thirty minutes are about — not the page, which draws at
 whatever rate Qt gives it.
 
+## Slice 12 — `sa6i-link intel snapshot`, and one copy of the words
+
+M1's plan names the surface `sa6i intel snapshot`; the CLI's binary is called
+`sa6i-link`, so the command is `sa6i-link intel snapshot`. What existed was only
+a separate binary, which is not the same thing: the CLI is what a person or a
+script reaches for, and a second binary is a second thing to remember. Adding the
+subcommand by copying the first one would have produced two reports that agree
+only by luck, so this slice moved the report out of `main()` first.
+
+Three pieces, each in the crate that can test it:
+
+- **`report.rs`** (`sa6i-link-intel-win`) holds every sentence the report is made
+  of, as `Vec<String>` rather than `println!`: the caller owns the stream, so
+  `--json` stays pure JSON on stdout, and the wording can be checked without a
+  terminal. Both front-ends print the same lines in the same order.
+- **`budget::Verdict`** (`sa6i-link-intel`) holds the verdict arithmetic that was
+  sitting inside the binary's `main`. It is now judged against invented timings
+  in six tests — a slow sample, a drifted rate, a greedy process, an unmeasured
+  CPU cost, one sample, and an empty run — which is the only way to know a check
+  can fail before a machine has to prove it.
+- **`sample_window`** (`sa6i-link-intel-win`) is the one sampling loop: 1 Hz,
+  sleeping between samples and not after the last, timing only when asked.
+
+**The command runs before the node.** `sa6i-link` starts its network node before
+dispatching anything; `Command::Intel` is handled ahead of that, so measuring
+this PC needs no identity, no socket and no data directory. That is partly
+tidiness and partly the privacy promise: nothing can leave the machine from a
+process that never opened a socket.
+
+`sa6i-link intel snapshot` takes `--samples`, `--interval-ms`, `--json`,
+`--no-findings`, `--average`, `--budget` and `--history`, behaves exactly like
+the standalone binary, and returns `3` when the budget missed.
+
+**Unverified, and it is the usual kind:** the clap wiring and the two
+hand-edited dependency entries in `Cargo.lock` (`cargo --locked` will notice
+within a second if I got the latter wrong). The arithmetic and the wording are
+tested.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now. What is still absent is
@@ -591,10 +631,10 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-   Then the two checks the CLI can answer without Qt: `--samples 60
-   --interval-ms 1000 --average` beside Task Manager's Performance tab, and
-   `--samples 1800 --interval-ms 1000 --budget` for the half hour. Two of M1's
-   six exit criteria close that way, with the desktop app still unbuilt.
+   Then the two checks the CLI can answer without Qt: `sa6i-link intel snapshot
+   --samples 60 --interval-ms 1000 --average` beside Task Manager's Performance
+   tab, and `--samples 1800 --interval-ms 1000 --budget` for the half hour. Two
+   of M1's six exit criteria close that way, with the desktop app still unbuilt.
 1. **Build the app.** `cargo build -p sa6i-link` on a machine with Qt and the
    Rust toolchain, then open Monitor and watch it for a minute. This is now the
    gate in front of everything else: M1.3 is the first slice that has never been

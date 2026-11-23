@@ -14,6 +14,8 @@ path = "src/main.rs"
 
 [dependencies]
 sa6i-link-core.workspace = true
+sa6i-link-intel.workspace = true
+sa6i-link-intel-win.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["env"] }
 dirs.workspace = true

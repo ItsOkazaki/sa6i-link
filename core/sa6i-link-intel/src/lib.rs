@@ -13,6 +13,7 @@
 //!
 //! See `docs/architecture/INTELLIGENCE-CORE.md`.
 
+mod budget;
 mod findings;
 mod history;
 mod model;
@@ -21,6 +22,7 @@ mod store;
 mod summary;
 mod view;
 
+pub use budget::{CPU_SHARE, Cost, RATE_TOLERANCE, SAMPLE_SHARE, Verdict};
 pub use findings::{
     Confidence, Evidence, Finding, Severity, all_clear_sentence, human_duration, render_bytes,
     render_percent,

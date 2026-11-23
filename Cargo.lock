@@ -2436,6 +2436,8 @@ dependencies = [
  "hostname",
  "libc",
  "sa6i-link-core",
+ "sa6i-link-intel",
+ "sa6i-link-intel-win",
  "qrcode",
  "serde",
  "serde_json",
