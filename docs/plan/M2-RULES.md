@@ -203,9 +203,9 @@ numbers, not identity.
 
 **Checked by a test rather than at startup:** that a `firing` or `near_miss` names a
 scenario that exists. The fixtures are not compiled into the binary, so the running
-app cannot answer it. `tests/…`-less as that is, the check is real:
-`rules_file.rs`'s tests read `tests/scenarios/` and match the names, so renaming a
-fixture breaks the build rather than drifting past.
+app cannot answer that half of the question — which is not the same as the check
+being optional. The loader's tests read `tests/scenarios/` and match the names
+against it, so renaming a fixture breaks the test instead of drifting past it.
 
 **The proof that nothing changed:** the tests assert that the thresholds parsed from
 the three shipped files equal `Thresholds::default()` exactly. Rules are pure
