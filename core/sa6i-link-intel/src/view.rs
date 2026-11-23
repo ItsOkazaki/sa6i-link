@@ -221,8 +221,13 @@ pub struct MonitorView {
     pub taken_at: Timestamp,
     pub tiles: Vec<Tile>,
     /// CPU use, newest last, gaps where a sample is missing.
+    ///
+    /// The numbers are **percentages, 0–100** — not fractions. The wire stays in
+    /// the unit a person reads and a log records; a widget that draws a 0–1
+    /// height divides by 100 itself, which is where a flat line at the top came
+    /// from the first time this was wired up.
     pub cpu: Sparkline,
-    /// Memory use, newest last, gaps where a sample is missing.
+    /// Memory use, same unit and same gaps.
     pub memory: Sparkline,
     pub cores: Vec<CoreBar>,
     pub processes: Vec<ProcessRow>,

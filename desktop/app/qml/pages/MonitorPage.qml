@@ -44,6 +44,11 @@ Item {
     function clamp01(value) {
         return Math.max(0, Math.min(1, value))
     }
+    /// The frame carries percentages; the line widget draws a 0-1 height. A
+    /// missing sample stays a gap instead of becoming a zero.
+    function fractions(points) {
+        return (points || []).map(value => has(value) ? clamp01(value / 100) : null)
+    }
 
     Component.onCompleted: IntelHost.start()
     Component.onDestruction: IntelHost.stop()
@@ -228,7 +233,8 @@ Item {
                             Sparkline {
                                 width: parent.width
                                 height: 56
-                                points: modelData.key === "cpu" ? page.cpuPoints : page.memoryPoints
+                                points: page.fractions(modelData.key === "cpu"
+                                    ? page.cpuPoints : page.memoryPoints)
                             }
                         }
                     }

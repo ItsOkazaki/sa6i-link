@@ -841,6 +841,31 @@ The verdict is now computed once, before the output decision, and:
 The standalone binary got the same treatment, because it is meant to be the
 headless twin and a twin that disagrees with itself is not one.
 
+## Slice 22 — the sparkline's units, which only disagreed in two languages
+
+`view::MonitorView.cpu` serialises as a bare array of **percentages** (`[12.5,
+14.0, null, …]`) — `Sparkline` is `#[serde(transparent)]` over
+`Vec<Option<f32>>`, and the values are what the collector measured.
+`components/Sparkline.qml` documents its `points` as **fractions** (`"numbers
+between 0 and 1"`) and clamps to that range before drawing.
+
+Both are reasonable. Together they draw a flat line along the top of the box on
+any machine using more than one percent of its CPU, which is every machine. No
+test could catch it: the Rust test pins the JSON at `Some(10.0)` and the QML
+component is right about what it was given.
+
+The fix keeps the wire in percentages — they are what a log records and what the
+JSON's other numbers are in — and divides at the boundary that needs a fraction,
+which is the same thing the core bars in this page already did (`percent / 100`).
+`fractions()` in the page keeps a `null` a gap, so an unmeasured second does not
+become a zero on the way through. The doc comment on `MonitorView.cpu` now says
+which unit it is, because the next person to wire a widget to it will have the
+same question.
+
+This is the class of defect that a first build would have shown immediately and a
+reader can only find by checking the same value in two languages. It is also the
+argument for writing the contract down in both places, not just the serialiser.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
