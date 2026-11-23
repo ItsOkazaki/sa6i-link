@@ -18,6 +18,7 @@ mod history;
 mod model;
 mod rules;
 mod store;
+mod view;
 
 pub use findings::{
     Confidence, Evidence, Finding, Severity, all_clear_sentence, human_duration, render_bytes,
@@ -30,6 +31,10 @@ pub use model::{
 };
 pub use rules::{RULES, Rule, RuleDef, evaluate};
 pub use store::{DEFAULT_CAPACITY, HeldWindow, SampleStore};
+pub use view::{
+    CoreBar, MonitorView, NO_VALUE, ProcessRow, SPARKLINE_POINTS, Sparkline, Tile, TileId, VolumeRow,
+    monitor_view, render_rate,
+};
 
 /// One machine, sampled.
 ///

@@ -16,6 +16,7 @@ actions.
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
+| Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -261,9 +262,10 @@ M1 exits when these hold. The plan's wording, and what would demonstrate it:
 | No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
 | Nothing leaves the machine | `tests/privacy.rs`: no socket-capable crate in either intel closure | **done** |
 
-Two of six need a machine, one needs an old one, and the Monitor page (M1.3) is
-not started. Which means M2's rules should wait for the two-machine run rather
-than stack more rules on numbers nobody has compared.
+Two of six need a machine, one needs an old one. The Monitor page's data is
+built and tested; the Qt surface in front of it is not written yet. Which means
+M2's rules should wait for the two-machine run rather than stack more rules on
+numbers nobody has compared.
 
 ## Slice 6 — the heaviest processes
 
@@ -376,6 +378,44 @@ copied out of PDH's buffer before it drops, and the adapter list is sorted
 heaviest-first so a page that shows one shows the discrete GPU rather than the
 iGPU.
 
+## Slice 9 — the Monitor's data, before the Monitor
+
+M1.3 is a Qt page, and Qt is the one thing in this repo that has never been
+compiled here either. So the part of the page that has an opinion is not Qt:
+`core/sa6i-link-intel/src/view.rs` turns a snapshot, the samples before it and
+a findings count into four tiles, two sparklines, a core strip, a process table
+and a volume list — every string finished, every fraction already between 0
+and 1. `MonitorView` is `PartialEq` and tested; `MonitorPage.qml` will only
+place things.
+
+The two rules the project rests on are about rendering as much as collecting,
+so this is where they are enforced rather than promised:
+
+- **A tile with no reading says why.** `Tile::missing(id, reason)` produces
+  `—`, an empty track and the reason sentence. Tested for all four tiles at
+  once, because "we handle Unknown" is exactly the claim that decays when only
+  one widget is checked.
+- **A gap is a gap.** `Sparkline` stores `Option<f32>`, and `normalized` keeps
+  the `None`s, so a dropped sample draws a hole instead of a point at the
+  bottom of the box. A one-minute window holds 60 points and drops the oldest.
+
+Two things found while writing it, both worth the paragraph:
+
+`Bytes::percent_used` reads its receiver as the bytes *available* and answers
+what is used — right for a volume's free space, exactly inverted for a process's
+own memory. A 1 GB process on a 16 GB machine would have shown **93.75 %**.
+`share_of(part, total)` exists now and a test pins 6.25 %; the wrong answer
+looked plausible, which is the reason the test is there.
+
+The disk tile has **no fraction**. CPU, memory and GPU are percentages of a
+capacity the machine can name; throughput has no ceiling worth drawing against,
+and a bar three-quarters full would be a number the collector never measured.
+
+And one more thing said in the tile rather than hidden: an integrated GPU
+reports its memory in use and the note "shared memory; no dedicated VRAM",
+because it owns none. There is a value and no percentage, which is the honest
+pair for that hardware.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now. What is still absent is
@@ -442,7 +482,7 @@ depends on the API shape.
 
 ## Next
 
-0. **Compile before writing more.** Seven commits of Win32 calls, PDH calls,
+0. **Compile before writing more.** Nine commits of Win32 calls, PDH calls,
    SQLite calls and a new dependency have never been through `rustc`. Until they have, every further
    collector is written on top of assumptions nobody has checked, and the cost
    of finding out grows with each one:
@@ -453,10 +493,10 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-1. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
-   Overview tiles and the sparklines that draw gaps as gaps, reading their
-   history from `History::recent` instead of the ring once the window is longer
-   than an hour.
+1. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt) sampling once a second on
+   its own thread and pushing a `MonitorView` across, then `MonitorPage.qml`
+   with the Overview tiles and the sparklines. The data behind it is slice 9;
+   what is left is the Qt, which is also what nobody here can compile.
 2. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
 
 (`sample_hourly` rollups stay unscheduled on purpose: they need a week of real

@@ -268,6 +268,7 @@ A rule or action without tests is not merged; demo data exists only behind a
 | Contract | Slice 1 | Why |
 | --- | --- | --- |
 | §4 data model | `Snapshot` carries CPU (total and per-core), memory, volumes, disk throughput, GPU adapters, uptime and the eight heaviest processes; frequency and thermal are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §5 Monitor view | `view::monitor_view` builds the page's tiles and sparklines in the core crate, not in QML or the FFI layer | a rule that cannot be unit-tested is a rule that will be broken by a binding; "never render Unknown as 0" needed a test, not a code review |
 | §4 GPU | per-adapter dedicated VRAM from the `GPU Adapter Memory` counters, not `QueryVideoMemoryInfo` | that call answers for the calling *process* on one adapter; using it as machine-wide pressure would be a true number answering the wrong question |
 | §4 disk io | `Snapshot.disk_io` is machine-wide throughput from `PhysicalDisk(_Total)`, not per volume | a volume spanning two disks has no single throughput, and per-volume numbers would invite adding them up. Per-physical-disk detail arrives with the Monitor page's disk view, if it needs it |
 | §4 processes | top-N is by working set only, not "top-N by cpu/mem" | memory is a fact about one moment; per-process CPU is a rate needing two samples keyed by pid *and* creation time, and that map belongs to its own slice |
