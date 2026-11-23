@@ -9,6 +9,37 @@ gate in front of M2, and four of them can only be closed on a real PC.
 This page is the operator's side of that: two commands, what each one answers, and
 what to do when one of them says no.
 
+## Before the first run: a toolchain
+
+The first machine this was tried on had no Rust at all, which is easy to forget when
+the whole milestone was written in a sandbox that had none either. From a fresh
+Windows terminal:
+
+```powershell
+winget install --id Rustlang.Rustup -e
+```
+
+Then open a **new** terminal - the installer changes `PATH`, and the one you were
+in will not see it - and check:
+
+```powershell
+rustup show          # picks up rust-toolchain.toml: stable, rustfmt, clippy
+cargo --version
+```
+
+Two things will bite if the machine is bare:
+
+- **`link.exe` not found.** rustup's default host on Windows is the MSVC toolchain,
+  which needs the Visual Studio C++ build tools, not just rustup. If the build stops
+  with a linker error, install them:
+  `winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`.
+  A machine with a Qt/MSVC kit already has them.
+- **The first build is slow.** `Cargo.lock` pins 527 packages and none of them are
+  compiled yet; several minutes of `Compiling` and a lot of network is normal.
+
+No Qt is needed for `verify-m1.ps1` - it builds `sa6i-link-cli` only. `check.ps1`
+does need Qt for the desktop crates.
+
 ## The commands
 
 ```powershell
