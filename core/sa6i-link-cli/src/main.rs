@@ -544,7 +544,6 @@ enum Command {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 #[derive(Subcommand, Debug)]
 enum IntelArg {
     /// Print one sample, or a window of them, as text or JSON.

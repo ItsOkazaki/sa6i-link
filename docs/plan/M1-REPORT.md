@@ -767,6 +767,38 @@ minutes could credit the wrong program after a pid is reused. Publishing it chan
 the wire format and the process row, which makes it a slice rather than two lines —
 and it belongs with the rule that needs it, not before it.
 
+## Slice 19 — the CLI's wiring and the lockfile, checked the boring way
+
+Slice 12 listed its two riskiest pieces as unverified: the clap wiring and the two
+entries hand-added to `Cargo.lock`. Both are mechanical, so both can be read
+instead of hoped for.
+
+**A compile error, found by reading.** `IntelArg` carried
+`#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]` *and*
+`#[derive(Subcommand, Debug)]` — every one of those derives wrong for a subcommand:
+`Debug` twice is a duplicate impl, `Copy` cannot hold the `Option<PathBuf>` inside
+`--history`, and `ValueEnum` is for values, not for a `Subcommand`. Three errors on
+one line, left behind by copying the derive line of a value enum four entries
+above. It is `#[derive(Subcommand, Debug)]` now.
+
+**What was checked around it.** `#[command(subcommand)]` is on the `Intel` field;
+the pre-node dispatch returns `Result<i32>` into the block that becomes the exit
+status, so `--budget`'s exit 3 survives; the defensive `bail!("intel runs before
+the node starts")` arm is in `run()`; the imports `run_intel` needs (`Verdict`,
+`WindowSummary`, `evaluate`, `Duration`, `Context`, `bail`) are all there; and the
+flags the script passes are the ones clap derives — `interval_ms` becomes
+`--interval-ms`, `no_findings` becomes `--no-findings`.
+
+**The lockfile, structurally.** 527 packages; no dependency names a package that
+is not in the file; no registry package is missing its checksum; no workspace
+crate carries a `source`; and `sa6i-link-intel`, `sa6i-link-intel-win` and
+`sa6i-link-cli` are all at 0.1.5, the workspace version, with their new edges
+present. Checksums are the one thing this cannot verify — they are correct or
+`cargo --locked` says so.
+
+**What it does not prove.** That the crate compiles. It removes three known errors
+and nothing more.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
@@ -802,6 +834,7 @@ per-core numbers should not also be the machine whose PDH query is suspect.
 | PDH (slice 7) | Every signature and type read from the generated docs for `windows` 0.62.2 (`microsoft/windows-docs-rs`), then cross-checked against a working open-source user of the same module (Argus `pdh.rs`: `PdhOpenQueryW(PCWSTR::null(), …) == 0`, `value.Anonymous.doubleValue`) |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
+| The CLI's wiring (slice 19) | `IntelArg`'s derives, the `#[command(subcommand)]` field, the pre-node dispatch's return type, the defensive arm and every import `run_intel` needs were read against the surrounding code; the lockfile was checked structurally (edges, sources, checksums present, versions) — three compile errors found and fixed |
 | The Qt surface (slice 16) | Every cxx-qt and QML API used was matched against a file in this repository that compiles, plus cxx-qt 0.10's own `threading.rs` for `queue`'s signature; the QML module and page registrations were read out of `build.rs` and `MainWindow.qml`; the lockfile was checked mechanically. Two defects found and fixed, one pattern aligned |
 | The verification script (slice 15) | Its JSON paths were read off the serde attributes in `model.rs` (`snapshot.processes[].cpu_percent.state`, snake_case, `MetricState` as `{state, value}`) rather than guessed, and the CLI flags it passes are the ones `IntelArg` declares. Not executed: no PowerShell here |
 
