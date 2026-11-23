@@ -653,6 +653,67 @@ Windows and no PowerShell. Its failure mode is the boring one — a parameter na
 or a `ConvertFrom-Json` shape that is stricter than the file it parses — and the
 fix is a line in the script, not a slice.
 
+## Slice 16 — the Qt surface, checked against the code that does compile
+
+Slices 10 and 13 wrote a bridge and a page that nothing here can build: no Qt, no
+`rustc`, no window. The usual response is another paragraph of disclaimers. The
+useful response is to check every API against code in this repository that *does*
+compile and ship — the same discipline that settled the `GetProcessTimes`
+signature — and to fix what does not match.
+
+**What was checked, and matched.** `impl cxx_qt::Threading`, the empty
+`impl cxx_qt::Initialize` inside the bridge module, `self.qt_thread()` and
+`CxxQtThread<qobject::IntelHost>` all appear in `app.rs` and `calls.rs` in the same
+shapes. `queue(..)` returns `Result<(), ThreadingQueueError>` and takes
+`FnOnce(Pin<&mut T>)`, read from cxx-qt 0.10's own `threading.rs` rather than
+recalled, so breaking the loop when the page has gone away is correct.
+
+**Registration is where a page dies quietly.** `src/bridge/intel.rs` is in the QML
+module's `rust_files` and `pub mod intel;` is in `bridge/mod.rs`; `MonitorPage.qml`,
+`Sparkline.qml`, `Segmented.qml` and `Txt.qml` are all in `build.rs`'s `QML_FILES`;
+`MainWindow.qml` carries the nav item, the `"monitor"` route and an icon that
+exists. A page missing from that list loads as an empty URL and no test we have
+would say a word, so it is worth having looked.
+
+**The page's vocabulary.** All seven `Theme` tokens it uses exist; it sets only
+properties `Txt`, `Card`, `Segmented` and `Sparkline` actually declare
+(`role`/`muted`, default content, `options`/`value`/`picked(string)`,
+`points`); and `interval_ms` reaching QML as `IntelHost.intervalMs` is the same
+snake-to-camel step as `caps_revision` → `AppController.capsRevision`.
+
+**The lockfile, mechanically.** Every path dependency declared in every workspace
+manifest has an edge in its package's `Cargo.lock` entry — the class of failure
+`cargo --locked` reports first, and the one hand-edited lock entries are most
+likely to introduce. One crate (`tools/powertoys-extension`) is outside the
+workspace and therefore absent by design.
+
+**Two real defects, both invisible until a frame arrives.** The chart cards were a
+`Repeater` over an array literal that mentioned `page.cpuPoints`, so the model's
+identity changed on every frame and both cards — each with a `Canvas` — were
+destroyed and recreated once a second, resetting the canvas each time. The model
+now carries keys only and the points are looked up in the delegate. And the volume
+track's width, `parent.width - 82 - 132`, could go negative in a narrow window;
+it is clamped.
+
+**One property read was aligned rather than fixed.** cxx-qt 0.10 generates a
+getter method for a `#[qproperty]` *and* derefs the generated type to the Rust
+struct holding the field, which is why the rest of this app reads properties as
+fields (`object.update_busy`). The bridge called `object.samples()` in one place;
+it now reads the field like every other bridge, so it does not depend on
+auto-deref through a reference.
+
+**Known cost, deliberately not paid blind.** The tile, core and process
+`Repeater`s still rebuild once per frame, because a new frame is a new array. That
+is churn rather than breakage — no `Canvas`, no animation that matters — and the
+fix (a numeric model with an accessor so the delegates update in place) is a
+three-block edit that wants a window to look at. The charts were fixed now
+because a recreated `Canvas` loses its paint state, which is visible.
+
+**Still unknown after all of this:** whether `Canvas` under Qt 6 accepts these 2D
+calls, whether the nested `Flickable`/`Grid`/`Repeater` layout produces the
+spacing the design asks for, and whether parsing one JSON frame a second is smooth
+in QML. Those are the three the build will answer.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
@@ -688,6 +749,7 @@ per-core numbers should not also be the machine whose PDH query is suspect.
 | PDH (slice 7) | Every signature and type read from the generated docs for `windows` 0.62.2 (`microsoft/windows-docs-rs`), then cross-checked against a working open-source user of the same module (Argus `pdh.rs`: `PdhOpenQueryW(PCWSTR::null(), …) == 0`, `value.Anonymous.doubleValue`) |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
+| The Qt surface (slice 16) | Every cxx-qt and QML API used was matched against a file in this repository that compiles, plus cxx-qt 0.10's own `threading.rs` for `queue`'s signature; the QML module and page registrations were read out of `build.rs` and `MainWindow.qml`; the lockfile was checked mechanically. Two defects found and fixed, one pattern aligned |
 | The verification script (slice 15) | Its JSON paths were read off the serde attributes in `model.rs` (`snapshot.processes[].cpu_percent.state`, snake_case, `MetricState` as `{state, value}`) rather than guessed, and the CLI flags it passes are the ones `IntelArg` declares. Not executed: no PowerShell here |
 
 **Not verified: it has not been compiled.** There is no Rust toolchain in this

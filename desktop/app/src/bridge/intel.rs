@@ -150,7 +150,9 @@ fn sampler(running: Arc<AtomicBool>, qt: cxx_qt::CxxQtThread<qobject::IntelHost>
         if qt
             .queue(move |mut object| {
                 object.as_mut().set_frame(QString::from(&json));
-                let samples = object.samples().saturating_add(1);
+                // Read as a field, like every other bridge in this app: the
+                // generated type derefs to the Rust struct that holds it.
+                let samples = object.samples.saturating_add(1);
                 object.as_mut().set_samples(samples);
             })
             .is_err()

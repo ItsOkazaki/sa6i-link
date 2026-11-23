@@ -195,9 +195,13 @@ Item {
                 spacing: 12
 
                 Repeater {
+                    // Keys, not data: this array has to stay free of bindings,
+                    // or the Repeater — and each card's Canvas — is rebuilt on
+                    // every frame. The points are looked up in the delegate, so
+                    // they update in place.
                     model: [
-                        { label: qsTr("CPU"), points: page.cpuPoints },
-                        { label: qsTr("Memory"), points: page.memoryPoints }
+                        { key: "cpu", label: qsTr("CPU") },
+                        { key: "memory", label: qsTr("Memory") }
                     ]
                     delegate: Card {
                         width: (parent.width - parent.spacing) / 2
@@ -224,7 +228,7 @@ Item {
                             Sparkline {
                                 width: parent.width
                                 height: 56
-                                points: modelData.points
+                                points: modelData.key === "cpu" ? page.cpuPoints : page.memoryPoints
                             }
                         }
                     }
@@ -324,7 +328,7 @@ Item {
                                 anchors.left: volumeMount.right
                                 anchors.leftMargin: 82
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - 82 - 132
+                                width: Math.max(0, parent.width - 82 - 132)
                                 height: 6
                                 radius: 3
                                 color: Theme.surfaceContainerHighest
