@@ -14,7 +14,7 @@
 use crate::findings::{
     Confidence, Evidence, Finding, Severity, render_bytes, render_percent,
 };
-use crate::model::{MetricState, Snapshot};
+use crate::model::{MemorySample, MetricState, Snapshot};
 use crate::store::SampleStore;
 
 /// What a rule declares about itself.
@@ -41,6 +41,7 @@ pub struct Rule {
 pub static RULES: &[Rule] = &[
     Rule { def: DISK_LOW_FREE_SPACE, evaluate: disk_low_free_space },
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
+    Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
 
@@ -54,6 +55,14 @@ const DISK_SUSTAINED_MS: u64 = 10 * 60 * 1000;
 /// Physical memory pressure, and how long it must last.
 const MEMORY_WARN_PERCENT: f32 = 90.0;
 const MEMORY_SUSTAINED_MS: u64 = 2 * 60 * 1000;
+
+/// Commit charge, as a share of the commit limit, and how long.
+///
+/// Higher than the physical-memory threshold on purpose: commit includes the
+/// pagefile, so a machine sitting at 90 % of it is not yet in trouble, while a
+/// machine at 90 % of physical memory already is.
+const COMMIT_WARN_PERCENT: f32 = 90.0;
+const COMMIT_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 
 /// Uptime at which "have you restarted?" becomes worth saying.
 const UPTIME_LONG_SECONDS: u64 = 14 * 24 * 60 * 60;
@@ -74,6 +83,10 @@ pub struct Thresholds {
     pub disk_sustained_ms: u64,
     pub memory_warn_percent: f32,
     pub memory_sustained_ms: u64,
+    /// Commit charge at or above this share of the commit limit is a warning.
+    pub memory_commit_warn_percent: f32,
+    /// …and how long it has to stay there.
+    pub memory_commit_sustained_ms: u64,
     pub uptime_long_seconds: u64,
 }
 
@@ -85,6 +98,8 @@ impl Default for Thresholds {
             disk_sustained_ms: DISK_SUSTAINED_MS,
             memory_warn_percent: MEMORY_WARN_PERCENT,
             memory_sustained_ms: MEMORY_SUSTAINED_MS,
+            memory_commit_warn_percent: COMMIT_WARN_PERCENT,
+            memory_commit_sustained_ms: COMMIT_SUSTAINED_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
         }
     }
@@ -243,6 +258,86 @@ fn memory_pressure(
     })
 }
 
+/// Commit charge has been close to the commit limit for five minutes.
+///
+/// This is the rule that answers a complaint Task Manager makes hard to see:
+/// "it says out of memory and there is plenty of RAM". Commit charge counts
+/// every byte the system has promised to a program, including the pagefile, so
+/// it can run out while physical memory looks comfortable. Physical memory
+/// pressure is a different finding, with a lower threshold, because the two
+/// fail differently: paging slows a machine down, running out of commit makes
+/// allocations fail.
+pub const MEMORY_COMMIT_PRESSURE: RuleDef = RuleDef {
+    id: "memory.commit_pressure",
+    severity: Severity::Warning,
+    confidence: Confidence::Likely,
+    requires: &["memory.commit_used_bytes", "memory.commit_limit_bytes"],
+};
+
+/// Commit charge as a share of the limit, or `None`.
+///
+/// A zero limit is not "0 % used": it is a machine that did not answer, and
+/// dividing by it would either invent a finding or hide one. Every caller treats
+/// `None` as "no opinion".
+fn commit_percent(memory: &MemorySample) -> Option<f32> {
+    let used = memory.commit_used.value()?.0;
+    let limit = memory.commit_limit.value()?.0;
+    if limit == 0 {
+        return None;
+    }
+    // Not clamped at 100: a machine past its commit limit is more interesting
+    // than one at it, and hiding that would be the same mistake as rendering an
+    // unmeasured rate as zero.
+    Some((used as f64 / limit as f64 * 100.0) as f32)
+}
+
+fn memory_commit_pressure(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.memory_commit_warn_percent;
+    let percent = commit_percent(&snapshot.memory)?;
+    if percent < warn {
+        return None;
+    }
+    let window = store.held_for(limits.memory_commit_sustained_ms, |sample| {
+        commit_percent(&sample.memory).is_some_and(|p| p >= warn)
+    })?;
+    // Both are values: `commit_percent` above returned one, which it only does
+    // when both sides are readable.
+    let used = snapshot.memory.commit_used.value()?;
+    let limit = snapshot.memory.commit_limit.value()?;
+    let warn_bytes = (limit.0 as f64 * f64::from(warn) / 100.0) as u64;
+    Some(Finding {
+        id: format!("{}/system", MEMORY_COMMIT_PRESSURE.id),
+        rule: MEMORY_COMMIT_PRESSURE.id.to_owned(),
+        severity: MEMORY_COMMIT_PRESSURE.severity,
+        confidence: MEMORY_COMMIT_PRESSURE.confidence,
+        subject: "system".to_owned(),
+        title: "Committed memory is close to the limit".to_owned(),
+        explain: format!(
+            "{} of {} commit is in use ({percent:.1} %) and it has been above {warn:.0} % for {} \
+             minutes. Commit charge counts every byte the system has promised, including the \
+             pagefile, so it can reach the limit while RAM looks free - and then allocations fail \
+             and programs close with an out-of-memory error.",
+            render_bytes(used.0),
+            render_bytes(limit.0),
+            window.held_for_ms / 60_000
+        ),
+        evidence: vec![
+            Evidence::new("memory.commit_used_bytes", render_bytes(used.0))
+                .threshold(render_bytes(warn_bytes))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+            Evidence::new("memory.commit_limit_bytes", render_bytes(limit.0)),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
 /// The machine has not been restarted in a fortnight.
 pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     id: "system.long_uptime",
@@ -365,6 +460,13 @@ mod tests {
         snapshot.volumes[0].free = MetricState::Value(Bytes(free));
     }
 
+    fn with_commit(snapshot: &mut Snapshot, percent: f32) {
+        let limit = 24 * 1_000_000_000u64;
+        let used = (percent / 100.0 * limit as f32) as u64;
+        snapshot.memory.commit_limit = MetricState::Value(Bytes(limit));
+        snapshot.memory.commit_used = MetricState::Value(Bytes(used));
+    }
+
     /// `last_second + 1` samples at 1 Hz, so a window of N seconds is exactly
     /// covered.
     fn series(last_second: u64, mut sample: impl FnMut(u64) -> Snapshot) -> SampleStore {
@@ -378,6 +480,61 @@ mod tests {
     fn findings_of(store: &SampleStore) -> Vec<Finding> {
         let snapshot = store.latest().expect("a store with samples").clone();
         evaluate(&snapshot, store)
+    }
+
+    #[test]
+    fn a_zero_commit_limit_is_no_opinion_rather_than_a_division() {
+        // A machine that reports a zero limit has not answered the question. The
+        // rule must keep quiet: 0 % would be a lie, and 100 % would be a worse
+        // one.
+        let store = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.memory.commit_limit = MetricState::Value(Bytes(0));
+            snap.memory.commit_used = MetricState::Value(Bytes(1_000));
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn commit_pressure_needs_five_minutes_and_then_says_so() {
+        // Four minutes of a high commit charge is a program starting, not a
+        // machine running out of promises.
+        let brief = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_commit(&mut snap, if s + 1 > 360 { 95.0 } else { 40.0 });
+            snap
+        });
+        assert!(findings_of(&brief).is_empty(), "four minutes is not five");
+
+        let sustained = series(360, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_commit(&mut snap, 95.0);
+            snap
+        });
+        let findings = findings_of(&sustained);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "memory.commit_pressure");
+        // Both cited paths are ones `metrics()` publishes, which is what makes
+        // the evidence checkable after the fact.
+        let cited: Vec<&str> = findings[0].evidence.iter().map(|e| e.metric.as_str()).collect();
+        assert!(cited.contains(&"memory.commit_used_bytes"), "{cited:?}");
+        assert!(cited.contains(&"memory.commit_limit_bytes"), "{cited:?}");
+    }
+
+    #[test]
+    fn commit_pressure_moves_with_its_threshold() {
+        let store = series(360, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_commit(&mut snap, 60.0);
+            snap
+        });
+        let snapshot = store.latest().expect("samples").clone();
+        assert!(evaluate(&snapshot, &store).is_empty(), "60 % is not 90 %");
+        let strict = Thresholds { memory_commit_warn_percent: 55.0, ..Thresholds::default() };
+        let findings = evaluate_with(&snapshot, &store, &strict);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "memory.commit_pressure");
     }
 
     #[test]

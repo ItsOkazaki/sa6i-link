@@ -37,11 +37,12 @@ process.{pid}.working_set_bytes    process.{pid}.cpu_percent
 system.uptime_seconds
 ```
 
-Three things are collected but **not published**, and each is a one-line change
-that a rule needs before it can cite them: `memory.commit_used` and
-`memory.commit_limit` (the collector reads them; `metrics()` does not emit them),
-and the process's creation stamp (`ProcessKey.created`), which lives in the
-rate tracker and never reaches the snapshot.
+One thing is collected but **not published**, and it is a one-line change that a
+rule needs before it can cite it: the process's creation stamp
+(`ProcessKey.created`), which lives in the rate tracker and never reaches the
+snapshot. Commit charge used to be on this list; slice 18 published
+`memory.commit_used_bytes` and `memory.commit_limit_bytes`, and
+`memory.commit_pressure` is built on them.
 
 ## The catalogue
 
@@ -59,7 +60,7 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | ready, silent where the limit is 0 |
 | `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | ready, with the identity caveat below |
 | `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | ready, same caveat |
-| `memory.commit_pressure` | `memory.commit_used` / `memory.commit_limit` | 5 min | Warning | needs the two `metrics()` lines |
+| `memory.commit_pressure` | `memory.commit_used_bytes` / `memory.commit_limit_bytes` | 5 min | Warning | **shipped** |
 | `disk.slow_transfers` | `Avg. Disk sec/Transfer` | 10 min | Warning | needs one more PDH counter on the query already open |
 | `memory.paging` | `Pages Input/sec` | 5 min | Warning | needs a second PDH query (`Memory`) |
 
@@ -188,7 +189,7 @@ did not run, and why (`requires` unavailable), because "nothing found" and
 
 ## What shipped as the front-end
 
-`core/sa6i-link-intel/src/rules_file.rs`, the three files in
+`core/sa6i-link-intel/src/rules_file.rs`, the files in
 `core/sa6i-link-intel/rules/`, and a test that loads them.
 
 **Refused, at parse or check time, with the rule and the key named:** a rule id the
@@ -208,7 +209,7 @@ being optional. The loader's tests read `tests/scenarios/` and match the names
 against it, so renaming a fixture breaks the test instead of drifting past it.
 
 **The proof that nothing changed:** the tests assert that the thresholds parsed from
-the three shipped files equal `Thresholds::default()` exactly. Rules are pure
+every shipped file equal `Thresholds::default()` exactly. Rules are pure
 functions of `(snapshot, store, thresholds)`, so equal thresholds mean every finding
 from every fixture is byte-identical to the one the compiled defaults produce — and
 the existing scenario tests already prove those.
@@ -224,7 +225,8 @@ rewrites the same line.
 ## Order of work, once the gate opens
 
 1. **The thresholds, as data** — *done in M1's slice 17*: `rules::Thresholds`
-   carries all six numbers, `Rule::evaluate` takes it, and `evaluate_with` runs the
+   carries every number (eight, now that commit charge has two), `Rule::evaluate`
+   takes it, and `evaluate_with` runs the
    fixtures at any other set. Nothing changed for callers: `evaluate` passes the
    defaults.
 2. **The loader and the validator**, with fixtures only — no new thresholds, the
@@ -232,9 +234,9 @@ rewrites the same line.
    from the same recipes. That is the test that the front-end did not change a
    verdict. — *done, see above; the runtime wiring is still owed*
 3. **The rules that need a `metrics()` line** — `memory.commit_pressure` is
-   unblocked (slice 18 published `memory.commit_used_bytes` and
-   `memory.commit_limit_bytes`); the process creation stamp is still owed, and
-   belongs with `process.runaway_cpu`.
+   *done*: the rule, its two thresholds, its TOML file and three fixtures
+   (firing, window-not-held, adjacent-at-89.5 %). The process creation stamp is
+   still owed, and belongs with `process.runaway_cpu`.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

@@ -1,0 +1,19 @@
+{
+  "name": "memory-commit-tight-for-six-minutes",
+  "about": "22.3 of 24 GiB of commit in use (93 %) for six minutes, with RAM at half: the machine is out of promises, not out of memory, which outlasts the five-minute window.",
+  "segments": [
+    {
+      "minutes": 6,
+      "memory_percent": 50,
+      "commit_percent": 93
+    }
+  ],
+  "expect": [
+    {
+      "rule": "memory.commit_pressure",
+      "severity": "Warning",
+      "subject": "system"
+    }
+  ],
+  "quiets": ["memory.pressure"]
+}

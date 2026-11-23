@@ -1,0 +1,17 @@
+{
+  "name": "memory-commit-two-minutes-is-not-five",
+  "about": "Commit climbs to 93 % only two minutes before the last sample. The number is above the threshold and the window is not - a machine that has just started paging in hard should not be reported as one that has been stuck there.",
+  "segments": [
+    {
+      "minutes": 8,
+      "memory_percent": 50,
+      "commit_percent": 40
+    },
+    {
+      "minutes": 2,
+      "memory_percent": 50,
+      "commit_percent": 93
+    }
+  ],
+  "quiets": ["memory.commit_pressure"]
+}

@@ -34,6 +34,9 @@ const MIB: u64 = 1024 * 1024;
 const MEMORY_TOTAL: u64 = 16 * 1024 * MIB;
 /// A 500 GiB data volume.
 const VOLUME_TOTAL: u64 = 500 * 1024 * MIB;
+/// The commit limit the commit fixtures describe: 16 GiB of RAM and an 8 GiB
+/// pagefile, which is what a default Windows install of this size would have.
+const COMMIT_LIMIT: u64 = 24 * 1024 * MIB;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -60,6 +63,11 @@ struct Segment {
     cpu_percent: f32,
     #[serde(default = "default_memory")]
     memory_percent: f32,
+    /// Commit charge as a share of the commit limit. Absent means the machine
+    /// would not say, which is how most machines are described here: a rule that
+    /// needs it has to keep quiet rather than assume.
+    #[serde(default)]
+    commit_percent: Option<f32>,
     #[serde(default)]
     volumes: Vec<VolumeSpec>,
     #[serde(default = "default_uptime")]
@@ -157,7 +165,7 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
             // scenario format grows per-core numbers when a rule needs them.
             per_core: Vec::new(),
         },
-        memory: memory(segment.memory_percent),
+        memory: memory(segment),
         volumes: segment.volumes.iter().map(volume).collect(),
         // The fixtures describe a whole machine; processes arrive when a rule
         // needs them.
@@ -168,13 +176,24 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
     }
 }
 
-fn memory(percent_used: f32) -> MemorySample {
+fn memory(segment: &Segment) -> MemorySample {
+    let percent_used = segment.memory_percent;
     let free = (MEMORY_TOTAL as f64 * f64::from(100.0 - percent_used) / 100.0) as u64;
+    let (commit_used, commit_limit) = match segment.commit_percent {
+        Some(percent) => (
+            MetricState::Value(Bytes((COMMIT_LIMIT as f64 * f64::from(percent) / 100.0) as u64)),
+            MetricState::Value(Bytes(COMMIT_LIMIT)),
+        ),
+        None => (
+            MetricState::Unknown(WhyUnknown::NotCollectedYet),
+            MetricState::Unknown(WhyUnknown::NotCollectedYet),
+        ),
+    };
     MemorySample {
         total: MetricState::Value(Bytes(MEMORY_TOTAL)),
         available: MetricState::Value(Bytes(free)),
-        commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
-        commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+        commit_limit,
+        commit_used,
     }
 }
 
@@ -280,6 +299,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         minutes: 1,
         cpu_percent: 42.0,
         memory_percent: 50.0,
+        commit_percent: None,
         volumes: vec![VolumeSpec {
             letter: "C:".to_owned(),
             kind: "fixed".to_owned(),

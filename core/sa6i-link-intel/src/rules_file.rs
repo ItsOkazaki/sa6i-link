@@ -254,6 +254,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
     match id {
         "disk.low_free_space" => &["warn_percent", "critical_percent", "sustained"],
         "memory.pressure" => &["warn_percent", "sustained"],
+        "memory.commit_pressure" => &["warn_percent", "sustained"],
         "system.long_uptime" => &["long_after"],
         _ => &[],
     }
@@ -292,6 +293,16 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
             if let Some(millis) = window {
                 limits.memory_sustained_ms = millis;
+            }
+        }
+        "memory.commit_pressure" => {
+            let warn = percent(entry.warn_percent, id, "warn_percent", refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(warn) = warn {
+                limits.memory_commit_warn_percent = warn;
+            }
+            if let Some(millis) = window {
+                limits.memory_commit_sustained_ms = millis;
             }
         }
         "system.long_uptime" => {
@@ -480,6 +491,7 @@ mod tests {
 
     const DISK: &str = include_str!("../rules/disk.toml");
     const MEMORY: &str = include_str!("../rules/memory.toml");
+    const COMMIT: &str = include_str!("../rules/commit.toml");
     const SYSTEM: &str = include_str!("../rules/system.toml");
 
     /// The scenario names the fixtures actually carry, read from the directory so
@@ -523,7 +535,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [DISK, MEMORY, SYSTEM] {
+        for text in [DISK, MEMORY, COMMIT, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)
