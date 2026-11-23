@@ -18,6 +18,8 @@ tracing.workspace = true
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem",
+    # Performance counters: disk throughput, and later GPU memory.
+    "Win32_System_Performance",
     # Process enumeration and per-process memory: the heaviest processes.
     "Win32_System_ProcessStatus",
     "Win32_System_SystemInformation",

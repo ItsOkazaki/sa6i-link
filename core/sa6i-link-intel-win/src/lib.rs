@@ -8,10 +8,12 @@
 //! attempted and failing mysteriously.
 //!
 //! Slice 1 covers CPU, memory, volumes and uptime; slice 4 adds per-core CPU,
-//! slice 6 the heaviest processes.
-//! Disk throughput, GPU memory and per-process detail need APIs that are either
-//! heavier (`PdhAddEnglishCounter`) or version-gated (`QueryVideoMemoryInfo`),
-//! and land in their own slices with their own fixtures.
+//! slice 6 the heaviest processes, slice 7 disk throughput (see the `pdh` module).
+//!
+//! GPU memory is still missing on purpose: `QueryVideoMemoryInfo` answers for
+//! the calling process on an adapter, not for the machine, so it needs the PDH
+//! counter set `\GPU Adapter Memory(*)` instead — the same module `pdh` now
+//! uses, which is why that collector comes next rather than first.
 //!
 //! # `unsafe`
 //!
@@ -23,9 +25,11 @@
 use std::time::Instant;
 
 use sa6i_link_intel::{
-    Bytes, Collector, CpuSample, MemorySample, MetricState, ProcessSample, Snapshot, TOP_PROCESSES,
-    Timestamp, VolumeSample, WhyUnknown, top_processes,
+    Bytes, Collector, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessSample, Snapshot,
+    TOP_PROCESSES, Timestamp, VolumeSample, WhyUnknown, top_processes,
 };
+
+mod pdh;
 
 /// A Windows collector. Keeps the previous CPU sample, because a rate needs two.
 #[derive(Debug)]
@@ -34,6 +38,10 @@ pub struct WindowsCollector {
     previous_cpu: Option<CpuTimes>,
     /// The previous per-core counters, so a rate can be computed per core.
     previous_cores: Option<Vec<CpuTimes>>,
+    /// The disk throughput query, opened once. `None` when this machine will
+    /// not give us one, which is reported per sample rather than retried every
+    /// second: a disabled counter set does not come back on its own.
+    disk: Option<pdh::DiskCounters>,
     seq: u64,
 }
 
@@ -49,6 +57,7 @@ impl WindowsCollector {
             started: Instant::now(),
             previous_cpu: None,
             previous_cores: None,
+            disk: pdh::DiskCounters::new(),
             seq: 0,
         }
     }
@@ -67,6 +76,10 @@ impl Collector for WindowsCollector {
         let cpu = self.cpu();
         let memory = read_memory();
         let volumes = read_volumes();
+        let disk_io = match self.disk.as_mut() {
+            Some(disk) => disk.read(),
+            None => DiskIoSample::unavailable(WhyUnknown::CollectorFailed),
+        };
         let processes = platform::read_processes();
         let uptime = read_uptime();
         Snapshot {
@@ -76,6 +89,7 @@ impl Collector for WindowsCollector {
             cpu,
             memory,
             volumes,
+            disk_io,
             processes,
             uptime,
         }
@@ -396,10 +410,12 @@ mod platform {
             let mut pids = vec![0u32; capacity];
             let mut written = 0u32;
             let bytes = u32::try_from(pids.len() * std::mem::size_of::<u32>()).unwrap_or(u32::MAX);
-            // The return value is deliberately not matched: the number of bytes
-            // written is what says whether the call worked, and that shape has
-            // changed between versions of this crate once already.
-            let _status = unsafe { EnumProcesses(pids.as_mut_ptr(), bytes, &mut written) };
+            // SAFETY: `pids` is a writable buffer of `bytes` and `written`
+            // receives how much of it the call filled.
+            let listed = unsafe { EnumProcesses(pids.as_mut_ptr(), bytes, &mut written) };
+            if listed.is_err() {
+                return Vec::new();
+            }
             let per_pid = std::mem::size_of::<u32>();
             let count = (written as usize / per_pid).min(pids.len());
             if count == 0 {

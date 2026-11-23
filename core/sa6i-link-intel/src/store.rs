@@ -150,7 +150,8 @@ pub struct HeldWindow {
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, MemorySample, MetricState, VolumeKind, VolumeSample, WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample,
+        WhyUnknown,
     };
 
     fn snapshot(seq: u64, monotonic_ms: u64, cpu: f32, disk_used: f32) -> Snapshot {
@@ -171,6 +172,7 @@ mod tests {
                 total: MetricState::Value(Bytes(100)),
                 free: MetricState::Value(Bytes((100.0 - disk_used) as u64)),
             }],
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(60),
         }

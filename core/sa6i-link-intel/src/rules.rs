@@ -264,7 +264,9 @@ pub fn evaluate(snapshot: &Snapshot, store: &SampleStore) -> Vec<Finding> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Bytes, CpuSample, MemorySample, VolumeKind, VolumeSample, WhyUnknown};
+    use crate::model::{
+        Bytes, CpuSample, DiskIoSample, MemorySample, VolumeKind, VolumeSample, WhyUnknown,
+    };
 
     /// A machine that is fine: 20 % CPU, half the memory, half of C:.
     fn healthy(seq: u64, monotonic_ms: u64) -> Snapshot {
@@ -285,6 +287,7 @@ mod tests {
                 total: MetricState::Value(Bytes(500 * 1_000_000_000)),
                 free: MetricState::Value(Bytes(250 * 1_000_000_000)),
             }],
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(3600),
         }

@@ -275,7 +275,8 @@ impl History {
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, MemorySample, MetricState, VolumeKind, VolumeSample, WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample,
+        WhyUnknown,
     };
 
     fn snapshot(seq: u64, taken_at: i64) -> Snapshot {
@@ -296,6 +297,7 @@ mod tests {
                 total: MetricState::Value(Bytes(100)),
                 free: MetricState::Value(Bytes(50)),
             }],
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(60),
         }

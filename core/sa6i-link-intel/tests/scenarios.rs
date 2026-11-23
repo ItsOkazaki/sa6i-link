@@ -22,8 +22,8 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use sa6i_link_intel::{
-    Bytes, CpuSample, Finding, MemorySample, MetricState, RULES, SampleStore, Severity, Snapshot,
-    Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
+    Bytes, CpuSample, DiskIoSample, Finding, MemorySample, MetricState, RULES, SampleStore, Severity,
+    Snapshot, Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
 };
 
 /// A fixed wall-clock base so the fixtures are deterministic: 2023-11-14T22:13:20Z.
@@ -161,6 +161,7 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         volumes: segment.volumes.iter().map(volume).collect(),
         // The fixtures describe a whole machine; processes arrive when a rule
         // needs them.
+        disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
         processes: Vec::new(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
     }
@@ -288,7 +289,17 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(
         names(&json),
-        ["cpu", "memory", "monotonic_ms", "processes", "seq", "taken_at", "uptime", "volumes"]
+        [
+            "cpu",
+            "disk_io",
+            "memory",
+            "monotonic_ms",
+            "processes",
+            "seq",
+            "taken_at",
+            "uptime",
+            "volumes"
+        ]
     );
     assert_eq!(names(&json["cpu"]), ["percent"]);
     assert_eq!(names(&json["memory"]), ["available", "commit_limit", "commit_used", "total"]);

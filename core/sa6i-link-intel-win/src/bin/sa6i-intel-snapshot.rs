@@ -36,6 +36,21 @@ fn describe_cores(cores: &[MetricState<f32>]) -> String {
     )
 }
 
+/// `"read 12.4 MB/s, write 840 kB/s"`, or why there is no number.
+fn describe_disk_io(io: &sa6i_link_intel::DiskIoSample) -> String {
+    let rate = |state: MetricState<sa6i_link_intel::Bytes>| match state {
+        MetricState::Value(bytes) => format!("{}/s", render_bytes(bytes.0)),
+        MetricState::Unknown(reason) | MetricState::Unsupported(reason) => {
+            format!("— ({})", reason.explain())
+        }
+    };
+    format!(
+        "read {}, write {}",
+        rate(io.read_bytes_per_second),
+        rate(io.write_bytes_per_second)
+    )
+}
+
 /// `"msedge.exe 1.2 GB, chrome.exe 900 MB"` for the heaviest few, or why not.
 fn describe_processes(processes: &[ProcessSample]) -> String {
     let described: Vec<String> = processes
@@ -166,6 +181,7 @@ fn main() {
     if !snapshot.cpu.per_core.is_empty() {
         println!("  cores      {}", describe_cores(&snapshot.cpu.per_core));
     }
+    println!("  disk io    {}", describe_disk_io(&snapshot.disk_io));
     if !snapshot.processes.is_empty() {
         println!("  processes  {}", describe_processes(&snapshot.processes));
     }

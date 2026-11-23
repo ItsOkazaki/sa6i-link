@@ -14,7 +14,8 @@ actions.
 | Findings and evidence | `core/sa6i-link-intel/src/findings.rs` | **done** — severity, confidence, evidence, rendering |
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
-| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, heaviest processes, no admin |
+| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
+| Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` counters; a rate needs two samples |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -297,6 +298,54 @@ this crate models the call as `BOOL` or `Result<()>` — a distinction I could n
 settle from documentation, and one that would otherwise have been a guess
 compiled into the code.
 
+## Slice 7 — disk throughput, and how the PDH guess was settled
+
+`Snapshot.disk_io` carries read and write bytes per second, summed over physical
+disks — Task Manager's Performance-tab number, and what "the disk is busy" means
+to a person.
+
+**The hold-up last slice was real, and it had a real answer.** I would not write
+PDH while the return type of `PdhOpenQueryW` was a coin flip — `WIN32_ERROR` or
+`PDH_STATUS`, one of which is a compile error. The way out was not a better
+guess but the generated documentation, which `microsoft/windows-docs-rs`
+publishes per item and which is readable through the GitHub API. Every signature
+in `pdh.rs` now comes from there, for `windows` 0.62.2 exactly:
+
+```text
+PdhOpenQueryW(PCWSTR, usize, *mut PDH_HQUERY) -> u32
+PdhAddEnglishCounterW(PDH_HQUERY, PCWSTR, usize, *mut PDH_HCOUNTER) -> u32
+PdhCollectQueryData(PDH_HQUERY) -> u32
+PdhGetFormattedCounterValue(PDH_HCOUNTER, PDH_FMT, Option<*mut u32>, *mut PDH_FMT_COUNTERVALUE) -> u32
+PDH_HQUERY(pub *mut c_void)   PDH_FMT(pub u32)   PDH_FMT_DOUBLE: PDH_FMT
+PDH_FMT_COUNTERVALUE { CStatus: u32, Anonymous: PDH_FMT_COUNTERVALUE_0 }
+PDH_FMT_COUNTERVALUE_0 { doubleValue: f64, … }
+```
+
+The function returns a plain `u32` — zero is success — which is why the checked
+pattern is `!= 0` rather than a typed error. The same source settled
+`EnumProcesses(...) -> Result<()>`, so slice 6's `let _status` hedge is gone and
+that call is matched properly now.
+
+Three decisions in the collector:
+
+**English counters, not localised ones** (`PdhAddEnglishCounterW`). Counter
+display names are translated; asking for `\PhysicalDisk(_Total)\Disk Read
+Bytes/sec` on a French Windows finds nothing, and a collector reporting 0 B/s
+forever on a French machine is worse than one reporting nothing.
+
+**A rate needs two samples.** The first collection has no interval behind it, so
+it reports `Unknown(NotSampledYet)` rather than the 0 PDH would happily hand
+back — on a busy disk that 0 is a lie.
+
+**Both statuses are checked.** PDH separates "the call worked" from "the data is
+valid" via the counter's own `CStatus`; believing the first without the second is
+the exact mistake this crate exists to prevent. Non-finite and negative values
+are refused too.
+
+The query is opened once and owned by the collector, so its handle closes in
+`Drop` — PDH queries are not reference counted, and a leak would be one kernel
+object per second.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -310,10 +359,10 @@ Evaluated but not shipped: `GetPerformanceInfo` for a process count (easy, but
 nothing yet uses it) and `GetVolumeInformationW` for filesystem names (only
 useful once the UI shows them).
 
-Disk throughput and GPU memory are still open — see `## Next` — and per-process
-CPU is deliberately absent from slice 6 for the reason given there. They were
-left out rather than bundled so that a machine reporting bad per-core numbers
-cannot also be a machine whose PDH query is suspect.
+GPU memory is the one collector still open, and per-process CPU is deliberately
+absent for the reason given in slice 6. They were left out rather than bundled
+so that a machine reporting bad per-core numbers cannot also be a machine whose
+PDH query is suspect.
 
 ## Verification
 
@@ -327,6 +376,7 @@ cannot also be a machine whose PDH query is suspect.
 | Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
 | Dependency graph | Both intel closures were recomputed independently in Python from the same lock — 62 and 74 crates, zero network-capable, which is what the Rust test asserts |
+| PDH (slice 7) | Every signature and type read from the generated docs for `windows` 0.62.2 (`microsoft/windows-docs-rs`), then cross-checked against a working open-source user of the same module (Argus `pdh.rs`: `PdhOpenQueryW(PCWSTR::null(), …) == 0`, `value.Anonymous.doubleValue`) |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 
@@ -364,8 +414,8 @@ depends on the API shape.
 
 ## Next
 
-0. **Stop and compile.** Six commits of Win32 calls, SQLite calls and a new
-   dependency have never been through `rustc`. Until they have, every further
+0. **Compile before writing more.** Seven commits of Win32 calls, PDH calls,
+   SQLite calls and a new dependency have never been through `rustc`. Until they have, every further
    collector is written on top of assumptions nobody has checked, and the cost
    of finding out grows with each one:
 
@@ -375,22 +425,14 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-1. **M1.1, the rest:** disk throughput (PDH, English counters) and GPU memory.
-   Each gets its own slice and its own fixture, for the same reason slice 4 was
-   one collector and not four. Per-process CPU joins them once there is a
+1. **M1.1, the last collector: GPU memory.** `QueryVideoMemoryInfo` answers for
+   *the calling process* on an adapter, not for the machine, so using it as
+   "GPU memory pressure" would be a true number answering the wrong question.
+   The documented machine-wide source is the PDH counter set
+   `\GPU Adapter Memory(*)\Dedicated Usage` (Win10 1709+), which is now a short
+   step: the same module slice 7 built, plus `PdhGetFormattedCounterArrayW` for
+   the instance list. Per-process CPU joins a later slice, once there is a
    two-sample map keyed by pid and creation time.
-   - PDH is deliberately not written yet. The `windows` crate is not in this
-     sandbox, and I could not confirm from documentation whether
-     `PdhOpenQueryW` returns `WIN32_ERROR` or `PDH_STATUS` in 0.62 — two
-     plausible signatures, and one of them is a compile error in a crate that
-     cannot be compiled here. Guessing that is worse than waiting for one
-     `cargo check`.
-   - GPU memory needs a decision before code: `QueryVideoMemoryInfo` answers for
-     *the calling process* on an adapter, not for the machine, so using it as
-     "GPU memory pressure" would be a true number answering the wrong question.
-     The documented machine-wide source is the PDH counter set
-     `\GPU Adapter Memory(*)\Dedicated Usage` (Win10 1709+), which means GPU
-     waits for the PDH work rather than racing it.
 2. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
    Overview tiles and the sparklines that draw gaps as gaps, reading their
    history from `History::recent` instead of the ring once the window is longer

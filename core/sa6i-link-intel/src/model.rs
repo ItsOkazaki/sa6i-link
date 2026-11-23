@@ -274,6 +274,33 @@ pub fn top_processes(mut processes: Vec<ProcessSample>, limit: usize) -> Vec<Pro
     processes
 }
 
+/// Disk throughput, from Windows' `PhysicalDisk` counters.
+///
+/// Bytes per second, summed over physical disks — the number Task Manager's
+/// Performance tab shows. Per-volume throughput would be a different
+/// measurement (a volume spanning two disks has no single answer), so this is
+/// named for what it actually is.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DiskIoSample {
+    pub read_bytes_per_second: MetricState<Bytes>,
+    pub write_bytes_per_second: MetricState<Bytes>,
+}
+
+impl DiskIoSample {
+    /// Throughput nobody measured, for the reason given.
+    pub fn unavailable(reason: WhyUnknown) -> Self {
+        Self {
+            read_bytes_per_second: MetricState::Unknown(reason),
+            write_bytes_per_second: MetricState::Unknown(reason),
+        }
+    }
+
+    /// Whether either direction is a real number.
+    pub fn is_known(&self) -> bool {
+        self.read_bytes_per_second.is_known() || self.write_bytes_per_second.is_known()
+    }
+}
+
 /// Everything measured at one moment.
 ///
 /// `PartialEq` is derived so tests can assert on whole snapshots, and `seq`
@@ -290,6 +317,8 @@ pub struct Snapshot {
     pub cpu: CpuSample,
     pub memory: MemorySample,
     pub volumes: Vec<VolumeSample>,
+    /// Read and write throughput, over physical disks.
+    pub disk_io: DiskIoSample,
     /// The heaviest processes, see [`TOP_PROCESSES`]. Empty when processes were
     /// not collected at all.
     pub processes: Vec<ProcessSample>,
@@ -332,6 +361,12 @@ impl Snapshot {
             if let MetricState::Value(total) = volume.total {
                 out.push((format!("volume.{}.total_bytes", volume.letter()), total.0 as f64));
             }
+        }
+        if let MetricState::Value(read) = self.disk_io.read_bytes_per_second {
+            out.push(("disk.read_bytes_per_second".to_owned(), read.0 as f64));
+        }
+        if let MetricState::Value(write) = self.disk_io.write_bytes_per_second {
+            out.push(("disk.write_bytes_per_second".to_owned(), write.0 as f64));
         }
         if let MetricState::Value(uptime) = self.uptime {
             out.push(("system.uptime_seconds".to_owned(), uptime as f64));
@@ -380,6 +415,7 @@ mod tests {
                 commit_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
             },
             volumes: Vec::new(),
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Unknown(WhyUnknown::CollectorFailed),
         };
@@ -427,6 +463,38 @@ mod tests {
     }
 
     #[test]
+    fn throughput_is_plotted_when_it_exists_and_absent_when_it_does_not() {
+        let mut snapshot = Snapshot {
+            seq: 1,
+            taken_at: Timestamp(0),
+            monotonic_ms: 0,
+            cpu: CpuSample { percent: MetricState::Value(5.0), per_core: Vec::new() },
+            memory: MemorySample {
+                total: MetricState::Value(Bytes(1_000)),
+                available: MetricState::Value(Bytes(900)),
+                commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+            },
+            volumes: Vec::new(),
+            disk_io: DiskIoSample {
+                read_bytes_per_second: MetricState::Value(Bytes(4_096)),
+                write_bytes_per_second: MetricState::Unknown(WhyUnknown::CollectorFailed),
+            },
+            processes: Vec::new(),
+            uptime: MetricState::Value(60),
+        };
+        let paths: Vec<String> = snapshot.metrics().into_iter().map(|(path, _)| path).collect();
+        assert!(paths.contains(&"disk.read_bytes_per_second".to_owned()));
+        // A write rate nobody measured has no line to draw; a 0 would look like
+        // a quiet disk, which is a different fact.
+        assert!(!paths.contains(&"disk.write_bytes_per_second".to_owned()));
+        assert!(snapshot.disk_io.is_known());
+        snapshot.disk_io = DiskIoSample::unavailable(WhyUnknown::NotCollectedYet);
+        assert!(!snapshot.disk_io.is_known());
+        assert!(!snapshot.metrics().iter().any(|(path, _)| path.starts_with("disk.")));
+    }
+
+    #[test]
     fn a_measured_core_is_plotted_and_an_unmeasured_core_is_not() {
         let mut snapshot = Snapshot {
             seq: 1,
@@ -447,6 +515,7 @@ mod tests {
                 commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             },
             volumes: Vec::new(),
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(60),
         };
@@ -506,6 +575,7 @@ mod tests {
                 commit_used: MetricState::Value(Bytes(8_000_000_000)),
             },
             volumes: vec![volume("C:\\", 1000, 100)],
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(3600),
         };
@@ -547,6 +617,7 @@ mod tests {
                 commit_used: MetricState::Value(Bytes(1)),
             },
             volumes: vec![volume("C:\\", 4, 1)],
+            disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(1),
         };
