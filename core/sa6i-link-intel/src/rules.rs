@@ -14,7 +14,7 @@
 use crate::findings::{
     Confidence, Evidence, Finding, Severity, render_bytes, render_percent,
 };
-use crate::model::{MemorySample, MetricState, Snapshot};
+use crate::model::{MemorySample, MetricState, ProcessSample, Snapshot};
 use crate::store::SampleStore;
 
 /// What a rule declares about itself.
@@ -42,6 +42,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: DISK_LOW_FREE_SPACE, evaluate: disk_low_free_space },
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
+    Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
 
@@ -63,6 +64,14 @@ const MEMORY_SUSTAINED_MS: u64 = 2 * 60 * 1000;
 /// machine at 90 % of physical memory already is.
 const COMMIT_WARN_PERCENT: f32 = 90.0;
 const COMMIT_SUSTAINED_MS: u64 = 5 * 60 * 1000;
+
+/// A process holding this share of one core, and for how long.
+///
+/// Percent of a core, not of the machine: a program with several busy threads can
+/// read above 100, and 80 % of one core for ten minutes is a program that is not
+/// going to stop on its own.
+const RUNAWAY_CPU_PERCENT: f32 = 80.0;
+const RUNAWAY_CPU_SUSTAINED_MS: u64 = 10 * 60 * 1000;
 
 /// Uptime at which "have you restarted?" becomes worth saying.
 const UPTIME_LONG_SECONDS: u64 = 14 * 24 * 60 * 60;
@@ -87,6 +96,10 @@ pub struct Thresholds {
     pub memory_commit_warn_percent: f32,
     /// …and how long it has to stay there.
     pub memory_commit_sustained_ms: u64,
+    /// One process at or above this share of a core is a runaway candidate.
+    pub process_cpu_percent: f32,
+    /// …once it has held it this long.
+    pub process_cpu_sustained_ms: u64,
     pub uptime_long_seconds: u64,
 }
 
@@ -100,6 +113,8 @@ impl Default for Thresholds {
             memory_sustained_ms: MEMORY_SUSTAINED_MS,
             memory_commit_warn_percent: COMMIT_WARN_PERCENT,
             memory_commit_sustained_ms: COMMIT_SUSTAINED_MS,
+            process_cpu_percent: RUNAWAY_CPU_PERCENT,
+            process_cpu_sustained_ms: RUNAWAY_CPU_SUSTAINED_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
         }
     }
@@ -338,6 +353,96 @@ fn memory_commit_pressure(
     })
 }
 
+/// One process has held most of a core for ten minutes.
+///
+/// Identity is the whole difficulty here, and it is why the creation stamp had to
+/// reach the snapshot first: Windows hands a pid to a new process as soon as the
+/// old one exits, so "pid 4242 has been busy for ten minutes" is only true if it
+/// was the same process the whole time. A recycled pid is a different subject,
+/// and the fixture that proves it stays quiet when the stamp changes mid-window.
+pub const PROCESS_RUNAWAY_CPU: RuleDef = RuleDef {
+    id: "process.runaway_cpu",
+    severity: Severity::Notice,
+    confidence: Confidence::Likely,
+    requires: &["process.*.cpu_percent"],
+};
+
+fn process_runaway_cpu(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.process_cpu_percent;
+    // One process at a time: a finding per busy process on a machine doing heavy
+    // work would be a wall of text that says "something is compiling".
+    let mut worst: Option<(&ProcessSample, f32, crate::store::HeldWindow)> = None;
+    for process in &snapshot.processes {
+        let MetricState::Value(percent) = process.cpu_percent else {
+            continue;
+        };
+        if percent < warn {
+            continue;
+        }
+        // No stamp, no claim: without identity this rule would attribute one
+        // program's ten minutes to the program that inherited its pid.
+        let Some(created) = process.created.value().copied() else {
+            continue;
+        };
+        let pid = process.pid;
+        let Some(window) = store.held_for(limits.process_cpu_sustained_ms, move |sample| {
+            sample.processes.iter().any(|candidate| {
+                candidate.pid == pid
+                    && candidate.created.value().copied() == Some(created)
+                    && candidate
+                        .cpu_percent
+                        .value()
+                        .is_some_and(|percent| *percent >= warn)
+            })
+        }) else {
+            continue;
+        };
+        if worst.as_ref().is_none_or(|(_, best, _)| percent > *best) {
+            worst = Some((process, percent, window));
+        }
+    }
+
+    let (process, percent, window) = worst?;
+    let pid = process.pid;
+    let name = if process.name.is_empty() {
+        format!("pid {pid}")
+    } else {
+        process.name.clone()
+    };
+    let working_set = match process.working_set.value() {
+        Some(bytes) => render_bytes(bytes.0),
+        None => "an unknown amount of memory".to_owned(),
+    };
+    Some(Finding {
+        id: format!("{}/{pid}", PROCESS_RUNAWAY_CPU.id),
+        rule: PROCESS_RUNAWAY_CPU.id.to_owned(),
+        severity: PROCESS_RUNAWAY_CPU.severity,
+        confidence: PROCESS_RUNAWAY_CPU.confidence,
+        subject: format!("{name} ({pid})"),
+        title: format!("{name} is holding a core"),
+        explain: format!(
+            "{name} (pid {pid}) has used {percent:.0} % of a core for {} minutes while holding \
+             {working_set}. A process that never comes down is usually a stuck update, a script \
+             that is not finishing, or a window repainting in a loop.",
+            window.held_for_ms / 60_000
+        ),
+        evidence: vec![
+            Evidence::new(format!("process.{pid}.cpu_percent"), render_percent(percent))
+                .threshold(render_percent(warn))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+            Evidence::new(format!("process.{pid}.working_set_bytes"), working_set),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
 /// The machine has not been restarted in a fortnight.
 pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     id: "system.long_uptime",
@@ -424,7 +529,8 @@ pub fn evaluate_with(
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, DiskIoSample, MemorySample, VolumeKind, VolumeSample, WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, MemorySample, ProcessSample, VolumeKind, VolumeSample,
+        WhyUnknown,
     };
 
     /// A machine that is fine: 20 % CPU, half the memory, half of C:.
@@ -458,6 +564,16 @@ mod tests {
         let free = ((100.0 - percent) / 100.0 * total as f32) as u64;
         snapshot.volumes[0].total = MetricState::Value(Bytes(total));
         snapshot.volumes[0].free = MetricState::Value(Bytes(free));
+    }
+
+    fn busy_process(pid: u32, name: &str, created: u64, percent: f32) -> ProcessSample {
+        ProcessSample {
+            pid,
+            name: name.to_owned(),
+            working_set: MetricState::Value(Bytes(200 * 1_000_000)),
+            cpu_percent: MetricState::Value(percent),
+            created: MetricState::Value(created),
+        }
     }
 
     fn with_commit(snapshot: &mut Snapshot, percent: f32) {
@@ -535,6 +651,50 @@ mod tests {
         let findings = evaluate_with(&snapshot, &store, &strict);
         assert_eq!(findings.len(), 1, "{findings:?}");
         assert_eq!(findings[0].rule, "memory.commit_pressure");
+    }
+
+    #[test]
+    fn ten_minutes_of_one_core_is_one_finding() {
+        let store = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.processes = vec![busy_process(4242, "render.exe", 1_000, 96.0)];
+            snap
+        });
+        let findings = findings_of(&store);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, "process.runaway_cpu");
+        assert_eq!(findings[0].subject, "render.exe (4242)");
+        assert_eq!(findings[0].id, "process.runaway_cpu/4242");
+        let cited: Vec<&str> = findings[0].evidence.iter().map(|e| e.metric.as_str()).collect();
+        assert!(cited.contains(&"process.4242.cpu_percent"), "{cited:?}");
+    }
+
+    #[test]
+    fn a_reused_pid_is_two_processes_not_ten_minutes() {
+        // The fixture that only passes because identity reaches the snapshot: the
+        // same pid and the same name throughout, a new creation stamp halfway.
+        let store = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let created = if s < 300 { 1_000 } else { 2_000 };
+            snap.processes = vec![busy_process(4242, "render.exe", created, 96.0)];
+            snap
+        });
+        assert!(
+            findings_of(&store).is_empty(),
+            "two five-minute processes are not one ten-minute one"
+        );
+    }
+
+    #[test]
+    fn a_process_without_a_stamp_is_not_accused() {
+        let store = series(900, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let mut process = busy_process(4242, "render.exe", 1_000, 96.0);
+            process.created = MetricState::Unknown(WhyUnknown::NeedsElevation);
+            snap.processes = vec![process];
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
     }
 
     #[test]

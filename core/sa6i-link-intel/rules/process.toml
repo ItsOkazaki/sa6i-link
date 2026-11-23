@@ -1,0 +1,19 @@
+# The numbers the runaway-process rule decides with.
+#
+# Percent is of ONE core, not of the machine: a program with several busy threads
+# reads above 100, and that is not an error. Ten minutes of 80 % of a core is a
+# program that is not going to stop by itself, where ten seconds of it is a build.
+
+[[rule]]
+id = "process.runaway_cpu"
+severity = "notice"
+confidence = "likely"
+requires = ["process.*.cpu_percent"]
+
+warn_percent = 80.0
+sustained = "10m"
+
+firing = "runaway-cpu-holds-a-core"
+# The harder near-miss: the same pid, twice, with a new creation stamp in the
+# middle. Only identity separates this from a ten-minute runaway.
+near_miss = "runaway-pid-reused-every-five-minutes"

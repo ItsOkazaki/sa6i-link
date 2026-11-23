@@ -1,0 +1,35 @@
+{
+  "name": "runaway-pid-reused-every-five-minutes",
+  "about": "Pid 4242 is busy at 96 % for five minutes, exits, and the pid is handed to a new process that is also busy for five minutes. Windows does this all day. Two five-minute processes are not one ten-minute process, and the creation stamp is the only thing that says so.",
+  "segments": [
+    {
+      "minutes": 5,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        {
+          "pid": 4242,
+          "name": "render.exe",
+          "cpu_percent": 96,
+          "working_set_mb": 780,
+          "created": 1000
+        }
+      ]
+    },
+    {
+      "minutes": 5,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        {
+          "pid": 4242,
+          "name": "render.exe",
+          "cpu_percent": 96,
+          "working_set_mb": 310,
+          "created": 2000
+        }
+      ]
+    }
+  ],
+  "quiets": ["process.runaway_cpu"]
+}

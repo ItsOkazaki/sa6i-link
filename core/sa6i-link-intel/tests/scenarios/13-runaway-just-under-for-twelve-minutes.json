@@ -1,0 +1,21 @@
+{
+  "name": "runaway-just-under-for-twelve-minutes",
+  "about": "The same process at 79 % of a core for twelve minutes: adjacent to the threshold, held well past the window, and never over it. A rule with an off-by-one on 80 would fire here.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        {
+          "pid": 4242,
+          "name": "render.exe",
+          "cpu_percent": 79,
+          "working_set_mb": 780,
+          "created": 1000
+        }
+      ]
+    }
+  ],
+  "quiets": ["process.runaway_cpu"]
+}

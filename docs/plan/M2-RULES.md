@@ -61,8 +61,8 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `cpu.one_core_pinned` | `cpu.core.{n}.percent` vs `cpu.percent` | 10 min | Notice | ready |
 | `disk.filling_fast` | `volume.{letter}.free_bytes` delta | 30 min | Notice | ready |
 | `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | ready, silent where the limit is 0 |
-| `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | next: identity now reaches the snapshot, the rule is unwritten |
-| `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | ready, same caveat |
+| `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | **shipped**, identity included |
+| `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | next: same identity, a different number, a 30-minute window |
 | `memory.commit_pressure` | `memory.commit_used_bytes` / `memory.commit_limit_bytes` | 5 min | Warning | **shipped** |
 | `disk.slow_transfers` | `Avg. Disk sec/Transfer` | 10 min | Warning | needs one more PDH counter on the query already open |
 | `memory.paging` | `Pages Input/sec` | 5 min | Warning | needs a second PDH query (`Memory`) |
@@ -238,9 +238,15 @@ rewrites the same line.
    verdict. — *done, see above; the runtime wiring is still owed*
 3. **The rules that need a `metrics()` line** — `memory.commit_pressure` is
    *done*: the rule, its two thresholds, its TOML file and three fixtures
-   (firing, window-not-held, adjacent-at-89.5 %). The process creation stamp now
-   reaches the snapshot; `process.runaway_cpu` is the next rule, and it is the
-   first one that needs the fixtures to describe processes at all.
+   (firing, window-not-held, adjacent-at-89.5 %).
+   `process.runaway_cpu` is *done* too: 80 % of one core for ten minutes, and the
+   first rule whose fixtures describe processes at all. Its near-miss is the one
+   that matters — the same pid and the same name for ten minutes with a new
+   creation stamp in the middle, which Windows produces every time a pid is
+   recycled, and which a rule keyed on the pid alone would report as a runaway.
+   `process.memory_growth` is the next one, and it reuses both the identity and
+   the harness. The "identity caveat" the catalogue used to carry is closed: the
+   caveat was the rule claiming more than it could know, and now it does not.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

@@ -1,0 +1,27 @@
+{
+  "name": "runaway-cpu-holds-a-core",
+  "about": "render.exe (pid 4242) uses 96 % of a core for eleven minutes while the machine sits at 20 %: one process that never comes down, which outlasts the ten-minute window.",
+  "segments": [
+    {
+      "minutes": 11,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        {
+          "pid": 4242,
+          "name": "render.exe",
+          "cpu_percent": 96,
+          "working_set_mb": 780,
+          "created": 1000
+        }
+      ]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "process.runaway_cpu",
+      "severity": "Notice",
+      "subject": "render.exe (4242)"
+    }
+  ]
+}

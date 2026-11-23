@@ -22,8 +22,8 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use sa6i_link_intel::{
-    Bytes, CpuSample, DiskIoSample, Finding, MemorySample, MetricState, RULES, SampleStore, Severity,
-    Snapshot, Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
+    Bytes, CpuSample, DiskIoSample, Finding, MemorySample, MetricState, ProcessSample, RULES,
+    SampleStore, Severity, Snapshot, Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
 };
 
 /// A fixed wall-clock base so the fixtures are deterministic: 2023-11-14T22:13:20Z.
@@ -72,6 +72,32 @@ struct Segment {
     volumes: Vec<VolumeSpec>,
     #[serde(default = "default_uptime")]
     uptime_days: f64,
+    /// The processes on the machine during this segment. Absent means the
+    /// scenario does not describe them, which keeps every older fixture honest.
+    #[serde(default)]
+    processes: Vec<ProcessSpec>,
+}
+
+/// One process during one segment.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProcessSpec {
+    pid: u32,
+    #[serde(default)]
+    name: String,
+    /// Percent of one core, as Task Manager reports it: above 100 is possible and
+    /// is not an error.
+    cpu_percent: f32,
+    #[serde(default = "default_working_set")]
+    working_set_mb: u64,
+    /// The creation stamp. Two segments with the same pid and different stamps
+    /// describe two processes, which is what Windows does with a reused pid.
+    #[serde(default)]
+    created: u64,
+}
+
+fn default_working_set() -> u64 {
+    100
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -167,11 +193,9 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         },
         memory: memory(segment),
         volumes: segment.volumes.iter().map(volume).collect(),
-        // The fixtures describe a whole machine; processes arrive when a rule
-        // needs them.
         disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
         gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
-        processes: Vec::new(),
+        processes: segment.processes.iter().map(process).collect(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
     }
 }
@@ -194,6 +218,20 @@ fn memory(segment: &Segment) -> MemorySample {
         available: MetricState::Value(Bytes(free)),
         commit_limit,
         commit_used,
+    }
+}
+
+fn process(spec: &ProcessSpec) -> ProcessSample {
+    ProcessSample {
+        pid: spec.pid,
+        name: if spec.name.is_empty() {
+            format!("proc{}.exe", spec.pid)
+        } else {
+            spec.name.clone()
+        },
+        working_set: MetricState::Value(Bytes(spec.working_set_mb * MIB)),
+        cpu_percent: MetricState::Value(spec.cpu_percent),
+        created: MetricState::Value(spec.created),
     }
 }
 
@@ -306,6 +344,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
             percent_used: Some(30.0),
         }],
         uptime_days: 1.0,
+        processes: Vec::new(),
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(
