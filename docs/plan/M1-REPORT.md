@@ -866,6 +866,16 @@ This is the class of defect that a first build would have shown immediately and 
 reader can only find by checking the same value in two languages. It is also the
 argument for writing the contract down in both places, not just the serialiser.
 
+So the same check was done for every other name, mechanically rather than by eye:
+the `pub` fields of `Tile`, `CoreBar`, `ProcessRow`, `VolumeRow` and `MonitorView`,
+camel-cased exactly as serde renames them, against every `frame.<name>` and
+`modelData.<name>` the page reads. Every field the page reads exists; the two names
+that did not resolve were `IntelHost.frame.length` (a `QString`, not the frame
+object) and the chart cards' own `key`, which is the page's, not the core's. The
+`missing` reasons the Limits card shows are `Tile.note`, and `Tile::missing` sets
+that to `WhyUnknown::explain` — so the card's second column is the reason, not an
+empty string, which is the one thing that would have made it worse than useless.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
@@ -902,6 +912,7 @@ per-core numbers should not also be the machine whose PDH query is suspect.
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 | The CLI's wiring (slice 19) | `IntelArg`'s derives, the `#[command(subcommand)]` field, the pre-node dispatch's return type, the defensive arm and every import `run_intel` needs were read against the surrounding code; the lockfile was checked structurally (edges, sources, checksums present, versions) — three compile errors found and fixed |
+| The frame's field names (slice 22) | Every `frame.<name>` and `modelData.<name>` in `MonitorPage.qml` was matched mechanically against the camel-cased `pub` fields of `Tile`, `CoreBar`, `ProcessRow`, `VolumeRow` and `MonitorView` — all present, after the one unit bug above was fixed |
 | The Qt surface (slice 16) | Every cxx-qt and QML API used was matched against a file in this repository that compiles, plus cxx-qt 0.10's own `threading.rs` for `queue`'s signature; the QML module and page registrations were read out of `build.rs` and `MainWindow.qml`; the lockfile was checked mechanically. Two defects found and fixed, one pattern aligned |
 | The verification script (slice 15) | Its JSON paths were read off the serde attributes in `model.rs` (`snapshot.processes[].cpu_percent.state`, snake_case, `MetricState` as `{state, value}`) rather than guessed, and the CLI flags it passes are the ones `IntelArg` declares. Not executed: no PowerShell here |
 
