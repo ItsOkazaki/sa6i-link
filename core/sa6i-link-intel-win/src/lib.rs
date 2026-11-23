@@ -42,6 +42,10 @@ pub struct WindowsCollector {
     /// not give us one, which is reported per sample rather than retried every
     /// second: a disabled counter set does not come back on its own.
     disk: Option<pdh::DiskCounters>,
+    /// The GPU query, or the reason there is none. `Unsupported` is what an old
+    /// Windows looks like — Windows 10 1709 added these counters — and it stays
+    /// `Unsupported` for the life of the collector.
+    gpu: Result<pdh::GpuCounters, WhyUnknown>,
     seq: u64,
 }
 
@@ -58,6 +62,7 @@ impl WindowsCollector {
             previous_cpu: None,
             previous_cores: None,
             disk: pdh::DiskCounters::new(),
+            gpu: pdh::GpuCounters::new(),
             seq: 0,
         }
     }
@@ -80,6 +85,10 @@ impl Collector for WindowsCollector {
             Some(disk) => disk.read(),
             None => DiskIoSample::unavailable(WhyUnknown::CollectorFailed),
         };
+        let gpu = match self.gpu.as_mut() {
+            Ok(counters) => counters.read(),
+            Err(reason) => MetricState::Unsupported(*reason),
+        };
         let processes = platform::read_processes();
         let uptime = read_uptime();
         Snapshot {
@@ -90,6 +99,7 @@ impl Collector for WindowsCollector {
             memory,
             volumes,
             disk_io,
+            gpu,
             processes,
             uptime,
         }

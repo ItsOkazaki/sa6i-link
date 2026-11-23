@@ -301,6 +301,52 @@ impl DiskIoSample {
     }
 }
 
+/// One graphics adapter, as Windows' GPU performance counters describe it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GpuAdapter {
+    /// The counter instance name, e.g. `luid_0x00000000_0x0000FB33_phys_0`.
+    /// It is the only stable identity Windows offers: there is no friendly name
+    /// in the counter set, and inventing one from the driver would be a guess.
+    pub instance: String,
+    /// VRAM in use.
+    pub dedicated_used: MetricState<Bytes>,
+    /// VRAM the adapter owns. **Zero is a fact, not a failure**: an integrated
+    /// GPU has no memory of its own and reports 0 here, which is why the
+    /// percentage below refuses to divide by it.
+    pub dedicated_limit: MetricState<Bytes>,
+}
+
+impl GpuAdapter {
+    /// Share of dedicated memory in use, when that question has an answer.
+    ///
+    /// `None` when either number is unknown, and `None` when the limit is 0 —
+    /// an integrated GPU would otherwise report "0 % of nothing", or infinity.
+    pub fn percent_used(&self) -> Option<f32> {
+        let used = self.dedicated_used.value()?.0;
+        let limit = self.dedicated_limit.value()?.0;
+        if limit == 0 {
+            return None;
+        }
+        Some((used.min(limit) as f32 / limit as f32) * 100.0)
+    }
+}
+
+/// The machine's graphics adapters.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GpuSample {
+    pub adapters: Vec<GpuAdapter>,
+}
+
+impl GpuSample {
+    /// The adapter with the most dedicated memory — the one a game would pick,
+    /// and the one worth showing when there are two.
+    pub fn heaviest(&self) -> Option<&GpuAdapter> {
+        self.adapters.iter().max_by_key(|adapter| {
+            adapter.dedicated_limit.value().map_or(0, |limit| limit.0)
+        })
+    }
+}
+
 /// Everything measured at one moment.
 ///
 /// `PartialEq` is derived so tests can assert on whole snapshots, and `seq`
@@ -319,6 +365,10 @@ pub struct Snapshot {
     pub volumes: Vec<VolumeSample>,
     /// Read and write throughput, over physical disks.
     pub disk_io: DiskIoSample,
+    /// The graphics adapters, or the reason there are none to report. Absent
+    /// rather than empty on a machine whose counters do not exist (Windows 8.1
+    /// and older, or a driver with no WDDM 2.0 GPU counters).
+    pub gpu: MetricState<GpuSample>,
     /// The heaviest processes, see [`TOP_PROCESSES`]. Empty when processes were
     /// not collected at all.
     pub processes: Vec<ProcessSample>,
@@ -368,6 +418,18 @@ impl Snapshot {
         if let MetricState::Value(write) = self.disk_io.write_bytes_per_second {
             out.push(("disk.write_bytes_per_second".to_owned(), write.0 as f64));
         }
+        if let MetricState::Value(gpu) = &self.gpu {
+            for (index, adapter) in gpu.adapters.iter().enumerate() {
+                if let MetricState::Value(used) = adapter.dedicated_used {
+                    let path = format!("gpu.adapter.{index}.dedicated_used_bytes");
+                    out.push((path, used.0 as f64));
+                }
+                if let MetricState::Value(limit) = adapter.dedicated_limit {
+                    let path = format!("gpu.adapter.{index}.dedicated_limit_bytes");
+                    out.push((path, limit.0 as f64));
+                }
+            }
+        }
         if let MetricState::Value(uptime) = self.uptime {
             out.push(("system.uptime_seconds".to_owned(), uptime as f64));
         }
@@ -416,6 +478,7 @@ mod tests {
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Unknown(WhyUnknown::CollectorFailed),
         };
@@ -460,6 +523,46 @@ mod tests {
         assert_eq!(top[0].pid, 7);
         assert_eq!(top[1].pid, 1);
         assert_eq!(top[1].working_set, MetricState::Unknown(WhyUnknown::NeedsElevation));
+    }
+
+    fn adapter(instance: &str, used: u64, limit: u64) -> GpuAdapter {
+        GpuAdapter {
+            instance: instance.to_owned(),
+            dedicated_used: MetricState::Value(Bytes(used)),
+            dedicated_limit: MetricState::Value(Bytes(limit)),
+        }
+    }
+
+    #[test]
+    fn gpu_percentage_refuses_to_divide_by_nothing() {
+        let discrete = adapter("luid_0x0_0x1_phys_0", 1_000, 4_000);
+        assert_eq!(discrete.percent_used(), Some(25.0));
+        // An integrated GPU owns no memory of its own; that is a fact about the
+        // hardware, not a measurement, and "0 % of 0 B" is not an answer.
+        let integrated = adapter("luid_0x0_0x2_phys_0", 512, 0);
+        assert_eq!(integrated.percent_used(), None);
+        // More used than exists (a driver accounting quirk) clamps rather than
+        // reporting 140 %.
+        let odd = adapter("luid_0x0_0x3_phys_0", 5_000, 4_000);
+        assert_eq!(odd.percent_used(), Some(100.0));
+        let unknown = GpuAdapter {
+            instance: "luid_0x0_0x4_phys_0".to_owned(),
+            dedicated_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
+            dedicated_limit: MetricState::Value(Bytes(4_000)),
+        };
+        assert_eq!(unknown.percent_used(), None);
+    }
+
+    #[test]
+    fn the_heaviest_adapter_is_the_one_with_the_most_memory() {
+        let sample = GpuSample {
+            adapters: vec![
+                adapter("integrated", 512, 0),
+                adapter("discrete", 2_000, 8_000),
+            ],
+        };
+        assert_eq!(sample.heaviest().map(|a| a.instance.as_str()), Some("discrete"));
+        assert!(GpuSample { adapters: Vec::new() }.heaviest().is_none());
     }
 
     #[test]
@@ -516,6 +619,7 @@ mod tests {
             },
             volumes: Vec::new(),
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(60),
         };
@@ -576,6 +680,7 @@ mod tests {
             },
             volumes: vec![volume("C:\\", 1000, 100)],
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(3600),
         };
@@ -618,6 +723,7 @@ mod tests {
             },
             volumes: vec![volume("C:\\", 4, 1)],
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(1),
         };

@@ -51,6 +51,33 @@ fn describe_disk_io(io: &sa6i_link_intel::DiskIoSample) -> String {
     )
 }
 
+/// The adapter with the most dedicated memory, or why there is nothing to say.
+fn describe_gpu(gpu: &MetricState<sa6i_link_intel::GpuSample>) -> String {
+    let sample = match gpu {
+        MetricState::Value(sample) => sample,
+        MetricState::Unknown(reason) | MetricState::Unsupported(reason) => {
+            return format!("— ({})", reason.explain());
+        }
+    };
+    let Some(adapter) = sample.heaviest() else {
+        return "— (no adapters reported)".to_owned();
+    };
+    match (adapter.dedicated_used.value(), adapter.dedicated_limit.value()) {
+        (Some(used), Some(limit)) => match adapter.percent_used() {
+            Some(percent) => format!(
+                "{} of {} ({})",
+                render_bytes(used.0),
+                render_bytes(limit.0),
+                render_percent(percent)
+            ),
+            // An integrated GPU: memory in use, nothing of its own to be a
+            // percentage of.
+            None => format!("{} used, no dedicated memory", render_bytes(used.0)),
+        },
+        _ => "— (the counters answered without a value)".to_owned(),
+    }
+}
+
 /// `"msedge.exe 1.2 GB, chrome.exe 900 MB"` for the heaviest few, or why not.
 fn describe_processes(processes: &[ProcessSample]) -> String {
     let described: Vec<String> = processes
@@ -182,6 +209,7 @@ fn main() {
         println!("  cores      {}", describe_cores(&snapshot.cpu.per_core));
     }
     println!("  disk io    {}", describe_disk_io(&snapshot.disk_io));
+    println!("  gpu        {}", describe_gpu(&snapshot.gpu));
     if !snapshot.processes.is_empty() {
         println!("  processes  {}", describe_processes(&snapshot.processes));
     }

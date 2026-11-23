@@ -288,6 +288,7 @@ mod tests {
                 free: MetricState::Value(Bytes(250 * 1_000_000_000)),
             }],
             disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(3600),
         }

@@ -267,7 +267,8 @@ A rule or action without tests is not merged; demo data exists only behind a
 
 | Contract | Slice 1 | Why |
 | --- | --- | --- |
-| §4 data model | `Snapshot` carries CPU (total and per-core), memory, volumes, uptime and the eight heaviest processes; frequency, GPU and thermal are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §4 data model | `Snapshot` carries CPU (total and per-core), memory, volumes, disk throughput, GPU adapters, uptime and the eight heaviest processes; frequency and thermal are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §4 GPU | per-adapter dedicated VRAM from the `GPU Adapter Memory` counters, not `QueryVideoMemoryInfo` | that call answers for the calling *process* on one adapter; using it as machine-wide pressure would be a true number answering the wrong question |
 | §4 disk io | `Snapshot.disk_io` is machine-wide throughput from `PhysicalDisk(_Total)`, not per volume | a volume spanning two disks has no single throughput, and per-volume numbers would invite adding them up. Per-physical-disk detail arrives with the Monitor page's disk view, if it needs it |
 | §4 processes | top-N is by working set only, not "top-N by cpu/mem" | memory is a fact about one moment; per-process CPU is a rate needing two samples keyed by pid *and* creation time, and that map belongs to its own slice |
 | §4 per-core | `CpuSample.per_core` is the calling thread's processor group, not every logical processor | `NtQuerySystemInformation(SystemProcessorPerformanceInformation)` answers per group; the documented classes do not expose all groups, and the buffer routine is worth trusting before the undocumented sibling gets used. `per_core.len()` is the number measured, and the UI says that instead of implying a total |

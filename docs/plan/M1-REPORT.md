@@ -15,7 +15,7 @@ actions.
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
-| Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` counters; a rate needs two samples |
+| Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
@@ -346,23 +346,50 @@ The query is opened once and owned by the collector, so its handle closes in
 `Drop` — PDH queries are not reference counted, and a leak would be one kernel
 object per second.
 
+## Slice 8 — GPU memory, and the last collector
+
+`Snapshot.gpu` carries the machine's graphics adapters with dedicated VRAM used
+and owned. This completes M1.1.
+
+**Why not `QueryVideoMemoryInfo`.** That call — which the plan named — answers
+for *the calling process* on one adapter. Presenting it as "GPU memory pressure"
+would be a true number answering the wrong question, which is the failure mode
+this project is built around. The machine-wide source is the counter set
+`\GPU Adapter Memory(*)\Dedicated Usage` (Windows 10 1709+), the same set Task
+Manager reads, and slice 7 had already built the query machinery.
+
+**A missing counter set is not a failure of ours.** `GpuCounters::new` maps
+`PDH_CSTATUS_NO_OBJECT` and `PDH_INVALID_PATH` to
+`Unsupported(NotOnThisWindowsVersion)` and everything else to
+`Unknown(CollectorFailed)`. That is how Windows 8.1 — or a driver without WDDM
+2.0 GPU counters — gets the honest sentence instead of a broken-collector alarm,
+and it is the mechanism by which "Win7 renders Unsupported, with reasons" holds.
+
+**Zero dedicated memory is a fact, not a measurement error.** An integrated GPU
+owns no VRAM and reports 0. `GpuAdapter::percent_used()` therefore returns `None`
+when the limit is 0 rather than dividing by it, and clamps when a driver reports
+more used than exists instead of printing 140 %. Tested, along with the choice
+of the heaviest adapter.
+
+Two implementation notes: the instance names (`luid_0x00000000_0x…_phys_0`) are
+copied out of PDH's buffer before it drops, and the adapter list is sorted
+heaviest-first so a page that shows one shows the discrete GPU rather than the
+iGPU.
+
 ## What the collectors do not do, on purpose
 
-Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
-this slice. Each needs either a heavier API (`PdhAddEnglishCounter`), a
-version-gated one (`QueryVideoMemoryInfo` is Windows 10+), or a different
-question (a process snapshot is not a counter). Adding them without fixtures
-would be guessing with a UI attached. Temperatures stay unavailable: that needs
-a driver, and Stage B settled that we report the reason instead.
+Everything the plan listed for M1.1 is collected now. What is still absent is
+absent for a reason: temperatures need a kernel driver, and per-process CPU is a
+rate that needs a two-sample map keyed by pid and creation time. Adding either
+without fixtures would be guessing with a UI attached. (`GetPerformanceInfo` for
+a process count was evaluated and not shipped: nothing uses it yet.)
 
 Evaluated but not shipped: `GetPerformanceInfo` for a process count (easy, but
 nothing yet uses it) and `GetVolumeInformationW` for filesystem names (only
 useful once the UI shows them).
 
-GPU memory is the one collector still open, and per-process CPU is deliberately
-absent for the reason given in slice 6. They were left out rather than bundled
-so that a machine reporting bad per-core numbers cannot also be a machine whose
-PDH query is suspect.
+One measurement per slice was deliberate, not slow: a machine reporting bad
+per-core numbers should not also be the machine whose PDH query is suspect.
 
 ## Verification
 
@@ -376,6 +403,7 @@ PDH query is suspect.
 | Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
 | Dependency graph | Both intel closures were recomputed independently in Python from the same lock — 62 and 74 crates, zero network-capable, which is what the Rust test asserts |
+| GPU counters (slice 8) | Same documentation source as slice 7 for `PdhGetFormattedCounterArrayW`, `PDH_FMT_COUNTERVALUE_ITEM_W { szName: PWSTR, FmtValue }`, `PDH_MORE_DATA` and `PDH_CSTATUS_NO_OBJECT`; counter paths cross-checked against Microsoft's GPU counter documentation (`\GPU Adapter Memory(*)\Dedicated Usage` / `Dedicated Limit`) |
 | PDH (slice 7) | Every signature and type read from the generated docs for `windows` 0.62.2 (`microsoft/windows-docs-rs`), then cross-checked against a working open-source user of the same module (Argus `pdh.rs`: `PdhOpenQueryW(PCWSTR::null(), …) == 0`, `value.Anonymous.doubleValue`) |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
@@ -425,19 +453,11 @@ depends on the API shape.
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
-1. **M1.1, the last collector: GPU memory.** `QueryVideoMemoryInfo` answers for
-   *the calling process* on an adapter, not for the machine, so using it as
-   "GPU memory pressure" would be a true number answering the wrong question.
-   The documented machine-wide source is the PDH counter set
-   `\GPU Adapter Memory(*)\Dedicated Usage` (Win10 1709+), which is now a short
-   step: the same module slice 7 built, plus `PdhGetFormattedCounterArrayW` for
-   the instance list. Per-process CPU joins a later slice, once there is a
-   two-sample map keyed by pid and creation time.
-2. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
+1. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
    Overview tiles and the sparklines that draw gaps as gaps, reading their
    history from `History::recent` instead of the ring once the window is longer
    than an hour.
-3. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
+2. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
 
 (`sample_hourly` rollups stay unscheduled on purpose: they need a week of real
 data before the rollup can be checked against what it summarises.)

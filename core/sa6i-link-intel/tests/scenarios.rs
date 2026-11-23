@@ -162,6 +162,7 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         // The fixtures describe a whole machine; processes arrive when a rule
         // needs them.
         disk_io: DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
+        gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
         processes: Vec::new(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
     }
@@ -292,6 +293,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         [
             "cpu",
             "disk_io",
+            "gpu",
             "memory",
             "monotonic_ms",
             "processes",

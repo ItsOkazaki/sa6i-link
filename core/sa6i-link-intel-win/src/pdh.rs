@@ -29,18 +29,28 @@
 
 #[cfg(windows)]
 mod imp {
-    use sa6i_link_intel::{Bytes, DiskIoSample, MetricState, WhyUnknown};
+    use sa6i_link_intel::{
+        Bytes, DiskIoSample, GpuAdapter, GpuSample, MetricState, WhyUnknown,
+    };
 
     use windows::core::{HSTRING, PCWSTR};
     use windows::Win32::System::Performance::{
-        PDH_FMT_COUNTERVALUE, PDH_FMT_DOUBLE, PDH_HCOUNTER, PDH_HQUERY, PdhAddEnglishCounterW,
-        PdhCloseQuery, PdhCollectQueryData, PdhGetFormattedCounterValue, PdhOpenQueryW,
+        PDH_CSTATUS_NO_OBJECT, PDH_FMT_COUNTERVALUE, PDH_FMT_COUNTERVALUE_ITEM_W, PDH_FMT_DOUBLE,
+        PDH_HCOUNTER, PDH_HQUERY, PDH_INVALID_PATH, PDH_MORE_DATA, PdhAddEnglishCounterW,
+        PdhCloseQuery, PdhCollectQueryData, PdhGetFormattedCounterArrayW,
+        PdhGetFormattedCounterValue, PdhOpenQueryW,
     };
 
     /// Summed over physical disks, which is what Task Manager's Performance tab
     /// shows and what "the disk is busy" means to a person.
     const READ_PATH: &str = "\\PhysicalDisk(_Total)\\Disk Read Bytes/sec";
     const WRITE_PATH: &str = "\\PhysicalDisk(_Total)\\Disk Write Bytes/sec";
+
+    /// GPU counters exist from Windows 10 1709 (Fall Creators Update) and need a
+    /// WDDM 2.0 driver; on older systems the counter set is simply absent, which
+    /// `reason_of` turns into an honest "not on this version".
+    const USED_PATH: &str = "\\GPU Adapter Memory(*)\\Dedicated Usage";
+    const LIMIT_PATH: &str = "\\GPU Adapter Memory(*)\\Dedicated Limit";
 
     /// An open PDH query with the two throughput counters attached.
     ///
@@ -107,6 +117,180 @@ mod imp {
         }
     }
 
+    /// Dedicated GPU memory per adapter, for Windows 10 1709 and later.
+    ///
+    /// This is the machine-wide answer, which `QueryVideoMemoryInfo` is not: that
+    /// call reports the calling *process*'s usage on one adapter, and presenting
+    /// it as "GPU memory pressure" would be a true number answering the wrong
+    /// question. The counters below are what Task Manager reads.
+    #[derive(Debug)]
+    pub struct GpuCounters {
+        query: PDH_HQUERY,
+        used: PDH_HCOUNTER,
+        limit: PDH_HCOUNTER,
+    }
+
+    impl GpuCounters {
+        /// Open the query, or say why this machine has no GPU counters.
+        ///
+        /// A missing counter set (Windows 8.1 or older, a driver without WDDM
+        /// 2.0 GPU counters) is not a failure of ours, so it is reported as
+        /// `Unsupported(NotOnThisWindowsVersion)`; anything else is a real
+        /// failure and says so.
+        #[allow(unsafe_code)]
+        pub fn new() -> Result<Self, WhyUnknown> {
+            let mut query = PDH_HQUERY::default();
+            // SAFETY: a null data source means "this machine"; the handle is
+            // owned by the returned struct and closed in `Drop`.
+            if unsafe { PdhOpenQueryW(PCWSTR::null(), 0, &mut query) } != 0 {
+                return Err(WhyUnknown::CollectorFailed);
+            }
+            let mut used = PDH_HCOUNTER::default();
+            let mut limit = PDH_HCOUNTER::default();
+            let used_path = HSTRING::from(USED_PATH);
+            let limit_path = HSTRING::from(LIMIT_PATH);
+            // SAFETY: the query is open and is closed on every failure path.
+            unsafe {
+                let first = PdhAddEnglishCounterW(query, &used_path, 0, &mut used);
+                if first != 0 {
+                    let _ = PdhCloseQuery(query);
+                    return Err(reason_of(first));
+                }
+                let second = PdhAddEnglishCounterW(query, &limit_path, 0, &mut limit);
+                if second != 0 {
+                    let _ = PdhCloseQuery(query);
+                    return Err(reason_of(second));
+                }
+            }
+            Ok(Self { query, used, limit })
+        }
+
+        /// Collect once and read every adapter.
+        #[allow(unsafe_code)]
+        pub fn read(&mut self) -> MetricState<GpuSample> {
+            // SAFETY: `query` is a live handle owned by `self`.
+            if unsafe { PdhCollectQueryData(self.query) } != 0 {
+                return MetricState::Unknown(WhyUnknown::CollectorFailed);
+            }
+            let (Some(used), Some(limits)) = (instances(self.used), instances(self.limit)) else {
+                return MetricState::Unknown(WhyUnknown::CollectorFailed);
+            };
+            let mut adapters: Vec<GpuAdapter> = used
+                .into_iter()
+                .map(|(instance, bytes)| GpuAdapter {
+                    dedicated_used: MetricState::Value(Bytes(bytes)),
+                    dedicated_limit: limits
+                        .iter()
+                        .find(|(name, _)| *name == instance)
+                        .map_or(MetricState::Unknown(WhyUnknown::CollectorFailed), |(_, limit)| {
+                            MetricState::Value(Bytes(*limit))
+                        }),
+                    instance,
+                })
+                .collect();
+            // Heaviest first, so a page that shows one shows the discrete GPU.
+            adapters.sort_by_key(|a| std::cmp::Reverse(a.dedicated_limit.value().map_or(0, |l| l.0)));
+            if adapters.is_empty() {
+                // A machine with a display always has one adapter; no items
+                // means the counters are there but empty, which is a failure.
+                return MetricState::Unknown(WhyUnknown::CollectorFailed);
+            }
+            MetricState::Value(GpuSample { adapters })
+        }
+    }
+
+    impl Drop for GpuCounters {
+        #[allow(unsafe_code)]
+        fn drop(&mut self) {
+            // SAFETY: closing the query this struct opened, exactly once.
+            let _ = unsafe { PdhCloseQuery(self.query) };
+        }
+    }
+
+    /// Why `PdhAddEnglishCounterW` refused a path.
+    fn reason_of(status: u32) -> WhyUnknown {
+        // An absent object or an unreadable path is what an old Windows or a
+        // driver without GPU counters looks like; everything else is a fault.
+        if status == PDH_CSTATUS_NO_OBJECT || status == PDH_INVALID_PATH {
+            WhyUnknown::NotOnThisWindowsVersion
+        } else {
+            WhyUnknown::CollectorFailed
+        }
+    }
+
+    /// Every instance of one counter, as `(instance name, value)`.
+    ///
+    /// PDH answers a wildcard path with an array of items, each carrying the
+    /// instance name and a formatted value. The buffer is a `Vec<u64>` so the
+    /// items are 8-byte aligned, and the names are copied out before it drops.
+    #[allow(unsafe_code)]
+    fn instances(counter: PDH_HCOUNTER) -> Option<Vec<(String, u64)>> {
+        let mut bytes = 0u32;
+        let mut count = 0u32;
+        // SAFETY: a null item buffer asks only for the size, which PDH reports
+        // with PDH_MORE_DATA.
+        let sized = unsafe {
+            PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &mut bytes, &mut count, None)
+        };
+        if sized != PDH_MORE_DATA && sized != 0 {
+            return None;
+        }
+        if count == 0 || bytes == 0 {
+            return Some(Vec::new());
+        }
+        let words = (bytes as usize).div_ceil(8) + 8;
+        let mut buffer = vec![0u64; words];
+        let mut filled = u32::try_from(buffer.len() * 8).ok()?;
+        let mut items = 0u32;
+        let items_ptr = buffer.as_mut_ptr().cast::<PDH_FMT_COUNTERVALUE_ITEM_W>();
+        // SAFETY: `buffer` is a live allocation of `filled` bytes, aligned for
+        // the item struct, and is exactly what the call is told it has.
+        let read = unsafe {
+            PdhGetFormattedCounterArrayW(
+                counter,
+                PDH_FMT_DOUBLE,
+                &mut filled,
+                &mut items,
+                Some(items_ptr),
+            )
+        };
+        if read != 0 {
+            return None;
+        }
+        let mut out = Vec::with_capacity(items as usize);
+        for index in 0..items as usize {
+            // SAFETY: PDH filled `items` entries starting at `items_ptr`.
+            let item = unsafe { &*items_ptr.add(index) };
+            if item.FmtValue.CStatus != 0 {
+                continue;
+            }
+            // SAFETY: `doubleValue` is the member PDH_FMT_DOUBLE fills.
+            let value = unsafe { item.FmtValue.Anonymous.doubleValue };
+            if !value.is_finite() || value < 0.0 {
+                continue;
+            }
+            out.push((name_of(item), value as u64));
+        }
+        Some(out)
+    }
+
+    /// The instance name of a counter item, copied out of PDH's buffer.
+    #[allow(unsafe_code)]
+    fn name_of(item: &PDH_FMT_COUNTERVALUE_ITEM_W) -> String {
+        if item.szName.0.is_null() {
+            return String::new();
+        }
+        let mut len = 0usize;
+        // SAFETY: PDH promises a null-terminated string for the life of the
+        // buffer this item points into.
+        while unsafe { *item.szName.0.add(len) } != 0 {
+            len += 1;
+        }
+        // SAFETY: `len` counts the units before that NUL.
+        let units = unsafe { std::slice::from_raw_parts(item.szName.0, len) };
+        String::from_utf16_lossy(units)
+    }
+
     impl Drop for DiskCounters {
         #[allow(unsafe_code)]
         fn drop(&mut self) {
@@ -138,7 +322,7 @@ mod imp {
 
 #[cfg(not(windows))]
 mod imp {
-    use sa6i_link_intel::{DiskIoSample, WhyUnknown};
+    use sa6i_link_intel::{DiskIoSample, GpuSample, MetricState, WhyUnknown};
 
     /// Nothing to query off Windows; `new` says so by returning `None`.
     #[derive(Debug)]
@@ -153,6 +337,20 @@ mod imp {
             DiskIoSample::unavailable(WhyUnknown::NotOnThisWindowsVersion)
         }
     }
+
+    /// No performance counters off Windows, and `new` says so.
+    #[derive(Debug)]
+    pub struct GpuCounters;
+
+    impl GpuCounters {
+        pub fn new() -> Result<Self, WhyUnknown> {
+            Err(WhyUnknown::NotOnThisWindowsVersion)
+        }
+
+        pub fn read(&mut self) -> MetricState<GpuSample> {
+            MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion)
+        }
+    }
 }
 
-pub use imp::DiskCounters;
+pub use imp::{DiskCounters, GpuCounters};
