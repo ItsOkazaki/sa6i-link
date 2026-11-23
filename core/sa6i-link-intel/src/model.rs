@@ -486,9 +486,77 @@ impl Snapshot {
     }
 }
 
+/// Every path shape [`Snapshot::metrics`] can publish, with `*` standing for one
+/// key.
+///
+/// The list exists so a rule's `requires` — and a rules file's — can be checked
+/// against what the snapshot actually emits rather than against the struct's
+/// fields. A rule citing `memory.commit_used` is citing a name no consumer can
+/// resolve, and that has to be catchable without a running machine.
+pub const PUBLISHED_PATHS: &[&str] = &[
+    "cpu.percent",
+    "cpu.core.*.percent",
+    "memory.percent_used",
+    "memory.total_bytes",
+    "memory.available_bytes",
+    "memory.commit_used_bytes",
+    "memory.commit_limit_bytes",
+    "volume.*.percent_used",
+    "volume.*.free_bytes",
+    "volume.*.total_bytes",
+    "disk.read_bytes_per_second",
+    "disk.write_bytes_per_second",
+    "gpu.adapter.*.dedicated_used_bytes",
+    "gpu.adapter.*.dedicated_limit_bytes",
+    "process.*.working_set_bytes",
+    "process.*.cpu_percent",
+    "system.uptime_seconds",
+];
+
+/// Whether `path` matches a shape [`Snapshot::metrics`] publishes.
+///
+/// A pattern is accepted too: `volume.*.percent_used` matches itself, which is
+/// what a rule's `requires` carries.
+pub fn is_published_path(path: &str) -> bool {
+    PUBLISHED_PATHS.iter().any(|shape| matches_shape(shape, path))
+}
+
+fn matches_shape(shape: &str, path: &str) -> bool {
+    let mut shape = shape.split('.');
+    let mut path = path.split('.');
+    loop {
+        match (shape.next(), path.next()) {
+            (None, None) => return true,
+            (Some(shape), Some(path)) => {
+                if shape != "*" && shape != path {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_published_path_matches_exactly_one_key_at_a_time() {
+        assert!(is_published_path("volume.C.percent_used"));
+        assert!(is_published_path("volume.*.percent_used"));
+        assert!(is_published_path("cpu.core.3.percent"));
+        assert!(is_published_path("process.1234.cpu_percent"));
+        assert!(is_published_path("system.uptime_seconds"));
+
+        // The names a rule might reach for and miss.
+        assert!(!is_published_path("memory.commit_used"));
+        assert!(!is_published_path("volume.C.percent"));
+        assert!(!is_published_path("cpu.percent.extra"));
+        assert!(!is_published_path(""));
+        assert!(matches_shape("cpu.percent", "cpu.percent"));
+        assert!(!matches_shape("cpu.*", "cpu.percent.extra"));
+    }
 
     fn volume(mount: &str, total: u64, free: u64) -> VolumeSample {
         VolumeSample {

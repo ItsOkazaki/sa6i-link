@@ -19,6 +19,7 @@ mod findings;
 mod history;
 mod model;
 mod rules;
+mod rules_file;
 mod store;
 mod summary;
 mod view;
@@ -35,6 +36,7 @@ pub use model::{
     Snapshot, TOP_PROCESSES, Timestamp, VolumeKind, VolumeSample, WhyUnknown, top_processes,
 };
 pub use rules::{RULES, Rule, RuleDef, Thresholds, evaluate, evaluate_with};
+pub use rules_file::{Refusal, RuleFile};
 pub use store::{DEFAULT_CAPACITY, HeldWindow, SampleStore};
 pub use summary::{Average, WindowSummary};
 pub use view::{

@@ -60,6 +60,19 @@ pub enum Confidence {
     Possible,
 }
 
+impl Confidence {
+    /// The word a rules file has to agree with, and the word the UI shows next to
+    /// evidence. Lowercase because that is how it is written in TOML, and a
+    /// comparison that needs a case rule is a comparison with two spellings.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Certain => "certain",
+            Self::Likely => "likely",
+            Self::Possible => "possible",
+        }
+    }
+}
+
 /// One piece of measured data behind a finding.
 ///
 /// `sample_seq` is what makes this checkable: those snapshots can be printed,

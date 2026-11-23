@@ -186,6 +186,41 @@ nothing wrong still shows the machine. M2 adds one thing to that: the rules that
 did not run, and why (`requires` unavailable), because "nothing found" and
 "nothing looked" must not look the same on screen.
 
+## What shipped as the front-end
+
+`core/sa6i-link-intel/src/rules_file.rs`, the three files in
+`core/sa6i-link-intel/rules/`, and a test that loads them.
+
+**Refused, at parse or check time, with the rule and the key named:** a rule id the
+build does not have; a key that does not exist (`deny_unknown_fields`, so `warn_pct`
+is a refusal and not a silently ignored default); a key that belongs to a *different*
+rule; a `requires` path no snapshot publishes; a percentage outside 1 - 99.9; a
+window outside a minute to a day, or an uptime outside a day to a year; a duration
+that is not `<number><s|m|h|d>`; a warning at or above its critical; the same rule
+twice; a scenario claimed by two rules. `severity`, `confidence` and `requires` may be
+*restated* and are checked against the code, but never applied: a file changes
+numbers, not identity.
+
+**Checked by a test rather than at startup:** that a `firing` or `near_miss` names a
+scenario that exists. The fixtures are not compiled into the binary, so the running
+app cannot answer it. `tests/…`-less as that is, the check is real:
+`rules_file.rs`'s tests read `tests/scenarios/` and match the names, so renaming a
+fixture breaks the build rather than drifting past.
+
+**The proof that nothing changed:** the tests assert that the thresholds parsed from
+the three shipped files equal `Thresholds::default()` exactly. Rules are pure
+functions of `(snapshot, store, thresholds)`, so equal thresholds mean every finding
+from every fixture is byte-identical to the one the compiled defaults produce — and
+the existing scenario tests already prove those.
+
+**Two honest limits.** Nothing reads a file at runtime yet: this is the loader, not
+the wiring, and where a config file lives (per-user, per-machine, beside the exe) is
+a decision that needs a Windows machine to test the search order. And `toml` was
+already in `Cargo.lock` through the build's own dependencies, so the only lock change
+is one hand-written dependency edge for `sa6i-link-intel`: no package was added, no
+checksum moved. If `cargo --locked` disagrees with it, one build without `--locked`
+rewrites the same line.
+
 ## Order of work, once the gate opens
 
 1. **The thresholds, as data** — *done in M1's slice 17*: `rules::Thresholds`
@@ -195,7 +230,7 @@ did not run, and why (`requires` unavailable), because "nothing found" and
 2. **The loader and the validator**, with fixtures only — no new thresholds, the
    three M1 rules expressed as TOML and proven to produce byte-identical findings
    from the same recipes. That is the test that the front-end did not change a
-   verdict.
+   verdict. — *done, see above; the runtime wiring is still owed*
 3. **The rules that need a `metrics()` line** — `memory.commit_pressure` is
    unblocked (slice 18 published `memory.commit_used_bytes` and
    `memory.commit_limit_bytes`); the process creation stamp is still owed, and

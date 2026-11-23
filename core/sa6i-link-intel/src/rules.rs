@@ -584,4 +584,19 @@ mod tests {
             assert!(!rule.def.requires.is_empty(), "{} declares no inputs", rule.def.id);
         }
     }
+
+    #[test]
+    fn every_declared_input_is_a_path_a_snapshot_publishes() {
+        // The other half of the sentence: a rule may not require evidence that
+        // `metrics()` will never emit. Without this, `requires` is a comment.
+        for rule in RULES {
+            for path in rule.def.requires {
+                assert!(
+                    crate::model::is_published_path(path),
+                    "{} requires {path}, which no snapshot publishes",
+                    rule.def.id
+                );
+            }
+        }
+    }
 }

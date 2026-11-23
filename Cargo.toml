@@ -71,6 +71,9 @@ bytes = "1"
 sha2 = "0.11"
 tempfile = "3"
 thiserror = "2"
+# The rules front-end. Already in Cargo.lock through build dependencies, so this
+# adds no crate to the graph; see docs/plan/M2-RULES.md.
+toml = "1"
 uniffi = "0.32"
 tokio-util = "0.7"
 tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "io-util", "sync", "time", "fs"] }
