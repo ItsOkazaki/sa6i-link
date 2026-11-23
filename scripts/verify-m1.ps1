@@ -144,6 +144,55 @@ function Add-Fact {
     }
 }
 
+function Describe-ExitCode {
+    param([int]$Code)
+    if ($Code -eq 0) { return "0" }
+    $hex = "0x{0:X8}" -f $Code
+    switch ($hex) {
+        "0xC0000135" { return "$hex STATUS_DLL_NOT_FOUND - a DLL the program needs is missing" }
+        "0xC0000139" { return "$hex STATUS_ENTRYPOINT_NOT_FOUND - the program never started: a DLL it needs is missing or too old" }
+        "0xC000007B" { return "$hex STATUS_INVALID_IMAGE_FORMAT - 32-bit and 64-bit were mixed" }
+        "0xC0000142" { return "$hex STATUS_DLL_INIT_FAILED - the program could not initialise" }
+        default { return $hex }
+    }
+}
+
+function Get-MachineValue {
+    # Get-CimInstance needs PowerShell 3. The first machine to run this did not have
+    # it, and could read the same facts through Get-WmiObject (PowerShell 2) or .NET.
+    param([scriptblock]$Cim, [scriptblock]$Wmi, [scriptblock]$DotNet)
+    foreach ($attempt in @($Cim, $Wmi, $DotNet)) {
+        if (-not $attempt) { continue }
+        try {
+            $value = & $attempt
+            if ($null -ne $value -and "$value" -ne "") { return $value }
+        } catch { }
+    }
+    return $null
+}
+
+function Describe-Toolchain {
+    $lines = @()
+    foreach ($tool in @("cargo", "rustc")) {
+        $found = Get-Command $tool -ErrorAction SilentlyContinue
+        if (-not $found) { $lines += "$tool is not on PATH"; continue }
+        $ErrorActionPreference = "Continue"
+        $text = (& $tool --version 2>&1 | Out-String).Trim()
+        $code = $LASTEXITCODE
+        $ErrorActionPreference = "Stop"
+        if ($text) {
+            $lines += $text
+        } elseif ($found -and $code -ne 0) {
+            # A toolchain that prints nothing and exits with a STATUS_* code never
+            # ran: that is a dependency problem, not a version to report.
+            $lines += "$tool at $($found.Source) printed nothing ($(Describe-ExitCode $code))"
+        } else {
+            $lines += "$tool at $($found.Source) printed nothing"
+        }
+    }
+    return ($lines -join "; ")
+}
+
 try {
     Write-Host ""
     Write-Host "Sa6i - M1 verification" -ForegroundColor Cyan
@@ -153,14 +202,47 @@ try {
     # ---- what this machine is, so the numbers have a context ----
     Write-Host "==> This machine" -ForegroundColor Cyan
     Add-Fact "OS" {
-        $os = Get-CimInstance Win32_OperatingSystem
-        "$($os.Caption) build $($os.BuildNumber)"
+        $caption = Get-MachineValue `
+            { (Get-CimInstance Win32_OperatingSystem).Caption } `
+            { (Get-WmiObject Win32_OperatingSystem).Caption } `
+            { [System.Environment]::OSVersion.VersionString }
+        $build = Get-MachineValue `
+            { (Get-CimInstance Win32_OperatingSystem).BuildNumber } `
+            { (Get-WmiObject Win32_OperatingSystem).BuildNumber } `
+            { [System.Environment]::OSVersion.Version.Build }
+        "$caption (build $build)"
     }
-    Add-Fact "CPU" { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name }
-    Add-Fact "Logical processors" { (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors }
-    Add-Fact "Physical memory" { "{0:N1} GB" -f ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB) }
-    Add-Fact "Rust" { (cargo --version) -join " " }
+    Add-Fact "CPU" {
+        Get-MachineValue `
+            { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } `
+            { (Get-WmiObject Win32_Processor | Select-Object -First 1).Name } `
+            { $env:PROCESSOR_IDENTIFIER }
+    }
+    Add-Fact "Logical processors" {
+        Get-MachineValue `
+            { (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors } `
+            { (Get-WmiObject Win32_ComputerSystem).NumberOfLogicalProcessors } `
+            { [System.Environment]::ProcessorCount }
+    }
+    Add-Fact "Physical memory" {
+        $bytes = Get-MachineValue `
+            { (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory } `
+            { (Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory } `
+            { $null }
+        if ($null -eq $bytes) { "not readable without WMI" } else { "{0:N1} GB" -f ($bytes / 1GB) }
+    }
+    Add-Fact "PowerShell" { $PSVersionTable.PSVersion.ToString() }
+    Add-Fact "Rust" { Describe-Toolchain }
     foreach ($fact in $facts) { Write-Host "  $fact" }
+
+    # rustc 1.78 and later need Windows 10; an older build number cannot compile
+    # this at all, and the error it gives is a STATUS_* code, not a compiler error.
+    $osVersion = [System.Environment]::OSVersion.Version
+    if ($osVersion.Major -lt 10) {
+        Write-Host ""
+        Write-Host ("  This is Windows {0}.{1} (build {2}). rustc 1.78 and later require" -f $osVersion.Major, $osVersion.Minor, $osVersion.Build) -ForegroundColor Yellow
+        Write-Host "  Windows 10: the toolchain cannot start here, only a built binary can run." -ForegroundColor Yellow
+    }
 
     # ---- build ----
     Write-Host ""
@@ -171,8 +253,15 @@ try {
     $ErrorActionPreference = "Stop"
     $script:Exe = Join-Path $root "target\debug\sa6i-link.exe"
     if ($buildExit -ne 0) {
+        $why = Describe-ExitCode $buildExit
         Write-Host "  the CLI did not build; nothing below can run" -ForegroundColor Red
-        Add-Result "Build" "fail" "cargo build --locked -p sa6i-link-cli exited $buildExit"
+        if ($buildExit -lt 0) {
+            # Negative means the process never ran to completion: a STATUS_* code is
+            # the loader's verdict, not the compiler's, and nothing above is wrong.
+            Write-Host "  $why" -ForegroundColor Red
+            Write-Host "  that is the toolchain failing to start, not a compile error." -ForegroundColor Yellow
+        }
+        Add-Result "Build" "fail" "cargo build --locked -p sa6i-link-cli exited $why"
         throw "build failed"
     }
     if (-not (Test-Path $script:Exe)) {

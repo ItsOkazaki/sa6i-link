@@ -40,6 +40,22 @@ Two things will bite if the machine is bare:
 No Qt is needed for `verify-m1.ps1` - it builds `sa6i-link-cli` only. `check.ps1`
 does need Qt for the desktop crates.
 
+**And check the Windows version before any of this**, because a toolchain that
+cannot start looks exactly like a broken project:
+
+```powershell
+[System.Environment]::OSVersion.VersionString
+(Get-WmiObject Win32_OperatingSystem).Version
+```
+
+rustc 1.78 and later require **Windows 10**. On Windows 7 or 8.1 the build exits
+with `-1073741511`, which is `0xC0000139 STATUS_ENTRYPOINT_NOT_FOUND`: the loader
+could not resolve a DLL, so `cargo.exe` never ran a line of anything. `cargo
+--version` prints nothing at all in that case, which is the tell - a compiler that
+has a complaint still prints a version first. The script now says this in the
+machine section and translates the code in the build row, so the record carries the
+reason instead of a decimal.
+
 ## The commands
 
 ```powershell
