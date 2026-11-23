@@ -8,6 +8,9 @@ Contents:
 | `themes/index.html` | Theme overview: Home screens, color roles, typography, components |
 | `mockups/index.html` | Core flows: pairing, phone setup, Choose your power, notifications, messages, mirroring and app windows, Deck, Power settings |
 | `assets/` | Shared preview stylesheet and helpers used by the mockups |
+| `SIGNAL-THEME.md` | Stage D proposal: the Sa6i ecosystem brand (mark, Signal theme, type, data-display rules). Not yet in `tokens.json` |
+| `SCREEN-INVENTORY.md` | Stage D: every screen, its states, and how far it is from existing work |
+| `sa6i-mark-preview.png` | Rendered preview of the connected-S mark on Midnight |
 
 Open the HTML files in a browser and switch themes and Material You seeds at the top.
 
