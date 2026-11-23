@@ -15,6 +15,7 @@ no model, no actions.
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU, memory, volumes, uptime, no admin |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
+| Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
 | Monitor page, TOML rules, disk/GPU/process collectors | — | **not started** (see below) |
 
@@ -121,6 +122,46 @@ mirrors `Snapshot` cannot drift from it, and one row a minute is cheap; the
 rollups (`sample_hourly`) wait until there is a week of raw data to validate
 them against, which is why they are not in this slice.
 
+## Slice 3 — golden scenarios
+
+A rule is a claim about a machine, and a claim is only as good as the case that
+disproves it. `core/sa6i-link-intel/tests/scenarios/*.json` holds eight written
+machines: each file is the input *and* the expected answer, side by side, so a
+reviewer checks the numbers against the sentence next to them.
+
+The files are recipes, not 600 hand-written snapshots — a segment says "eleven
+minutes at 95 % full" and the harness expands it to the 1 Hz series the
+collector would have produced. That keeps a scenario readable and reviewable,
+which a 200 KB wall of JSON is not.
+
+| Scenario | What it pins |
+| --- | --- |
+| `01-disk-full-for-eleven-minutes` | fires: Warning, subject `C:` |
+| `02-disk-cleared-before-the-window` | eight minutes full then three minutes clean → silent |
+| `03-disk-ninety-eight-is-critical` | the 97 % escalation is real, not aspirational |
+| `04-disk-network-and-unreadable` | a network share and an unreadable volume produce nothing |
+| `05-memory-tight-for-three-minutes` | fires: Notice |
+| `06-memory-dipped-inside-the-window` | a dip inside the two-minute window disqualifies the claim |
+| `07-uptime-twenty-days` | fires: Info |
+| `08-uptime-one-hour` | silent |
+
+Three tests enforce the harness rather than the other way round:
+
+- `every_scenario_produces_exactly_the_findings_it_promises` — the finding set
+  must match **exactly**, in both directions, and every finding that appears
+  must carry evidence.
+- `every_rule_has_a_firing_case_and_a_near_miss` — iterates `RULES` and fails if
+  any rule has no scenario proving it fires, or none proving it can stay quiet.
+  Adding a rule without fixtures breaks the build instead of shipping a guess.
+- `a_severity_word_is_never_invented_by_a_scenario` — a typo like `"warning"`
+  would otherwise make an expectation unreachable and the test would pass for
+  the wrong reason.
+
+There is also `the_json_a_page_receives_has_the_field_names_it_expects`: the
+snapshot's JSON keys and the `Unknown` encoding (`{"state":"unknown","value":
+"not_collected_yet"}`) are asserted, because renaming a field is a breaking
+change for the Monitor page that no compiler would catch.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -143,6 +184,7 @@ names (only useful once the UI shows them).
 | Rule thresholds | Firing case and near-miss case per rule, including "network drive ignored", "worst volume wins", "unreadable volume is silent" |
 | CPU maths | Tick deltas including an idle machine, a backwards counter, and a kernel/idle disagreement |
 | Ordering | Worst-first, and identical ids across two evaluations of the same store |
+| Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 

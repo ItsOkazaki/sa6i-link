@@ -1,0 +1,22 @@
+{
+  "name": "disk-full-for-eleven-minutes",
+  "about": "C: has been 95 % full (25 GiB free of 500) for eleven minutes, so it is past the ten-minute window.",
+  "segments": [
+    {
+      "minutes": 11,
+      "volumes": [
+        {
+          "letter": "C:",
+          "percent_used": 95
+        }
+      ]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "disk.low_free_space",
+      "severity": "Warning",
+      "subject": "C:"
+    }
+  ]
+}

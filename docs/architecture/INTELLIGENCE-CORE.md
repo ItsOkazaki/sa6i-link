@@ -254,7 +254,7 @@ Details that are load-bearing:
 | --- | --- |
 | Collectors | Contract tests: shape and units only, skipped when the OS lacks the API. No value assertions against a live machine |
 | Normalizer | Property tests: units, overflow, missing → `Unknown` |
-| Rules | **Golden fixtures**: recorded snapshots as JSON; each rule has a firing case and a near-miss case |
+| Rules | **Golden fixtures**: `core/sa6i-link-intel/tests/scenarios/*.json`, each rule with a firing case and a near-miss case; the harness fails if a rule in `RULES` lacks either |
 | Actions | Temp-dir sandboxes, fault injection, precondition race, timeout, rollback |
 | Explainer | Fake HTTP server; schema-rejection cases (unknown action, malformed JSON, oversize) |
 | UI | Existing QML test harness (`desktop/app/tests/qml`) for models and states |

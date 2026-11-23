@@ -1,0 +1,28 @@
+{
+  "name": "disk-network-and-unreadable",
+  "about": "A network share at 99 % is not this machine's problem, and a volume Windows refuses to describe is unknown, not empty - neither may produce a finding.",
+  "segments": [
+    {
+      "minutes": 11,
+      "volumes": [
+        {
+          "letter": "Z:",
+          "kind": "network",
+          "percent_used": 99
+        },
+        {
+          "letter": "C:",
+          "percent_used": null
+        },
+        {
+          "letter": "D:",
+          "percent_used": 40
+        }
+      ]
+    }
+  ],
+  "expect": [],
+  "quiets": [
+    "disk.low_free_space"
+  ]
+}

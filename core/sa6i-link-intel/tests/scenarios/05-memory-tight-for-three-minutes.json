@@ -1,0 +1,17 @@
+{
+  "name": "memory-tight-for-three-minutes",
+  "about": "13.6 of 16 GiB used (95 %) for three minutes, which outlasts the two-minute window.",
+  "segments": [
+    {
+      "minutes": 3,
+      "memory_percent": 95
+    }
+  ],
+  "expect": [
+    {
+      "rule": "memory.pressure",
+      "severity": "Notice",
+      "subject": "system"
+    }
+  ]
+}

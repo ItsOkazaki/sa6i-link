@@ -1,0 +1,28 @@
+{
+  "name": "disk-cleared-before-the-window",
+  "about": "C: was 95 % full for eight minutes, then something was deleted and it sat at 60 % for three: the window that matters is clean, so nothing is said.",
+  "segments": [
+    {
+      "minutes": 8,
+      "volumes": [
+        {
+          "letter": "C:",
+          "percent_used": 95
+        }
+      ]
+    },
+    {
+      "minutes": 3,
+      "volumes": [
+        {
+          "letter": "C:",
+          "percent_used": 60
+        }
+      ]
+    }
+  ],
+  "expect": [],
+  "quiets": [
+    "disk.low_free_space"
+  ]
+}
