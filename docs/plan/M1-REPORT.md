@@ -799,6 +799,29 @@ present. Checksums are the one thing this cannot verify — they are correct or
 **What it does not prove.** That the crate compiles. It removes three known errors
 and nothing more.
 
+## Slice 20 — the rest of the blind code, read against the compiler's rules
+
+Slice 19 found three errors in one derive line, so the sweep continued over
+everything else written without a toolchain.
+
+**Signatures against call sites.** `sample_window(u32, Duration, bool) ->
+(SampleStore, Cost)` matches its `Cost { elapsed_ms: f64, per_sample_ms:
+Vec<f64>, cpu_ms: Option<f64> }` construction; `Verdict::judge(u32, u64, &Cost)`
+matches both the CLI and the standalone binary; `report_lines` and
+`findings_lines` take what both callers pass; `SampleStore::len` exists and
+`record_history`'s `&Path`/`&[Finding]` line up. No mismatch found.
+
+**Two things I thought were guesses are precedents.** `#[auto_cxx_name]` is not
+invented for the Intel bridge — `app.rs`, `prefs.rs`, `pairing.rs` and
+`timeline.rs` all use it. And `Canvas` under Qt 6 with these exact 2D calls is not
+an open question either: `WalkthroughPage.qml` ships and draws with the same
+`getContext("2d")`, `reset`, `arc` and `roundedRect`.
+
+**What is left of the "never verified" list** is now short and specific: whether
+the compiler accepts the Win32, PDH, SQLite and cxx-qt calls as written, and
+whether the page lays out as designed. Everything that could be read has been read;
+the rest is the build's to answer.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
