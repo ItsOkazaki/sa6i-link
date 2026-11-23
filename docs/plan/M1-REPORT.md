@@ -876,6 +876,34 @@ object) and the chart cards' own `key`, which is the page's, not the core's. The
 that to `WhyUnknown::explain` — so the card's second column is the reason, not an
 empty string, which is the one thing that would have made it worse than useless.
 
+## Slice 23 — the first run ever, and the defect it found was mine
+
+M1 was executed for the first time on a real Windows machine today, and the first
+thing that failed was not the twenty slices of Rust. It was the verification script
+I wrote two slices ago, at line 70:
+
+```
+Jeton "{" inattendu dans une expression ou une instruction.
+```
+
+Windows PowerShell 5.1 reads a `.ps1` with **no byte-order mark as the local ANSI
+code page**. The script was UTF-8 and contained ten em dashes; each one's three
+bytes landed on three cp1252 characters, one of which (0x94) is a closing double
+quote — so `("  [{0}] {1} — {2}" -f ...` ended its string in the middle and the
+parser met a `{` where nothing could follow.
+
+Every other script in `scripts/` is pure ASCII, which is the convention I could
+have read off the folder and did not. It is ASCII now, byte for byte, and the
+header says why so the next editor does not put one back. (For the record: the fix
+was nearly a second bug of my own — a failed write truncated the file to zero bytes
+before the replacement was checked; `git checkout --` restored it, and the second
+attempt asserted ASCII before writing.)
+
+Two things worth keeping from this. A script is code, and an encoding assumption is
+part of its interface. And the sandbox's inability to run anything was never the
+only gap: this file was read three times by me and never executed, which is exactly
+the class of defect that only an execution finds.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included

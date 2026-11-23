@@ -1,4 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+# ASCII only, on purpose: Windows PowerShell 5.1 reads a script with no BOM in
+# the local ANSI code page, so a single em dash breaks the parser - its UTF-8
+# bytes land on cp1252 characters, one of which is a double quote that ends
+# the string early.
 <#
 .SYNOPSIS
     Runs M1's six exit criteria on this machine and writes down what happened.
@@ -67,7 +71,7 @@ function Add-Result {
         "fail" { "Red" }
         default { "Yellow" }
     }
-    Write-Host ("  [{0}] {1} — {2}" -f $State.ToUpperInvariant(), $Criterion, $Detail) -ForegroundColor $colour
+    Write-Host ("  [{0}] {1} - {2}" -f $State.ToUpperInvariant(), $Criterion, $Detail) -ForegroundColor $colour
 }
 
 function Invoke-Sa6i {
@@ -109,7 +113,7 @@ function Add-Fact {
 
 try {
     Write-Host ""
-    Write-Host "Sa6i — M1 verification" -ForegroundColor Cyan
+    Write-Host "Sa6i - M1 verification" -ForegroundColor Cyan
     Write-Host "  Six exit criteria, one command, and a record at $OutFile"
     Write-Host ""
 
@@ -150,7 +154,7 @@ try {
     Write-Host ""
     Write-Host "==> 1. Within 3 % of Task Manager" -ForegroundColor Cyan
     Write-Host "  Taking $Samples samples at $IntervalMs ms. Watch Task Manager's Performance"
-    Write-Host "  tab while this runs — at the end, its Utilisation and Memory figures are"
+    Write-Host "  tab while this runs - at the end, its Utilisation and Memory figures are"
     Write-Host "  what the next two questions want."
     $report = Invoke-Sa6i @(
         "intel", "snapshot", "--samples", "$Samples", "--interval-ms", "$IntervalMs",
@@ -175,7 +179,7 @@ try {
         $tmCpu = Read-Percent "  Task Manager CPU % (blank to skip)"
         $tmMemory = Read-Percent "  Task Manager Memory % (blank to skip)"
         if ($null -eq $tmCpu -and $null -eq $tmMemory) {
-            Add-Result "Within 3 % of Task Manager" "eyes" ("ours cpu $oursCpuText, memory $oursMemoryText — Task Manager not entered")
+            Add-Result "Within 3 % of Task Manager" "eyes" ("ours cpu $oursCpuText, memory $oursMemoryText - Task Manager not entered")
         } else {
             $cpuOff = if ($null -ne $tmCpu) { [math]::Abs($oursCpu - $tmCpu) } else { $null }
             $memoryOff = if ($null -ne $tmMemory) { [math]::Abs($oursMemory - $tmMemory) } else { $null }
@@ -224,9 +228,9 @@ try {
             $unknown = @($processes | Where-Object { $_.cpu_percent.state -ne "value" })
             $detail = "{0} processes, {1} with a rate, {2} without" -f $processes.Count, $rated.Count, $unknown.Count
             if ($processes.Count -gt 0 -and $rated.Count -eq 0) {
-                Add-Result "JSON contract" "fail" ($detail + " — the second sample should know the first one's processes")
+                Add-Result "JSON contract" "fail" ($detail + " - the second sample should know the first one's processes")
             } elseif ($unknown.Count -gt 0 -and @($unknown | Where-Object { $null -ne $_.cpu_percent.value }).Count -gt 0) {
-                Add-Result "JSON contract" "fail" ($detail + " — an unmeasured rate carried a value")
+                Add-Result "JSON contract" "fail" ($detail + " - an unmeasured rate carried a value")
             } else {
                 Add-Result "JSON contract" "pass" ($detail + "; keys and states as documented")
                 if ($rated.Count -gt 0) {
@@ -254,7 +258,7 @@ try {
     if ($Budget) {
         Write-Host ""
         Write-Host "==> 2. 1 Hz for half an hour, under budget" -ForegroundColor Cyan
-        Write-Host ("  {0} samples at {1} ms — about {2:N0} minutes. Leave the machine alone," -f `
+        Write-Host ("  {0} samples at {1} ms - about {2:N0} minutes. Leave the machine alone," -f `
             $BudgetSamples, $IntervalMs, ($BudgetSamples * $IntervalMs / 60000))
         Write-Host "  or note what you did to it; either way the record says when it ran."
         $go = $Yes
@@ -275,13 +279,13 @@ try {
             if ($budgetExit -eq 0) {
                 Add-Result "1 Hz for 30 min under budget" "pass" ("PASS, {0:N0} minutes wall clock" -f $took)
             } elseif ($budgetExit -eq 3) {
-                Add-Result "1 Hz for 30 min under budget" "fail" ("the verdict was MISS, {0:N0} minutes wall clock — see the lines above" -f $took)
+                Add-Result "1 Hz for 30 min under budget" "fail" ("the verdict was MISS, {0:N0} minutes wall clock - see the lines above" -f $took)
             } else {
                 Add-Result "1 Hz for 30 min under budget" "fail" "exited $budgetExit"
             }
         }
     } else {
-        Add-Result "1 Hz for 30 min under budget" "eyes" "not run — pass -Budget to take the half hour"
+        Add-Result "1 Hz for 30 min under budget" "eyes" "not run - pass -Budget to take the half hour"
     }
 
     # ---- the two that are somebody's eyes, not this script's ----
@@ -298,7 +302,7 @@ try {
     # ---- the record ----
     $stamp = Get-Date -Format "yyyy-MM-dd HH:mm"
     $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add("# M1 verification — $stamp")
+    $lines.Add("# M1 verification - $stamp")
     $lines.Add("")
     $lines.Add("Written by ``scripts/verify-m1.ps1``. Two of these six rows cannot be")
     $lines.Add("answered by a script: an old Windows, and a human watching for a UAC prompt.")
