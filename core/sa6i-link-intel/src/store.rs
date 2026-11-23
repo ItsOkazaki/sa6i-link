@@ -158,7 +158,7 @@ mod tests {
             seq,
             taken_at: Timestamp(seq as i64 * 1000),
             monotonic_ms,
-            cpu: CpuSample { percent: MetricState::Value(cpu) },
+            cpu: CpuSample { percent: MetricState::Value(cpu), per_core: Vec::new() },
             memory: MemorySample {
                 total: MetricState::Value(Bytes(1000)),
                 available: MetricState::Value(Bytes(500)),

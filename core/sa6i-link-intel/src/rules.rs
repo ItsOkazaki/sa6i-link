@@ -272,7 +272,7 @@ mod tests {
             seq,
             taken_at: crate::model::Timestamp(seq as i64 * 1000),
             monotonic_ms,
-            cpu: CpuSample { percent: MetricState::Value(20.0) },
+            cpu: CpuSample { percent: MetricState::Value(20.0), per_core: Vec::new() },
             memory: MemorySample {
                 total: MetricState::Value(Bytes(16 * 1_000_000_000)),
                 available: MetricState::Value(Bytes(8 * 1_000_000_000)),

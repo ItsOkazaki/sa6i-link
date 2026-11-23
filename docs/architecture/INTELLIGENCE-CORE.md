@@ -267,7 +267,8 @@ A rule or action without tests is not merged; demo data exists only behind a
 
 | Contract | Slice 1 | Why |
 | --- | --- | --- |
-| §4 data model | `Snapshot` carries CPU, memory, volumes, uptime; GPU, thermal, process summary are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §4 data model | `Snapshot` carries CPU (total and per-core), memory, volumes, uptime; frequency, GPU, thermal and process summary are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §4 per-core | `CpuSample.per_core` is the calling thread's processor group, not every logical processor | `NtQuerySystemInformation(SystemProcessorPerformanceInformation)` answers per group; the documented classes do not expose all groups, and the buffer routine is worth trusting before the undocumented sibling gets used. `per_core.len()` is the number measured, and the UI says that instead of implying a total |
 | §5 TOML rules | rules are Rust functions with named constants, behind the same `RuleDef` | the front-end compiles into the same struct; shipping a parser before one rule works would be backwards |
 | §9 SQLite | `sample` stores the whole snapshot as JSON, not compact per-metric rows; no `sample_hourly` yet | one row a minute is a few hundred kilobytes a day, and a schema that mirrors `Snapshot` cannot drift from it. Rollups wait until there is a week of raw data to validate them against |
 | §9 SQLite | history is written only when asked (`History::open`) | a diagnostics tool that silently starts writing to disk on first launch is a privacy decision made by accident |

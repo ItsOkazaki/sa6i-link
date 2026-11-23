@@ -151,7 +151,12 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         seq: index + 1,
         taken_at: Timestamp(BASE_TIME + (index as i64) * 1000),
         monotonic_ms: index * 1000,
-        cpu: CpuSample { percent: MetricState::Value(segment.cpu_percent) },
+        cpu: CpuSample {
+            percent: MetricState::Value(segment.cpu_percent),
+            // The fixtures describe a whole machine, not its cores; the
+            // scenario format grows per-core numbers when a rule needs them.
+            per_core: Vec::new(),
+        },
         memory: memory(segment.memory_percent),
         volumes: segment.volumes.iter().map(volume).collect(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),

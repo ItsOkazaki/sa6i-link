@@ -1,9 +1,10 @@
 # M1 report — telemetry, evidence, rules
 
-The first two slices of the intelligence core: measure a machine, prove what
-was measured, turn it into findings that carry their own evidence, and keep the
-result long enough to say "for three weeks" instead of "right now". No UI yet,
-no model, no actions.
+The first four slices of the intelligence core: measure a machine, prove what
+was measured, turn it into findings that carry their own evidence, keep the
+result long enough to say "for three weeks" instead of "right now", and write
+down the machines the rules must be right about. No UI yet, no model, no
+actions.
 
 ## What exists now
 
@@ -13,7 +14,7 @@ no model, no actions.
 | Findings and evidence | `core/sa6i-link-intel/src/findings.rs` | **done** — severity, confidence, evidence, rendering |
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
-| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU, memory, volumes, uptime, no admin |
+| Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, no admin |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
 | Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
@@ -162,6 +163,60 @@ snapshot's JSON keys and the `Unknown` encoding (`{"state":"unknown","value":
 "not_collected_yet"}`) are asserted, because renaming a field is a breaking
 change for the Monitor page that no compiler would catch.
 
+## Slice 4 — per-core CPU
+
+The first M1.1 collector. `CpuSample` gains `per_core: Vec<MetricState<f32>>`,
+and the Win32 collector fills it from
+`NtQuerySystemInformation(SystemProcessorPerformanceInformation)`.
+
+Three decisions:
+
+**The maths is the maths that was already tested.** The per-core counters are
+idle/kernel/user, exactly the shape `CpuTimes` has had since slice 1, so
+`percent_busy_since` — with its clamping, its backwards-counter rule and its
+zero-interval rule — is reused per core rather than reimplemented. Only the
+plumbing is new, and `core_states` is a pure function with its own tests: the
+first sample is `Unknown(NotSampledYet)` per core; a core that appears later is
+`Unknown` too; one backwards counter makes *that* core unknown and leaves the
+others alone.
+
+**No struct layout from memory.** `SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION` is
+not in the `windows` crate, and declaring forty-eight bytes of layout because I
+remember them is how a collector starts reporting nonsense. The buffer is read
+as six `u64` words per processor instead — idle, kernel, user are the first
+three — and the allocation is `Vec<u64>` so it is 8-byte aligned for the kernel's
+stores. Every field I use is in the first 24 bytes, where the three
+`LARGE_INTEGER`s unmistakably are.
+
+**A group is not a machine.** Windows answers this class per *processor group*,
+and the call returns the caller's group. On a machine with more than 64 logical
+processors, `per_core` is short. It says so: the length is the number measured,
+the CLI prints "N measured" rather than "N cores", and the architecture doc
+records the deviation. The alternative — the undocumented `Ex` class — is a
+guessing game with a struct layout, and it can wait until there is a 128-core
+machine to check it against.
+
+The CLI gained one line:
+
+```text
+  cpu        41.7 %
+  cores      8 measured, 2 above half, busiest 96.4 %
+```
+
+## The compile blocker slice 1 left behind
+
+Reading the crate against the workspace lints found one: `unsafe_code = "deny"`
+is inherited by `sa6i-link-intel-win` through `[lints] workspace = true`, and the
+crate is *made* of `unsafe` Win32 calls, so it could not have compiled. Every
+function that calls a C API now carries its own `#[allow(unsafe_code)]` — the
+pattern `sa6i-link-core` already uses — with the crate docs stating the rule:
+this crate is the only place the allow exists, and it is granted per function,
+not per crate.
+
+That is the value of the audit: nothing in the sandbox could compile it, and
+CI would have gone red on a technicality that took ten seconds to fix once it
+was seen.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -172,8 +227,13 @@ would be guessing with a UI attached. Temperatures stay unavailable: that needs
 a driver, and Stage B settled that we report the reason instead.
 
 Evaluated but not shipped: `GetPerformanceInfo` for a process count (easy, but
-slice 1 has nothing that uses it) and `GetVolumeInformationW` for filesystem
-names (only useful once the UI shows them).
+nothing yet uses it) and `GetVolumeInformationW` for filesystem names (only
+useful once the UI shows them).
+
+Disk throughput, GPU memory and per-process detail are still open — see
+`## Next`. They were left out of slice 4 rather than bundled with it so that a
+machine that reports bad per-core numbers cannot also be a machine whose PDH
+query is suspect.
 
 ## Verification
 
@@ -186,6 +246,7 @@ names (only useful once the UI shows them).
 | Ordering | Worst-first, and identical ids across two evaluations of the same store |
 | Scenario fixtures | Every scenario was re-derived by an independent implementation (Python, written from the documented thresholds and windows, not from the Rust) — 8/8 agree with the expectations, so the fixtures are right for a reason other than "the code produced them" |
 | SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
+| Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 
 **Not verified: it has not been compiled.** There is no Rust toolchain in this
@@ -222,9 +283,15 @@ depends on the API shape.
 
 ## Next
 
-1. **M1.1 — the collectors the Monitor page needs:** per-core CPU
-   (`NtQuerySystemInformation`), disk throughput (PDH, English counters),
-   GPU memory (`QueryVideoMemoryInfo`, Win10+), and a per-process top-N snapshot.
+1. **M1.1, the rest:** disk throughput (PDH, English counters), GPU memory, and
+   a per-process top-N snapshot. Each gets its own slice and its own fixture,
+   for the same reason slice 4 was one collector and not four.
+   - GPU memory needs a decision before code: `QueryVideoMemoryInfo` answers for
+     *the calling process* on an adapter, not for the machine, so using it as
+     "GPU memory pressure" would be a true number answering the wrong question.
+     The documented machine-wide source is the PDH counter set
+     `\GPU Adapter Memory(*)\Dedicated Usage` (Win10 1709+), which means GPU
+     waits for the PDH work rather than racing it.
 2. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
    Overview tiles and the sparklines that draw gaps as gaps, reading their
    history from `History::recent` instead of the ring once the window is longer

@@ -7,10 +7,17 @@
 //! elevation is reported as [`WhyUnknown::NeedsElevation`] instead of being
 //! attempted and failing mysteriously.
 //!
-//! Slice 1 covers CPU, memory, volumes and uptime. Per-core CPU, disk
-//! throughput, GPU memory and per-process detail need APIs that are either
+//! Slice 1 covers CPU, memory, volumes and uptime; slice 4 adds per-core CPU.
+//! Disk throughput, GPU memory and per-process detail need APIs that are either
 //! heavier (`PdhAddEnglishCounter`) or version-gated (`QueryVideoMemoryInfo`),
-//! and land in the next slice with their own fixtures.
+//! and land in their own slices with their own fixtures.
+//!
+//! # `unsafe`
+//!
+//! The workspace denies `unsafe_code`; this crate is where the C API lives, so
+//! each function that calls one carries its own `#[allow(unsafe_code)]` with a
+//! `SAFETY:` note on every block. Nothing else in the crate is allowed to be
+//! unsafe, which is the point of doing it per function rather than per crate.
 
 use std::time::Instant;
 
@@ -24,6 +31,8 @@ use sa6i_link_intel::{
 pub struct WindowsCollector {
     started: Instant,
     previous_cpu: Option<CpuTimes>,
+    /// The previous per-core counters, so a rate can be computed per core.
+    previous_cores: Option<Vec<CpuTimes>>,
     seq: u64,
 }
 
@@ -38,6 +47,7 @@ impl WindowsCollector {
         Self {
             started: Instant::now(),
             previous_cpu: None,
+            previous_cores: None,
             seq: 0,
         }
     }
@@ -71,20 +81,39 @@ impl Collector for WindowsCollector {
 
 impl WindowsCollector {
     fn cpu(&mut self) -> CpuSample {
+        let per_core = self.cores();
         let Some(now) = read_cpu_times() else {
-            return CpuSample { percent: MetricState::Unknown(WhyUnknown::CollectorFailed) };
+            let percent = MetricState::Unknown(WhyUnknown::CollectorFailed);
+            return CpuSample { percent, per_core };
         };
         let previous = self.previous_cpu.replace(now);
         let Some(previous) = previous else {
             // The first sample has no interval to divide by.
-            return CpuSample { percent: MetricState::Unknown(WhyUnknown::NotSampledYet) };
+            let percent = MetricState::Unknown(WhyUnknown::NotSampledYet);
+            return CpuSample { percent, per_core };
         };
-        match now.percent_busy_since(previous) {
-            Some(percent) => CpuSample { percent: MetricState::Value(percent) },
-            // A counter that went backwards (a suspend, a firmware quirk) is
-            // not a measurement.
-            None => CpuSample { percent: MetricState::Unknown(WhyUnknown::CollectorFailed) },
-        }
+        // A counter that went backwards (a suspend, a firmware quirk) is not a
+        // measurement.
+        let percent = match now.percent_busy_since(previous) {
+            Some(percent) => MetricState::Value(percent),
+            None => MetricState::Unknown(WhyUnknown::CollectorFailed),
+        };
+        CpuSample { percent, per_core }
+    }
+
+    /// Per-core percentages, keeping the counters for the next interval.
+    ///
+    /// `read_core_times` answering `None` empties the list rather than filling
+    /// it with zeros: the page draws nothing, which is the truth, instead of
+    /// drawing an idle machine, which is a lie with a shape.
+    fn cores(&mut self) -> Vec<MetricState<f32>> {
+        let Some(now) = read_core_times() else {
+            self.previous_cores = None;
+            return Vec::new();
+        };
+        let previous = self.previous_cores.replace(now);
+        let current = self.previous_cores.as_deref().unwrap_or(&[]);
+        core_states(previous.as_deref(), current)
     }
 }
 
@@ -116,6 +145,29 @@ impl CpuTimes {
     }
 }
 
+/// Per-core busy percentages from two sets of counters.
+///
+/// Pure on purpose: the arithmetic is tested on every platform, while the call
+/// that produces the counters can only be tested on Windows.
+///
+/// A core with no previous reading has no interval to divide by, and a counter
+/// that went backwards is not a measurement — both are `Unknown` with a reason,
+/// and neither is 0.
+fn core_states(previous: Option<&[CpuTimes]>, current: &[CpuTimes]) -> Vec<MetricState<f32>> {
+    let previous = previous.unwrap_or(&[]);
+    current
+        .iter()
+        .enumerate()
+        .map(|(index, now)| match previous.get(index) {
+            None => MetricState::Unknown(WhyUnknown::NotSampledYet),
+            Some(before) => match now.percent_busy_since(*before) {
+                Some(percent) => MetricState::Value(percent),
+                None => MetricState::Unknown(WhyUnknown::CollectorFailed),
+            },
+        })
+        .collect()
+}
+
 #[cfg(windows)]
 mod platform {
     use super::*;
@@ -128,12 +180,16 @@ mod platform {
     use windows::Win32::System::SystemInformation::{
         GetSystemTimes, GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
     };
+    use windows::Wdk::System::SystemInformation::{
+        NtQuerySystemInformation, SystemProcessorPerformanceInformation,
+    };
     use windows::core::HSTRING;
 
     fn ticks(time: FILETIME) -> u64 {
         (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime)
     }
 
+    #[allow(unsafe_code)]
     pub(super) fn read_cpu_times() -> Option<CpuTimes> {
         let mut idle = FILETIME::default();
         let mut kernel = FILETIME::default();
@@ -147,6 +203,70 @@ mod platform {
         })
     }
 
+    /// Per-processor counters, in the calling thread's processor group.
+    ///
+    /// `NtQuerySystemInformation(SystemProcessorPerformanceInformation)` fills an
+    /// array of `SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION`, six 64-bit words per
+    /// processor: idle, kernel, user, deferred-procedure, interrupt, then the
+    /// interrupt count packed with its padding. That struct is not in the
+    /// `windows` crate, so the buffer is read as words instead of declaring a
+    /// layout I would be trusting from memory — 48 bytes is exactly six of them.
+    #[allow(unsafe_code)]
+    pub(super) fn read_core_times() -> Option<Vec<CpuTimes>> {
+        const WORD: usize = std::mem::size_of::<u64>();
+        const PER_PROCESSOR: usize = 6 * WORD;
+        // A null buffer with length 0 is how the required size is asked for.
+        let mut needed = 0u32;
+        // SAFETY: with a null pointer and a zero length the call writes nothing;
+        // it only reports the size it would need.
+        unsafe {
+            NtQuerySystemInformation(
+                SystemProcessorPerformanceInformation,
+                std::ptr::null_mut(),
+                0,
+                &mut needed,
+            )
+        };
+        if needed == 0 {
+            return None;
+        }
+        // Some slack: the call rounds the size up when the buffer is not an
+        // exact fit, and an exact-fit buffer makes it fail on some builds.
+        let words = (needed as usize).div_ceil(WORD) + 8;
+        // `Vec<u64>`, so the allocation is 8-byte aligned as the call assumes;
+        // a `Vec<u8>` only guarantees 1.
+        let mut buffer = vec![0u64; words];
+        let Ok(length) = u32::try_from(buffer.len() * WORD) else {
+            return None;
+        };
+        let mut written = 0u32;
+        // SAFETY: `buffer` is a live allocation of `length` bytes and is told so,
+        // and it is aligned for the 64-bit stores the kernel performs.
+        let status = unsafe {
+            NtQuerySystemInformation(
+                SystemProcessorPerformanceInformation,
+                buffer.as_mut_ptr().cast(),
+                length,
+                &mut written,
+            )
+        };
+        if status.is_err() {
+            return None;
+        }
+        let bytes = (written as usize).min(buffer.len() * WORD);
+        let count = bytes / PER_PROCESSOR;
+        let mut cores = Vec::with_capacity(count);
+        for processor in buffer[..count * 6].chunks_exact(6) {
+            cores.push(CpuTimes {
+                idle: processor[0],
+                kernel: processor[1],
+                user: processor[2],
+            });
+        }
+        Some(cores)
+    }
+
+    #[allow(unsafe_code)]
     pub(super) fn read_memory() -> MemorySample {
         let mut status = MEMORYSTATUSEX {
             dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
@@ -187,6 +307,7 @@ mod platform {
         }
     }
 
+    #[allow(unsafe_code)]
     pub(super) fn read_volumes() -> Vec<VolumeSample> {
         // Length in UTF-16 units, including the final double NUL.
         // SAFETY: a size query with a null buffer writes nothing.
@@ -234,6 +355,7 @@ mod platform {
         volumes
     }
 
+    #[allow(unsafe_code)]
     fn free_space(mount: &str) -> (MetricState<Bytes>, MetricState<Bytes>) {
         let wide = HSTRING::from(mount);
         let mut free = 0u64;
@@ -249,6 +371,7 @@ mod platform {
         }
     }
 
+    #[allow(unsafe_code)]
     pub(super) fn read_uptime() -> MetricState<u64> {
         // SAFETY: no arguments, no state.
         let ms = unsafe { GetTickCount64() };
@@ -263,6 +386,9 @@ mod platform {
     const REASON: WhyUnknown = WhyUnknown::NotOnThisWindowsVersion;
 
     pub(super) fn read_cpu_times() -> Option<CpuTimes> {
+        None
+    }
+    pub(super) fn read_core_times() -> Option<Vec<CpuTimes>> {
         None
     }
     pub(super) fn read_memory() -> MemorySample {
@@ -281,7 +407,7 @@ mod platform {
     }
 }
 
-use platform::{read_cpu_times, read_memory, read_uptime, read_volumes};
+use platform::{read_core_times, read_cpu_times, read_memory, read_uptime, read_volumes};
 
 #[cfg(test)]
 mod tests {
@@ -320,6 +446,43 @@ mod tests {
         let now = CpuTimes { idle: 150, kernel: 120, user: 150 };
         let percent = now.percent_busy_since(previous).unwrap();
         assert!((0.0..=100.0).contains(&percent), "{percent}");
+    }
+
+    #[test]
+    fn per_core_starts_unknown_then_reports_each_core() {
+        let first = [CpuTimes { idle: 0, kernel: 100, user: 100 }];
+        assert_eq!(core_states(None, &first), vec![MetricState::Unknown(WhyUnknown::NotSampledYet)]);
+        // 100 ticks of which all 100 idle: the core was idle for the interval.
+        let second = [CpuTimes { idle: 100, kernel: 200, user: 100 }];
+        assert_eq!(core_states(Some(&first), &second), vec![MetricState::Value(0.0)]);
+    }
+
+    #[test]
+    fn a_core_with_no_previous_reading_is_unknown_not_zero() {
+        let previous = [CpuTimes { idle: 10, kernel: 20, user: 20 }];
+        let current = [
+            CpuTimes { idle: 20, kernel: 30, user: 30 },
+            CpuTimes { idle: 5, kernel: 5, user: 5 },
+        ];
+        let states = core_states(Some(&previous), &current);
+        assert_eq!(states.len(), 2);
+        assert!(states[0].is_known());
+        assert_eq!(states[1], MetricState::Unknown(WhyUnknown::NotSampledYet));
+    }
+
+    #[test]
+    fn a_backwards_core_counter_does_not_poison_the_other_cores() {
+        let previous = [
+            CpuTimes { idle: 10, kernel: 20, user: 20 },
+            CpuTimes { idle: 10, kernel: 20, user: 20 },
+        ];
+        let current = [
+            CpuTimes { idle: 20, kernel: 30, user: 30 },
+            CpuTimes { idle: 1, kernel: 2, user: 2 },
+        ];
+        let states = core_states(Some(&previous), &current);
+        assert_eq!(states[0], MetricState::Value(50.0));
+        assert_eq!(states[1], MetricState::Unknown(WhyUnknown::CollectorFailed));
     }
 
     #[test]

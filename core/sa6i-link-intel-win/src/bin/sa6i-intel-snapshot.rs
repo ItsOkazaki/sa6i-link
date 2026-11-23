@@ -18,6 +18,24 @@ use sa6i_link_intel::{
 };
 use sa6i_link_intel_win::WindowsCollector;
 
+/// A per-core line that never invents a core count.
+///
+/// It says how many were *measured*, because on a machine with more than one
+/// processor group Windows answers per group and the list is short.
+fn describe_cores(cores: &[MetricState<f32>]) -> String {
+    let known: Vec<f32> = cores.iter().filter_map(|state| state.value().copied()).collect();
+    if known.is_empty() {
+        return format!("{} core(s) seen, none measured yet", cores.len());
+    }
+    let busy = known.iter().filter(|percent| **percent >= 50.0).count();
+    let busiest = known.iter().copied().fold(0.0_f32, f32::max);
+    format!(
+        "{} measured, {busy} above half, busiest {}",
+        known.len(),
+        render_percent(busiest)
+    )
+}
+
 /// `"— (requires administrator rights)"`, or the value if there is one.
 fn describe<T>(state: &MetricState<T>) -> String {
     match state.why() {
@@ -128,6 +146,9 @@ fn main() {
     match snapshot.cpu.percent {
         MetricState::Value(percent) => println!("  cpu        {}", render_percent(percent)),
         other => println!("  cpu        {}", describe(&other)),
+    }
+    if !snapshot.cpu.per_core.is_empty() {
+        println!("  cores      {}", describe_cores(&snapshot.cpu.per_core));
     }
 
     match (snapshot.memory.percent_used(), snapshot.memory.total) {

@@ -19,6 +19,9 @@ windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem",
     "Win32_System_SystemInformation",
+    # NtQuerySystemInformation, for per-processor counters: the Win32 surface
+    # has no per-core equivalent of GetSystemTimes.
+    "Wdk_System_SystemInformation",
 ] }
 
 [[bin]]

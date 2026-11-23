@@ -118,11 +118,24 @@ impl<T> MetricState<T> {
 }
 
 /// CPU use since the previous snapshot.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CpuSample {
     /// Percent of total capacity, 0 to 100, averaged over the interval between
     /// this sample and the previous one.
     pub percent: MetricState<f32>,
+    /// Percent busy per logical processor, in index order, over the same
+    /// interval.
+    ///
+    /// Empty when per-core data was not collected at all (an older build,
+    /// another platform, a failed read). A core that was not measured is
+    /// [`MetricState::Unknown`] with its reason, never 0: an idle core and an
+    /// unmeasured one look identical in a bar chart and mean opposite things.
+    ///
+    /// Windows answers this per *processor group*, and this is the group the
+    /// sampling thread runs in — on a machine with more than 64 logical
+    /// processors the list is that group's cores. `per_core.len()` is how many
+    /// were actually measured; the UI says so rather than guessing a total.
+    pub per_core: Vec<MetricState<f32>>,
 }
 
 /// Physical and committed memory, in bytes.
@@ -255,6 +268,11 @@ impl Snapshot {
         if let MetricState::Value(p) = self.cpu.percent {
             out.push(("cpu.percent".to_owned(), f64::from(p)));
         }
+        for (index, core) in self.cpu.per_core.iter().enumerate() {
+            if let MetricState::Value(p) = core {
+                out.push((format!("cpu.core.{index}.percent"), f64::from(*p)));
+            }
+        }
         if let MetricState::Value(p) = self.memory.percent_used() {
             out.push(("memory.percent_used".to_owned(), f64::from(p)));
         }
@@ -311,7 +329,10 @@ mod tests {
             seq: 1,
             taken_at: Timestamp(0),
             monotonic_ms: 0,
-            cpu: CpuSample { percent: MetricState::Unknown(WhyUnknown::NotSampledYet) },
+            cpu: CpuSample {
+                percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+                per_core: Vec::new(),
+            },
             memory: MemorySample {
                 total: MetricState::Unknown(WhyUnknown::CollectorFailed),
                 available: MetricState::Unknown(WhyUnknown::CollectorFailed),
@@ -322,6 +343,39 @@ mod tests {
             uptime: MetricState::Unknown(WhyUnknown::CollectorFailed),
         };
         assert!(snapshot.metrics().is_empty(), "unknown metrics must not become numbers");
+    }
+
+    #[test]
+    fn a_measured_core_is_plotted_and_an_unmeasured_core_is_not() {
+        let mut snapshot = Snapshot {
+            seq: 1,
+            taken_at: Timestamp(0),
+            monotonic_ms: 0,
+            cpu: CpuSample {
+                percent: MetricState::Value(40.0),
+                per_core: vec![
+                    MetricState::Value(100.0),
+                    MetricState::Unknown(WhyUnknown::NotSampledYet),
+                    MetricState::Value(25.0),
+                ],
+            },
+            memory: MemorySample {
+                total: MetricState::Value(Bytes(1_000)),
+                available: MetricState::Value(Bytes(500)),
+                commit_limit: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                commit_used: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+            },
+            volumes: Vec::new(),
+            uptime: MetricState::Value(60),
+        };
+        let paths: Vec<String> = snapshot.metrics().into_iter().map(|(path, _)| path).collect();
+        assert!(paths.contains(&"cpu.core.0.percent".to_owned()));
+        assert!(paths.contains(&"cpu.core.2.percent".to_owned()));
+        // A core that was not measured has no line to draw. Drawing 0 for it
+        // would be the same picture as an idle core, and mean the opposite.
+        assert!(!paths.contains(&"cpu.core.1.percent".to_owned()));
+        snapshot.cpu.per_core.clear();
+        assert!(!snapshot.metrics().iter().any(|(path, _)| path.starts_with("cpu.core.")));
     }
 
     #[test]
@@ -362,7 +416,7 @@ mod tests {
             seq: 7,
             taken_at: Timestamp(1_700_000_000_000),
             monotonic_ms: 5,
-            cpu: CpuSample { percent: MetricState::Value(12.5) },
+            cpu: CpuSample { percent: MetricState::Value(12.5), per_core: Vec::new() },
             memory: MemorySample {
                 total: MetricState::Value(Bytes(16_000_000_000)),
                 available: MetricState::Value(Bytes(4_000_000_000)),
@@ -399,7 +453,10 @@ mod tests {
             seq: 1,
             taken_at: Timestamp(0),
             monotonic_ms: 0,
-            cpu: CpuSample { percent: MetricState::Unknown(WhyUnknown::NotSampledYet) },
+            cpu: CpuSample {
+                percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+                per_core: Vec::new(),
+            },
             memory: MemorySample {
                 total: MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion),
                 available: MetricState::Value(Bytes(1)),
