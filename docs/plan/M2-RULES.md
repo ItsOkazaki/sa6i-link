@@ -187,8 +187,10 @@ did not run, and why (`requires` unavailable), because "nothing found" and
    three M1 rules expressed as TOML and proven to produce byte-identical findings
    from the same recipes. That is the test that the front-end did not change a
    verdict.
-3. **The three rules that need a `metrics()` line** (`memory.commit_pressure`,
-   plus publishing the process creation stamp), then the four that need nothing.
+3. **The rules that need a `metrics()` line** — `memory.commit_pressure` is
+   unblocked (slice 18 published `memory.commit_used_bytes` and
+   `memory.commit_limit_bytes`); the process creation stamp is still owed, and
+   belongs with `process.runaway_cpu`.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

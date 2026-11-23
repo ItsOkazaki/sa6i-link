@@ -426,6 +426,15 @@ impl Snapshot {
         if let MetricState::Value(available) = self.memory.available {
             out.push(("memory.available_bytes".to_owned(), available.0 as f64));
         }
+        // Commit charge is collected with the rest of the memory sample. It is
+        // published here because a rule may not cite a path `metrics()` does not
+        // emit — evidence is checked against this list, not against the struct.
+        if let MetricState::Value(used) = self.memory.commit_used {
+            out.push(("memory.commit_used_bytes".to_owned(), used.0 as f64));
+        }
+        if let MetricState::Value(limit) = self.memory.commit_limit {
+            out.push(("memory.commit_limit_bytes".to_owned(), limit.0 as f64));
+        }
         for volume in &self.volumes {
             if let MetricState::Value(p) = volume.percent_used() {
                 out.push((format!("volume.{}.percent_used", volume.letter()), f64::from(p)));
@@ -755,8 +764,19 @@ mod tests {
         let paths: Vec<&str> = metrics.iter().map(|(p, _)| p.as_str()).collect();
         assert!(paths.contains(&"cpu.percent"));
         assert!(paths.contains(&"memory.percent_used"));
+        assert!(paths.contains(&"memory.commit_used_bytes"));
+        assert!(paths.contains(&"memory.commit_limit_bytes"));
         assert!(paths.contains(&"volume.C.percent_used"));
         assert!(paths.contains(&"system.uptime_seconds"));
+        // The commit charge is the one memory figure a rule can cite that is not
+        // a percentage, so its values are checked, not just its path.
+        let metrics = snapshot.metrics();
+        let commit = |path: &str| metrics.iter().find(|(p, _)| p == path).map(|(_, v)| *v);
+        assert_eq!(commit("memory.commit_used_bytes"), Some(8_000_000_000.0));
+        // …and an unreadable commit charge publishes nothing at all.
+        let mut unknown = snapshot.clone();
+        unknown.memory.commit_used = MetricState::Unknown(WhyUnknown::CollectorFailed);
+        assert!(unknown.metrics().iter().all(|(p, _)| p != "memory.commit_used_bytes"));
         assert_eq!(
             snapshot.volume("C:").map(VolumeSample::percent_used),
             Some(MetricState::Value(90.0))

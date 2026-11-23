@@ -748,6 +748,25 @@ changed, `Cargo.lock` untouched. The front-end needs the rule bodies to be
 parameterisable first; a file format on top of globals would have been a parser
 with nothing to parse.
 
+## Slice 18 — the two evidence paths that were collected and never published
+
+`Snapshot::metrics()` is the contract a rule cites evidence against: a finding that
+names a path no snapshot emits is a finding with no evidence. The M2 audit found
+that the memory collector reads `commit_used` and `commit_limit` and `metrics()`
+never emitted them — so the most useful memory figure a rule could cite (`"9.4 GB
+of a 12 GB commit limit"`) was invisible to the evidence check.
+
+Two lines fix it: `memory.commit_used_bytes` and `memory.commit_limit_bytes`. They
+are published only when measured, like every other path, and the test that used to
+check path names now checks the commit values too — plus that an unreadable commit
+charge emits nothing rather than a zero.
+
+The other half of that audit is deliberately still owed: `ProcessSample` does not
+carry the creation stamp the CPU tracker keys on, so a per-process rule over ten
+minutes could credit the wrong program after a pid is reused. Publishing it changes
+the wire format and the process row, which makes it a slice rather than two lines —
+and it belongs with the rule that needs it, not before it.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
