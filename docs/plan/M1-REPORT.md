@@ -16,6 +16,7 @@ actions.
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU (total and per-core), memory, volumes, uptime, disk throughput, heaviest processes, no admin |
 | Performance counters | `core/sa6i-link-intel-win/src/pdh.rs` | **done** — English `PhysicalDisk` and `GPU Adapter Memory` counters |
+| Window averages | `core/sa6i-link-intel/src/summary.rs` | **done** — mean of what was measured, with the counts; unknown excluded, never averaged in as zero |
 | Monitor data | `core/sa6i-link-intel/src/view.rs` | **done** — tiles, sparklines with gaps, process and volume rows; words chosen here, Qt only places them |
 | Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, tiles and sparklines; needs a machine with Qt |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
@@ -256,8 +257,8 @@ M1 exits when these hold. The plan's wording, and what would demonstrate it:
 
 | Exit criterion | Demonstrated by | State |
 | --- | --- | --- |
-| Numbers within ±3 % of Task Manager | a side-by-side run on a real machine | **needs your PC** |
-| 1 Hz for 30 min under budget | `--samples 1800` with a stopwatch and a CPU reading | **needs your PC** |
+| Numbers within ±3 % of Task Manager | `--samples 60 --interval-ms 1000 --average` next to Task Manager's Performance tab | **needs your PC, measurable now** |
+| 1 Hz for 30 min under budget | `--samples 1800 --interval-ms 1000 --budget`: prints the rate, the per-sample cost and this process's CPU share, and exits 3 on a miss | **needs your PC, measurable now** |
 | Win7 renders `Unsupported`, with reasons | the `cfg(not(windows))` collector and the reason strings already do this on any non-Windows build; a real Win7 pass is still owed | **partly demonstrable** |
 | CLI JSON stable and tested | `tests/scenarios.rs`: field names, `Unknown` encoding, exact finding sets | **done** |
 | No admin prompt anywhere | no elevation API is called and no manifest requests it; the collectors use `GetDiskFreeSpaceExW`, `GlobalMemoryStatusEx`, `GetSystemTimes`, `NtQuerySystemInformation` — all available to a standard user | **done by construction, needs a click-through** |
@@ -469,6 +470,50 @@ by name, and that the `Canvas` drawing calls I used exist in Qt 6's 2D context.
 Everything else — the view, the wire format, the gap rule, the share arithmetic —
 is tested.
 
+## Slice 11 — the two machine checks, as commands
+
+Two of M1's six exit criteria need a real PC, and both were written as things a
+person does with a stopwatch: compare against Task Manager, and sample for thirty
+minutes "under budget" without saying what the budget is. That is a bad way to
+hold an exit criterion — it produces an opinion, not a number.
+
+So: two flags on the existing CLI, and the arithmetic behind them in
+`core/sa6i-link-intel/src/summary.rs` where it is tested.
+
+**`--average`** prints the window's mean CPU and memory with the counts that make
+the mean honest — `cpu 12.4 % (60 of 60 samples) · memory 61.2 % (58 of 60
+samples) · over 59 seconds`. Unreadable samples are excluded from the mean and
+counted, never averaged in as zero; a machine whose collector failed half the
+time would otherwise look idle, which is the same lie the rest of the engine
+exists to prevent. `--samples 60 --interval-ms 1000 --average` is the command to
+hold next to Task Manager's Performance tab.
+
+**`--budget`** answers the other criterion with three numbers and a verdict:
+
+```text
+  budget
+    rate       1.00 Hz of 1.00 Hz over 30 minutes — ok
+    collection mean 6.2 ms, worst 41.0 ms, ceiling 1000 ms — ok
+    cpu        0.31 % of one core, ceiling 1 % — ok
+    verdict    PASS
+```
+
+The budget is now a definition rather than a feeling: a sample may spend at most
+a quarter of its interval collecting, no single sample may overrun the interval,
+the achieved rate must stay within 5 % of the requested one, and the whole
+process must use under 1 % of one core. A miss exits `3` so the check can gate
+something later. The CPU figure comes from `GetProcessTimes` on the process's own
+pseudo-handle — kernel plus user time, in 100 ns units — and where it cannot be
+read the line says so and does not fail the run, because an unmeasured cost is
+not a cheap one.
+
+**What this does not do:** it cannot tell you whether the numbers are *right*.
+The ±3 % comparison is still a person looking at two screens; all this does is
+make the thing being compared a mean with a sample count instead of a single
+twitchy reading. And the timing half measures the Windows collector at 1 Hz,
+which is what the plan's thirty minutes are about — not the page, which draws at
+whatever rate Qt gives it.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now. What is still absent is
@@ -535,17 +580,21 @@ depends on the API shape.
 
 ## Next
 
-0. **Compile before writing more.** Nine commits of Win32 calls, PDH calls,
-   SQLite calls and a new dependency have never been through `rustc`. Until they have, every further
-   collector is written on top of assumptions nobody has checked, and the cost
-   of finding out grows with each one:
+0. **Run it, on a machine with the toolchain.** Eleven commits of Win32 calls,
+   PDH calls, SQLite, a new dependency and a Qt page have never been through
+   `rustc`. In this order:
 
    ```powershell
    cargo fmt --all
    cargo test --locked -p sa6i-link-intel -p sa6i-link-intel-win
+   cargo clippy --workspace --all-targets -- -D warnings
    cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
    ```
 
+   Then the two checks the CLI can answer without Qt: `--samples 60
+   --interval-ms 1000 --average` beside Task Manager's Performance tab, and
+   `--samples 1800 --interval-ms 1000 --budget` for the half hour. Two of M1's
+   six exit criteria close that way, with the desktop app still unbuilt.
 1. **Build the app.** `cargo build -p sa6i-link` on a machine with Qt and the
    Rust toolchain, then open Monitor and watch it for a minute. This is now the
    gate in front of everything else: M1.3 is the first slice that has never been

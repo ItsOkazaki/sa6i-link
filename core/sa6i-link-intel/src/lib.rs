@@ -18,6 +18,7 @@ mod history;
 mod model;
 mod rules;
 mod store;
+mod summary;
 mod view;
 
 pub use findings::{
@@ -31,6 +32,7 @@ pub use model::{
 };
 pub use rules::{RULES, Rule, RuleDef, evaluate};
 pub use store::{DEFAULT_CAPACITY, HeldWindow, SampleStore};
+pub use summary::{Average, WindowSummary};
 pub use view::{
     CoreBar, MonitorView, NO_VALUE, ProcessRow, SPARKLINE_POINTS, Sparkline, Tile, TileId, VolumeRow,
     monitor_view, render_rate,

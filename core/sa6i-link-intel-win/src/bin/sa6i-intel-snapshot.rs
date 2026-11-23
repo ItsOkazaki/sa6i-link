@@ -8,13 +8,25 @@
 //! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot
 //! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --samples 700
 //! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
+//!
+//! # M1's two checks that need a real machine:
+//! # 60 samples averaged, to hold next to Task Manager's Performance tab.
+//! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- \
+//!     --samples 60 --interval-ms 1000 --average
+//! # The plan's thirty minutes at 1 Hz, with a verdict and exit code 3 on a miss.
+//! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- \
+//!     --samples 1800 --interval-ms 1000 --budget
 //! ```
 
-use std::{path::Path, thread::sleep, time::Duration};
+use std::{
+    path::Path,
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 use sa6i_link_intel::{
-    History, MetricState, ProcessSample, SampleStore, Timestamp, all_clear_sentence, evaluate,
-    human_duration, render_bytes, render_percent,
+    History, MetricState, ProcessSample, SampleStore, Timestamp, WindowSummary,
+    all_clear_sentence, evaluate, human_duration, render_bytes, render_percent,
 };
 use sa6i_link_intel_win::WindowsCollector;
 
@@ -102,12 +114,109 @@ fn describe<T>(state: &MetricState<T>) -> String {
     }
 }
 
+/// A sample may spend at most this share of the interval collecting.
+const SAMPLE_SHARE: f64 = 0.25;
+/// The whole process may use at most this share of one core.
+const CPU_SHARE: f64 = 0.01;
+/// How far off the requested rate still counts as holding it.
+const RATE_TOLERANCE: f64 = 0.05;
+
+/// What one run cost: the wall clock, each sample's own time, and this
+/// process's CPU time where the platform will say.
+struct Cost {
+    elapsed: Duration,
+    per_sample: Vec<Duration>,
+    cpu: Option<Duration>,
+}
+
+/// CPU time this process has used (kernel + user), or `None` where it cannot be
+/// read.
+///
+/// Windows counts in 100 ns units and asks for four `FILETIME`s of which only
+/// the last two are used. The pseudo-handle from `GetCurrentProcess` needs no
+/// closing.
+#[cfg(windows)]
+#[allow(unsafe_code)]
+fn process_cpu_time() -> Option<Duration> {
+    use windows::Win32::Foundation::FILETIME;
+    use windows::Win32::System::Threading::{GetCurrentProcess, GetProcessTimes};
+    let mut creation = FILETIME::default();
+    let mut exit = FILETIME::default();
+    let mut kernel = FILETIME::default();
+    let mut user = FILETIME::default();
+    // SAFETY: the handle is a pseudo-handle that is not closed, and all four
+    // out-pointers point at locals that outlive the call.
+    unsafe { GetProcessTimes(GetCurrentProcess(), &mut creation, &mut exit, &mut kernel, &mut user) }
+        .ok()?;
+    let ticks =
+        |time: FILETIME| (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime);
+    Some(Duration::from_nanos(
+        ticks(kernel).saturating_add(ticks(user)).saturating_mul(100),
+    ))
+}
+
+/// No way to read it off Windows, and a guess would be worse than a blank.
+#[cfg(not(windows))]
+fn process_cpu_time() -> Option<Duration> {
+    None
+}
+
+/// Prints what the run cost and whether it held. Returns false on a miss.
+///
+/// The three things "1 Hz under budget" means, spelled out: the rate held, no
+/// sample took longer than its interval, and the process stayed inside its share
+/// of a core. CPU is skipped rather than failed where it could not be measured —
+/// an unmeasured cost is not a cheap one.
+fn print_budget(samples: u32, interval: Duration, cost: &Cost) -> bool {
+    let count = cost.per_sample.len().max(1);
+    let seconds = |d: Duration| d.as_secs_f64();
+    let mean = cost.per_sample.iter().copied().map(seconds).sum::<f64>() / count as f64;
+    let worst = cost.per_sample.iter().copied().map(seconds).fold(0.0, f64::max);
+    let achieved = if samples > 1 { f64::from(samples - 1) / seconds(cost.elapsed) } else { 0.0 };
+    let target = 1.0 / seconds(interval);
+    let share = cost.cpu.map(|cpu| seconds(cpu) / seconds(cost.elapsed));
+
+    let rate_ok = samples < 2 || (achieved / target - 1.0).abs() <= RATE_TOLERANCE;
+    let sample_ok = mean <= seconds(interval) * SAMPLE_SHARE && worst <= seconds(interval);
+    let cpu_ok = share.map_or(true, |share| share <= CPU_SHARE);
+
+    let mark = |ok: bool| if ok { "ok" } else { "OVER" };
+    println!();
+    println!("  budget");
+    println!(
+        "    rate       {achieved:.2} Hz of {target:.2} Hz over {} — {}",
+        human_duration(u64::try_from(cost.elapsed.as_millis()).unwrap_or(u64::MAX)),
+        mark(rate_ok)
+    );
+    println!(
+        "    collection mean {:.1} ms, worst {:.1} ms, ceiling {:.0} ms — {}",
+        mean * 1000.0,
+        worst * 1000.0,
+        seconds(interval) * 1000.0,
+        mark(sample_ok)
+    );
+    match share {
+        Some(share) => println!(
+            "    cpu        {:.2} % of one core, ceiling {:.0} % — {}",
+            share * 100.0,
+            CPU_SHARE * 100.0,
+            mark(cpu_ok)
+        ),
+        None => println!("    cpu        — (not measurable on this platform)"),
+    }
+    let passed = rate_ok && sample_ok && cpu_ok;
+    println!("    verdict    {}", if passed { "PASS" } else { "MISS" });
+    passed
+}
+
 fn main() {
     let mut samples: u32 = 1;
     let mut interval_ms: u64 = 1000;
     let mut json = false;
     let mut show_findings = true;
     let mut history_path: Option<String> = None;
+    let mut average = false;
+    let mut budget = false;
 
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -121,11 +230,18 @@ fn main() {
             "--json" => json = true,
             "--no-findings" => show_findings = false,
             "--history" => history_path = args.next(),
+            "--average" => average = true,
+            "--budget" => budget = true,
             "--help" | "-h" => {
-                println!(
-                    "usage: sa6i-intel-snapshot [--samples N] [--interval-ms MS] \
-                     [--json] [--no-findings] [--history PATH]"
-                );
+                println!("usage: sa6i-intel-snapshot [--samples N] [--interval-ms MS]");
+                println!("       [--json] [--no-findings] [--history PATH] [--average] [--budget]");
+                println!();
+                println!("--average  print the window's mean cpu and memory, which is what");
+                println!("           Task Manager's Performance tab shows; use --samples 60");
+                println!("           --interval-ms 1000 to compare per the exit criteria");
+                println!("--budget   print the cost of sampling and whether it held: use");
+                println!("           --samples 1800 --interval-ms 1000 for the thirty-minute");
+                println!("           check. Exits 3 on a miss.");
                 return;
             }
             other => {
@@ -140,12 +256,25 @@ fn main() {
 
     let mut collector = WindowsCollector::new();
     let mut store = SampleStore::default();
+    let mut cost = Cost { elapsed: Duration::ZERO, per_sample: Vec::new(), cpu: None };
+    let cpu_before = budget.then(process_cpu_time).flatten();
+    let started = Instant::now();
     for index in 0..samples {
         if index > 0 {
             sleep(interval);
         }
-        store.push(collector.next_snapshot());
+        let begin = Instant::now();
+        let snapshot = collector.next_snapshot();
+        if budget {
+            cost.per_sample.push(begin.elapsed());
+        }
+        store.push(snapshot);
     }
+    cost.elapsed = started.elapsed();
+    cost.cpu = match (cpu_before, budget.then(process_cpu_time).flatten()) {
+        (Some(before), Some(after)) => after.checked_sub(before),
+        _ => None,
+    };
 
     let snapshot = store.latest().expect("at least one sample");
     let findings = if show_findings { evaluate(snapshot, &store) } else { Vec::new() };
@@ -180,8 +309,13 @@ fn main() {
         }
     }
 
+    let summary = average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
+
     if json {
-        let payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });
+        let mut payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });
+        if let Some(summary) = &summary {
+            payload["summary"] = serde_json::json!(summary);
+        }
         match serde_json::to_string_pretty(&payload) {
             Ok(text) => println!("{text}"),
             Err(error) => {
@@ -238,6 +372,10 @@ fn main() {
         }
     }
 
+    if let Some(summary) = &summary {
+        println!("  average    {}", summary.line());
+    }
+
     match snapshot.uptime {
         MetricState::Value(seconds) => {
             println!("  uptime     {}", human_duration(seconds.saturating_mul(1000)));
@@ -262,5 +400,11 @@ fn main() {
                 println!("        · {}", evidence.sentence());
             }
         }
+    }
+
+    // A miss is a result, not a crash: the numbers are printed either way and
+    // the exit code is what a script (or CI, or the next person) reads.
+    if budget && !print_budget(samples, interval, &cost) {
+        std::process::exit(3);
     }
 }
