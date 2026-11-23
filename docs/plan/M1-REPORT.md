@@ -24,6 +24,7 @@ actions.
 | Monitor page | `desktop/app/src/bridge/intel.rs`, `qml/pages/MonitorPage.qml` | **written, never built** — one sampling thread, one JSON frame a second, Overview (tiles, sparklines) and Detail (cores, volumes, processes, limits); needs a machine with Qt |
 | Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
 | Golden scenarios | `core/sa6i-link-intel/tests/` | **done** — 8 recipe fixtures, firing case and near-miss per rule |
+| Verification harness | `scripts/verify-m1.ps1`, `docs/plan/M1-VERIFY.md` | **written, never run** — the six exit criteria in one command, a markdown record, and the two rows that need a human rather than marked green |
 | Privacy, as a test | `core/sa6i-link-intel/tests/privacy.rs` | **done** — neither intel crate can reach a socket-capable crate |
 | Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
 | TOML rules, Doctor rules, actions | — | **not started** (M2, see below) |
@@ -622,6 +623,36 @@ Uncompiled, like the rest. The new risk is one signature: `GetProcessTimes` take
 the handle and four `&mut FILETIME` out-parameters, modelled on the existing call
 in `desktop/app/src/win/mod.rs` rather than recalled.
 
+## Slice 15 — the verification, as one command
+
+The report has said "not verified" in every slice, and the six exit criteria have
+been a table to read rather than a thing to run. That is the wrong shape for the
+one step that is not mine to take: an operator who has to assemble `cargo test`,
+two CLI invocations, a JSON check and a markdown table by hand will do it once,
+badly, at eleven at night.
+
+So `scripts/verify-m1.ps1` does the assembling. It builds `sa6i-link-cli`, takes
+the minute of samples, asks for Task Manager's two numbers and does the ±3
+arithmetic the plan asks for, checks the JSON contract from a **two**-sample run —
+the process column is the one field that a single sample cannot demonstrate,
+because a rate needs two — runs `tests/privacy.rs`, and, with `-Budget`, takes the
+half hour and reads the CLI's exit code 3 rather than re-deriving a verdict from
+text. It ends with `target/m1-verification.md`: the machine, what was measured,
+and a row per criterion.
+
+Two of the six rows come out as **eyes**, not pass: an old Windows, and a person
+watching for a UAC shield. A script that printed PASS for those would be lying,
+and this milestone has spent enough care on not doing that.
+
+It does not replace `scripts/check.ps1`, which owns formatting, clippy, the whole
+test suite, the headers and the dependency policy. The two are a sequence, and
+`docs/plan/M1-VERIFY.md` says so: if `check.ps1` fails, nothing else matters yet.
+
+Not verified, obviously: it is a PowerShell script written on a machine with no
+Windows and no PowerShell. Its failure mode is the boring one — a parameter name
+or a `ConvertFrom-Json` shape that is stricter than the file it parses — and the
+fix is a line in the script, not a slice.
+
 ## What the collectors do not do, on purpose
 
 Everything the plan listed for M1.1 is collected now, per-process CPU included
@@ -657,6 +688,7 @@ per-core numbers should not also be the machine whose PDH query is suspect.
 | PDH (slice 7) | Every signature and type read from the generated docs for `windows` 0.62.2 (`microsoft/windows-docs-rs`), then cross-checked against a working open-source user of the same module (Argus `pdh.rs`: `PdhOpenQueryW(PCWSTR::null(), …) == 0`, `value.Anonymous.doubleValue`) |
 | Win32 surface (slice 4) | The module path, signature and class constant of `NtQuerySystemInformation` were checked against the `windows` 0.62.2 API listing rather than recalled; the per-processor struct is deliberately *not* declared, so only the first three of its six words are read |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
+| The verification script (slice 15) | Its JSON paths were read off the serde attributes in `model.rs` (`snapshot.processes[].cpu_percent.state`, snake_case, `MetricState` as `{state, value}`) rather than guessed, and the CLI flags it passes are the ones `IntelArg` declares. Not executed: no PowerShell here |
 
 **Not verified: it has not been compiled.** There is no Rust toolchain in this
 sandbox, so neither the `windows` calls nor the `rusqlite` calls have been
@@ -692,9 +724,10 @@ depends on the API shape.
 
 ## Next
 
-0. **Run it, on a machine with the toolchain.** Eleven commits of Win32 calls,
+0. **Run it, on a machine with the toolchain.** Fifteen commits of Win32 calls,
    PDH calls, SQLite, a new dependency and a Qt page have never been through
-   `rustc`. In this order:
+   `rustc`. `docs/plan/M1-VERIFY.md` is the short version of this list, as a
+   script that writes down what it found. By hand, in this order:
 
    ```powershell
    cargo fmt --all
