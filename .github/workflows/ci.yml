@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
   QT_VERSION: "6.12.0"
   # The crates that build without Qt or the Android NDK.
-  CORE_CRATES: -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi -p sa6i-link-cli -p sa6i-link-adb -p xtask
+  CORE_CRATES: -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel -p sa6i-link-intel-win -p xtask
 
 jobs:
   # Whether anything but docs changed (docs-only.sh). A push or pull request

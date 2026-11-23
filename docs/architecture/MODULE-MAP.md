@@ -73,8 +73,8 @@ it runs.
 
 | Module | Engine | Depends on | Status |
 | --- | --- | --- | --- |
-| Doctor | `intel` rules over `intel-win` collectors | — | **not implemented** (connection-only `doctor.rs` exists in core) |
-| Monitor | `intel` model + collectors | — | **not implemented** |
+| Doctor | `intel` rules over `intel-win` collectors | — | **partial** — 3 rules with fixtures; the connection-only `doctor.rs` in core is separate |
+| Monitor | `intel` model + collectors | — | **partial** — model, store and CPU/memory/volume/uptime collectors done; no page yet |
 | Clean | `intel` scan (native) + hosted fallback | action registry | **partial** (hosted only) |
 | Link | `core` | — | **verified** |
 | Security | `intel-win` readers | — | **not implemented**, several readings **technically uncertain** without admin |

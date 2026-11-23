@@ -246,6 +246,17 @@ in-memory only, and says so.
 A rule or action without tests is not merged; demo data exists only behind a
 `--demo` flag that the UI labels.
 
+## Slice 1 status (where the code deviates, on purpose)
+
+| Contract | Slice 1 | Why |
+| --- | --- | --- |
+| §4 data model | `Snapshot` carries CPU, memory, volumes, uptime; GPU, thermal, process summary are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
+| §5 TOML rules | rules are Rust functions with named constants, behind the same `RuleDef` | the front-end compiles into the same struct; shipping a parser before one rule works would be backwards |
+| §9 SQLite | history is an in-memory ring (`SampleStore`) | the Monitor page's history view is what forces the schema; the engine only needs windows |
+| §2 crate names | as planned: `sa6i-link-intel`, `sa6i-link-intel-win` | — |
+
+See `docs/plan/M1-REPORT.md`.
+
 ## ## ## 11. Boundaries with existing code
 
 - No changes to Link transport, protocol or `features.rs` semantics.

@@ -4,6 +4,8 @@ members = [
     "core/sa6i-link-adb",
     "core/sa6i-link-protocol",
     "core/sa6i-link-core",
+    "core/sa6i-link-intel",
+    "core/sa6i-link-intel-win",
     "core/sa6i-link-cli",
     "core/sa6i-link-ffi",
     "desktop/app",
@@ -30,6 +32,8 @@ name = "Pollen"
 sa6i-link-adb = { path = "core/sa6i-link-adb", version = "0.1.5" }
 sa6i-link-protocol = { path = "core/sa6i-link-protocol", version = "0.1.5" }
 sa6i-link-core = { path = "core/sa6i-link-core", version = "0.1.5" }
+sa6i-link-intel = { path = "core/sa6i-link-intel", version = "0.1.5" }
+sa6i-link-intel-win = { path = "core/sa6i-link-intel-win", version = "0.1.5" }
 sa6i-vcam = { path = "desktop/vcam", version = "0.1.5" }
 
 anyhow = "1"

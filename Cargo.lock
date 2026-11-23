@@ -2531,6 +2531,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sa6i-link-intel"
+version = "0.1.5"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "sa6i-link-intel-win"
+version = "0.1.5"
+dependencies = [
+ "sa6i-link-intel",
+ "serde",
+ "serde_json",
+ "tracing",
+ "windows",
+]
+
+[[package]]
 name = "sa6i-link-protocol"
 version = "0.1.5"
 dependencies = [
