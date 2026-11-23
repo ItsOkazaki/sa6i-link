@@ -1,0 +1,13 @@
+{
+  "name": "cpu-just-under-for-twelve-minutes",
+  "about": "89 % for twelve minutes: one point under the line, held well past the window. A machine near its ceiling is what a build looks like, and neither CPU rule has anything to say about it.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 89,
+      "memory_percent": 50,
+      "cores": [89, 88, 90, 89, 87, 90, 89, 88]
+    }
+  ],
+  "quiets": ["cpu.sustained_high", "cpu.one_core_pinned"]
+}

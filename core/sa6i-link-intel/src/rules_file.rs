@@ -59,6 +59,9 @@ struct Entry {
     requires: Option<Vec<String>>,
     warn_percent: Option<f32>,
     critical_percent: Option<f32>,
+    /// The ceiling the *whole machine* has to stay under, for the rule about one
+    /// pinned core. Without it that rule would be about any busy machine.
+    total_below_percent: Option<f32>,
     /// Growth in mebibytes, for the rule that measures a difference rather than a
     /// level.
     growth_mb: Option<u64>,
@@ -177,6 +180,7 @@ impl RuleFile {
             for (key, present) in [
                 ("warn_percent", entry.warn_percent.is_some()),
                 ("critical_percent", entry.critical_percent.is_some()),
+                ("total_below_percent", entry.total_below_percent.is_some()),
                 ("sustained", entry.sustained.is_some()),
                 ("long_after", entry.long_after.is_some()),
                 ("growth_mb", entry.growth_mb.is_some()),
@@ -277,6 +281,8 @@ impl RuleFile {
 /// file had been applied.
 fn allowed_keys(id: &str) -> &'static [&'static str] {
     match id {
+        "cpu.sustained_high" => &["warn_percent", "sustained"],
+        "cpu.one_core_pinned" => &["warn_percent", "total_below_percent", "sustained"],
         "disk.low_free_space" => &["warn_percent", "critical_percent", "sustained"],
         "memory.pressure" => &["warn_percent", "sustained"],
         "memory.commit_pressure" => &["warn_percent", "sustained"],
@@ -292,6 +298,37 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
 /// Apply one rule's numbers, refusing the ones that cannot be meant.
 fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Refusal>) {
     match id {
+        "cpu.sustained_high" => {
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(warn) = warn {
+                limits.cpu_warn_percent = warn;
+            }
+            if let Some(millis) = window {
+                limits.cpu_sustained_ms = millis;
+            }
+        }
+        "cpu.one_core_pinned" => {
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
+            let ceiling = ranged_f32(
+                entry.total_below_percent,
+                id,
+                "total_below_percent",
+                PERCENT,
+                "",
+                refusals,
+            );
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(warn) = warn {
+                limits.core_pinned_percent = warn;
+            }
+            if let Some(ceiling) = ceiling {
+                limits.core_pinned_total_below_percent = ceiling;
+            }
+            if let Some(millis) = window {
+                limits.core_pinned_ms = millis;
+            }
+        }
         "disk.low_free_space" => {
             let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
             let critical = ranged_f32(entry.critical_percent, id, "critical_percent", PERCENT, "", refusals);
@@ -577,6 +614,8 @@ impl std::error::Error for Refusal {}
 mod tests {
     use super::*;
 
+    const CPU: &str = include_str!("../rules/cpu.toml");
+    const CORE: &str = include_str!("../rules/core.toml");
     const DISK: &str = include_str!("../rules/disk.toml");
     const MEMORY: &str = include_str!("../rules/memory.toml");
     const COMMIT: &str = include_str!("../rules/commit.toml");
@@ -627,7 +666,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [DISK, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
+        for text in [CPU, CORE, DISK, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)
@@ -679,6 +718,17 @@ sustained = "5m"
         let text = "[[rule]]\nid = \"disk.low_free_space\"\nwarn_pct = 90.0\n";
         let refused = refusals(text);
         assert!(matches!(refused.as_slice(), [Refusal::Parse { .. }]), "{refused:?}");
+    }
+
+    #[test]
+    fn the_two_cpu_rules_do_not_share_a_ceiling_key() {
+        // `total_below_percent` is the one number that only means something beside
+        // a pin threshold, so it belongs to one rule and is refused on the other.
+        let text = "[[rule]]\nid = \"cpu.sustained_high\"\ntotal_below_percent = 50.0\n";
+        assert!(refusals(text).contains(&Refusal::NotThisRulesKey {
+            id: "cpu.sustained_high".to_owned(),
+            key: "total_below_percent",
+        }));
     }
 
     #[test]

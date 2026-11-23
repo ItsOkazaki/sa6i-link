@@ -60,8 +60,8 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `disk.low_free_space` | `volume.{letter}.percent_used` | 10 min | Warning → Critical at 97 % | **shipped in M1** |
 | `memory.pressure` | `memory.percent_used` | 2 min | Notice | **shipped in M1** |
 | `system.long_uptime` | `system.uptime_seconds` | instant | Info | **shipped in M1** |
-| `cpu.sustained_high` | `cpu.percent` | 10 min | Warning | ready |
-| `cpu.one_core_pinned` | `cpu.core.{n}.percent` vs `cpu.percent` | 10 min | Notice | ready |
+| `cpu.sustained_high` | `cpu.percent` | 10 min | Warning | **shipped**, and a build is it firing correctly |
+| `cpu.one_core_pinned` | `cpu.core.{n}.percent` vs `cpu.percent` | 10 min | Notice | **shipped**, quiet whenever the machine is over 50 % |
 | `disk.filling_fast` | `volume.{letter}.free_bytes` delta | 30 min | Notice | ready |
 | `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | ready, silent where the limit is 0 |
 | `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | **shipped**, identity included |
@@ -77,6 +77,18 @@ genuinely 0 on an iGPU, and slice 8 already refuses to divide by it. The rule mu
 therefore run only on adapters that publish a limit, and say nothing about the
 others — not "0 %", and not "cannot tell" on a page that looks otherwise complete.
 The Limits card already lists unmeasured tiles; this is the same rule.
+
+**`cpu.sustained_high` and `cpu.one_core_pinned` are one decision, not two.**
+The first asks whether the machine is busy; the second whether one core is busy
+while the machine is not. Both numbers are needed to keep them apart, because
+eight cores at 92 % and one core at 92 % have the same total and are different
+machines. The second is the finding Task Manager's overview cannot show: on eight
+cores a single-threaded program at 100 % reads 12 % on the graph, so the machine
+looks asleep while the program takes exactly as long as one thread takes. The
+ceiling on the second rule is what stops the pair both firing — a machine over
+50 % is the first rule's story, not a pinned core's. On a two-core machine that
+ceiling swallows the case entirely, which is a known false negative and the
+honest direction to be wrong in.
 
 **`process.*` and pid reuse.** The rate tracker keys on pid *and* creation stamp,
 but the snapshot carries only the pid. A rule that accumulates a process over ten
@@ -267,10 +279,29 @@ rewrites the same line.
    matters is the broken window: three minutes of faults, one quiet, three more, is
    a program starting and settling rather than a machine out of memory.
 
-   That is every rule in the catalogue that did not need a decision from a person.
-   What is left of M2 is `disk.smart_readiness` (an explicitly `Unsupported` row),
-   the rules the plan deferred, and the five-machine review - which is the only
-   part no amount of sandbox work can do.
+   `cpu.sustained_high` and `cpu.one_core_pinned` are *done* too, and they are
+   the first rules that needed the fixtures to describe cores rather than only the
+   machine: a segment may now carry a `cores` list, and a fixture without one is a
+   machine whose per-core counters nobody read — not the same thing as a machine
+   with idle cores, and the rule treats it as having no opinion. Five fixtures
+   carry the pair. `cpu-sustained-for-eleven-minutes` is all eight cores at 92 %
+   (the whole-machine finding, and quiet for the pinned one);
+   `cpu-just-under-for-twelve-minutes` is 89 % held well past the window;
+   `cpu-busy-then-idle-then-busy` is six minutes at 92 %, two quiet, five more,
+   which is one build ending and another starting. The pinned-core pair is
+   `one-core-pinned-for-eleven-minutes` — core 0 at 98 % on a machine at 22 % —
+   and `one-core-just-under-the-line`, 94 % for twelve minutes: one point under,
+   held long enough that the threshold is what keeps it quiet rather than the
+   window.
+
+   Two rows of the catalogue are still open, and both are ready for a reason worth
+   writing down rather than an oversight: `gpu.vram_pressure`, which must be
+   silent where the adapter publishes no dedicated limit (every integrated GPU),
+   and `disk.filling_fast`, whose window is half an hour of `volume.*.free_bytes`
+   and whose wording has to stop short of a forecast. What is left of M2 after
+   them is `disk.smart_readiness` (an explicitly `Unsupported` row), the rules the
+   plan deferred, and the five-machine review - which is the only part no amount
+   of sandbox work can do.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

@@ -39,6 +39,8 @@ pub struct Rule {
 
 /// The rules this build ships, in the order the UI should show them.
 pub static RULES: &[Rule] = &[
+    Rule { def: CPU_SUSTAINED_HIGH, evaluate: cpu_sustained_high },
+    Rule { def: CPU_ONE_CORE_PINNED, evaluate: cpu_one_core_pinned },
     Rule { def: DISK_LOW_FREE_SPACE, evaluate: disk_low_free_space },
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
@@ -48,6 +50,28 @@ pub static RULES: &[Rule] = &[
     Rule { def: MEMORY_PAGING, evaluate: memory_paging },
     Rule { def: SYSTEM_LONG_UPTIME, evaluate: system_long_uptime },
 ];
+
+/// Total CPU use at or above this share, and for how long.
+///
+/// 90 % for ten minutes. A render or a compile is this rule being right rather
+/// than wrong: the machine is working as hard as it can and that is the honest
+/// answer to "why is everything slow". What the rule adds is the case nobody
+/// started — a stuck updater, a miner, a game left paused in the background —
+/// where the graph is high and the person has no explanation for it.
+const CPU_WARN_PERCENT: f32 = 90.0;
+const CPU_SUSTAINED_MS: u64 = 10 * 60 * 1000;
+
+/// One logical processor at or above this share, while the machine as a whole
+/// stays under the second number, for ten minutes.
+///
+/// 95 % of a core while the whole machine is under 50 %: a single-threaded
+/// program doing all of its work in one place. The two numbers together are what
+/// makes the claim mean something. A core at 95 % on its own is any busy machine;
+/// a core at 95 % while the other seven idle is one program that will take as
+/// long as one thread takes, and Task Manager's overview cannot show it.
+const CORE_PINNED_PERCENT: f32 = 95.0;
+const CORE_PINNED_TOTAL_BELOW_PERCENT: f32 = 50.0;
+const CORE_PINNED_MS: u64 = 10 * 60 * 1000;
 
 /// Free space thresholds, as percentages of the volume.
 const DISK_WARN_PERCENT: f32 = 90.0;
@@ -145,6 +169,16 @@ pub struct Thresholds {
     /// …over this long is leaking rather than working.
     pub process_growth_window_ms: u64,
     pub uptime_long_seconds: u64,
+    /// The whole machine at or above this share of its CPU…
+    pub cpu_warn_percent: f32,
+    /// …for this long is a machine with nothing left to give.
+    pub cpu_sustained_ms: u64,
+    /// One core at or above this share…
+    pub core_pinned_percent: f32,
+    /// …while the whole machine stays below this one…
+    pub core_pinned_total_below_percent: f32,
+    /// …for this long is a program doing all of its work on one thread.
+    pub core_pinned_ms: u64,
 }
 
 impl Default for Thresholds {
@@ -166,8 +200,167 @@ impl Default for Thresholds {
             memory_pages_per_second: PAGING_PAGES_PER_SECOND,
             memory_paging_sustained_ms: PAGING_SUSTAINED_MS,
             uptime_long_seconds: UPTIME_LONG_SECONDS,
+            cpu_warn_percent: CPU_WARN_PERCENT,
+            cpu_sustained_ms: CPU_SUSTAINED_MS,
+            core_pinned_percent: CORE_PINNED_PERCENT,
+            core_pinned_total_below_percent: CORE_PINNED_TOTAL_BELOW_PERCENT,
+            core_pinned_ms: CORE_PINNED_MS,
         }
     }
+}
+
+/// The machine has been at or above its CPU ceiling for ten minutes.
+///
+/// This is the rule everybody assumes a monitoring tool has, and the reason it is
+/// worth having is narrower than it looks: a compile, a render or a game produces
+/// it and the person already knows why. The case it earns is the one nobody
+/// started. So the finding says what the number is and leaves the question of
+/// whether it was expected to the person reading it — an alarm that calls every
+/// build a fault is an alarm people stop reading.
+pub const CPU_SUSTAINED_HIGH: RuleDef = RuleDef {
+    id: "cpu.sustained_high",
+    severity: Severity::Warning,
+    confidence: Confidence::Likely,
+    requires: &["cpu.percent"],
+};
+
+fn cpu_sustained_high(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.cpu_warn_percent;
+    let MetricState::Value(percent) = snapshot.cpu.percent else {
+        return None;
+    };
+    if percent < warn {
+        return None;
+    }
+    let window = store.held_for(limits.cpu_sustained_ms, |sample| {
+        sample.cpu.percent.value().is_some_and(|p| *p >= warn)
+    })?;
+    let mut evidence = vec![
+        Evidence::new("cpu.percent", render_percent(percent))
+            .threshold(render_percent(warn))
+            .over(window.from_seq, window.to_seq, window.held_for_ms),
+    ];
+    // When the cores were measured, say where the work is. Eight cores at 90 %
+    // and one at 91 % are the same total and different machines, and the second
+    // one is `cpu.one_core_pinned`'s finding rather than this one.
+    if let Some((index, busiest)) = busiest_core(&snapshot.cpu.per_core) {
+        evidence.push(Evidence::new(
+            format!("cpu.core.{index}.percent"),
+            render_percent(busiest),
+        ));
+    }
+    Some(Finding {
+        id: format!("{}/system", CPU_SUSTAINED_HIGH.id),
+        rule: CPU_SUSTAINED_HIGH.id.to_owned(),
+        severity: CPU_SUSTAINED_HIGH.severity,
+        confidence: CPU_SUSTAINED_HIGH.confidence,
+        subject: "system".to_owned(),
+        title: "The processor has been almost fully busy".to_owned(),
+        explain: format!(
+            "CPU use has been at or above {warn:.0} % for {} minutes. If you started a \
+             build, a render or a game, this is that program using the machine it was given. \
+             If you did not, something is working in the background, and the process list on \
+             this page is where to look for it.",
+            window.held_for_ms / 60_000
+        ),
+        evidence,
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
+/// One logical processor has been pinned for ten minutes while the machine as a
+/// whole was quiet.
+///
+/// This is the finding the CPU graph cannot show: on eight cores a
+/// single-threaded program at 100 % is 12 % of the machine, so the overview reads
+/// "idle" while the program takes exactly as long as one thread takes. The rule
+/// asks whether *a* core is pinned rather than whether the same core has been for
+/// the whole window, because Windows moves a busy thread between processors
+/// constantly and demanding one index would make the rule silent exactly when the
+/// machine is single-thread bound.
+///
+/// Two honest limits. On a two-core machine a pinned core is half the machine,
+/// which is over the ceiling, so the rule is quiet there rather than calling a
+/// half-busy machine calm. And `process.runaway_cpu` names the program when the
+/// process list can be read; this rule is what is left when it cannot.
+pub const CPU_ONE_CORE_PINNED: RuleDef = RuleDef {
+    id: "cpu.one_core_pinned",
+    severity: Severity::Notice,
+    confidence: Confidence::Likely,
+    requires: &["cpu.core.*.percent", "cpu.percent"],
+};
+
+fn cpu_one_core_pinned(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let pinned = limits.core_pinned_percent;
+    let ceiling = limits.core_pinned_total_below_percent;
+    let MetricState::Value(total) = snapshot.cpu.percent else {
+        return None;
+    };
+    // A busy machine is the other rule's finding. Two sentences about one fact is
+    // how a page reads as noise.
+    if total >= ceiling {
+        return None;
+    }
+    let (index, percent) = busiest_core(&snapshot.cpu.per_core)?;
+    if percent < pinned {
+        return None;
+    }
+    let window = store.held_for(limits.core_pinned_ms, |sample| {
+        let some_core = sample
+            .cpu
+            .per_core
+            .iter()
+            .any(|core| core.value().is_some_and(|p| *p >= pinned));
+        some_core && sample.cpu.percent.value().is_some_and(|p| *p < ceiling)
+    })?;
+    Some(Finding {
+        id: format!("{}/system", CPU_ONE_CORE_PINNED.id),
+        rule: CPU_ONE_CORE_PINNED.id.to_owned(),
+        severity: CPU_ONE_CORE_PINNED.severity,
+        confidence: CPU_ONE_CORE_PINNED.confidence,
+        subject: "system".to_owned(),
+        title: "One processor core is doing all the work".to_owned(),
+        explain: format!(
+            "Core {index} has been at or above {pinned:.0} % for {} minutes while the whole \
+             machine stayed under {ceiling:.0} %. That is one program using a single thread: it \
+             will take as long as one thread takes, and the idle cores cannot make it faster. \
+             Everything else stays responsive, which is why the overall CPU reading looks calm.",
+            window.held_for_ms / 60_000
+        ),
+        evidence: vec![
+            Evidence::new(format!("cpu.core.{index}.percent"), render_percent(percent))
+                .threshold(render_percent(pinned))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+            Evidence::new("cpu.percent", render_percent(total)),
+        ],
+        actions: Vec::new(),
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
+/// The busiest measured core and its index, or `None` when no core was measured.
+///
+/// A core that read `Unknown` is skipped rather than counted as idle: the two look
+/// the same in a bar chart and mean opposite things.
+fn busiest_core(per_core: &[MetricState<f32>]) -> Option<(usize, f32)> {
+    per_core
+        .iter()
+        .enumerate()
+        .filter_map(|(index, core)| core.value().map(|percent| (index, *percent)))
+        .max_by(|a, b| a.1.total_cmp(&b.1))
 }
 
 /// A local volume is nearly full, and has been for ten minutes.
@@ -1058,6 +1251,94 @@ mod tests {
             snap
         });
         assert!(findings_of(&quiet).is_empty());
+    }
+
+    /// A machine with the cores measured, which is what the CPU rules need.
+    fn with_cores(snapshot: &mut Snapshot, total: f32, cores: &[f32]) {
+        snapshot.cpu.percent = MetricState::Value(total);
+        snapshot.cpu.per_core = cores.iter().map(|percent| MetricState::Value(*percent)).collect();
+    }
+
+    #[test]
+    fn ten_minutes_at_the_ceiling_is_a_finding_and_a_spike_is_not() {
+        // A minute of it is a build; ten is the window.
+        let brief = series(500, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.cpu.percent = MetricState::Value(if s >= 420 { 94.0 } else { 20.0 });
+            snap
+        });
+        assert!(findings_of(&brief).is_empty(), "80 seconds is not ten minutes");
+
+        let sustained = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_cores(&mut snap, 94.0, &[94.0, 90.0, 91.0, 92.0, 93.0, 90.5, 91.5, 92.5]);
+            snap
+        });
+        let findings = findings_of(&sustained);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, CPU_SUSTAINED_HIGH.id);
+        assert_eq!(findings[0].subject, "system");
+        assert_eq!(findings[0].evidence[0].metric, "cpu.percent");
+        assert!(findings[0].evidence[0].sentence().contains("10 minutes"), "{:?}", findings[0].evidence[0]);
+        // The busiest core rides along, so the reader can see whether the load was
+        // spread over the machine or sitting in one place.
+        assert_eq!(findings[0].evidence[1].metric, "cpu.core.0.percent");
+    }
+
+    #[test]
+    fn a_pinned_core_is_found_where_the_overview_looks_calm() {
+        let store = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_cores(&mut snap, 22.0, &[98.0, 11.0, 12.0, 9.0, 13.0, 10.0, 11.0, 12.0]);
+            snap
+        });
+        let findings = findings_of(&store);
+        assert_eq!(findings.len(), 1, "the pair must not both fire: {findings:?}");
+        assert_eq!(findings[0].rule, CPU_ONE_CORE_PINNED.id);
+        assert_eq!(findings[0].severity, Severity::Notice);
+        assert_eq!(findings[0].evidence[0].metric, "cpu.core.0.percent");
+        // The total is cited too: "one core at 98 % while the machine is at 22 %"
+        // is the whole claim, and half of it would be a different finding.
+        assert_eq!(findings[0].evidence[1].metric, "cpu.percent");
+    }
+
+    #[test]
+    fn a_machine_busy_on_every_core_is_not_a_pinned_one() {
+        // The pair partitions the space: all cores busy is the whole-machine
+        // finding, and reporting a pinned core as well would be two sentences
+        // about one fact.
+        let store = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_cores(&mut snap, 96.0, &[96.0; 8]);
+            snap
+        });
+        let findings = findings_of(&store);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].rule, CPU_SUSTAINED_HIGH.id);
+    }
+
+    #[test]
+    fn a_core_one_point_under_the_line_is_not_pinned() {
+        // 94 % for twelve minutes: held well past the window and still not the
+        // claim, which is what makes the window and the threshold two decisions.
+        let store = series(720, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_cores(&mut snap, 22.0, &[94.0, 11.0, 12.0, 9.0, 13.0, 10.0, 11.0, 12.0]);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn cores_that_were_not_measured_are_not_idle_ones() {
+        // `per_core` empty is a machine whose cores nobody read. The rule has no
+        // opinion, and in particular it does not read the blank as "all idle".
+        let store = series(660, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            snap.cpu.percent = MetricState::Value(22.0);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
     }
 
     #[test]

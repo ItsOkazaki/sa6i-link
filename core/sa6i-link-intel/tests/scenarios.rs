@@ -85,6 +85,11 @@ struct Segment {
     /// scenario does not describe them, which keeps every older fixture honest.
     #[serde(default)]
     processes: Vec<ProcessSpec>,
+    /// Percent busy for each logical processor, in index order. Absent means the
+    /// scenario does not describe the machine's cores, so a rule about cores has
+    /// nothing to read there rather than reading a blank as "all idle".
+    #[serde(default)]
+    cores: Vec<f32>,
 }
 
 /// One process during one segment.
@@ -196,9 +201,14 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
         monotonic_ms: index * 1000,
         cpu: CpuSample {
             percent: MetricState::Value(segment.cpu_percent),
-            // The fixtures describe a whole machine, not its cores; the
-            // scenario format grows per-core numbers when a rule needs them.
-            per_core: Vec::new(),
+            // A segment that describes its cores gives one reading each; one that
+            // does not leaves the list empty, which is what a machine whose
+            // per-core counters failed looks like.
+            per_core: segment
+                .cores
+                .iter()
+                .map(|percent| MetricState::Value(*percent))
+                .collect(),
         },
         memory: memory(segment),
         volumes: segment.volumes.iter().map(volume).collect(),
@@ -369,6 +379,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         processes: Vec::new(),
         disk_seconds_per_transfer: None,
         pages_input_per_second: None,
+        cores: Vec::new(),
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(
@@ -386,8 +397,14 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
             "volumes"
         ]
     );
-    assert_eq!(names(&json["cpu"]), ["percent"]);
-    assert_eq!(names(&json["memory"]), ["available", "commit_limit", "commit_used", "total"]);
+    // `per_core` and `pages_input_per_second` are always present, even when they
+    // are empty and `unknown`: a page that has to guess whether a key is there is
+    // a page that will one day draw a missing number as zero.
+    assert_eq!(names(&json["cpu"]), ["per_core", "percent"]);
+    assert_eq!(
+        names(&json["memory"]),
+        ["available", "commit_limit", "commit_used", "pages_input_per_second", "total"]
+    );
     assert_eq!(names(&json["volumes"][0]), ["free", "kind", "mount", "total"]);
     // A measurement that is missing keeps its reason in the JSON, so no page
     // can quietly render it as 0.

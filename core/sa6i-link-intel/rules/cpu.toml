@@ -1,0 +1,28 @@
+# The numbers the whole-machine CPU rule decides with.
+#
+# CPU use is the reading every person already has open, and the rule exists for
+# the case where it is high and nobody started anything: a stuck updater, a miner,
+# a game left paused in the background. A build or a render produces the same
+# finding, and that is the rule being right rather than wrong — the machine is
+# working as hard as it can, which is the honest answer to "why is everything
+# slow". An alarm that called every compile a fault is an alarm people stop
+# reading.
+#
+# One busy core on an idle machine is a different finding, and `core.toml` holds
+# it: eight cores at 90 % and one at 91 % are the same total and different
+# machines.
+
+[[rule]]
+id = "cpu.sustained_high"
+severity = "warning"
+confidence = "likely"
+requires = ["cpu.percent"]
+
+# 90 % for ten minutes. Below that Windows is scheduling work, not queueing it.
+warn_percent = 90.0
+sustained = "10m"
+
+firing = "cpu-sustained-for-eleven-minutes"
+# One point under the line, held well past the window: a machine near its ceiling
+# is what a build looks like.
+near_miss = "cpu-just-under-for-twelve-minutes"

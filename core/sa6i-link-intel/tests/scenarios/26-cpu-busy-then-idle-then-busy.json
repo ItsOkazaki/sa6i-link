@@ -1,0 +1,25 @@
+{
+  "name": "cpu-busy-then-idle-then-busy",
+  "about": "Six minutes at 92 %, two minutes at 25 %, five more at 92 %: one build finished and another started. The machine was busy on both sides of the gap and never for ten unbroken minutes, so sustained stays quiet.",
+  "segments": [
+    {
+      "minutes": 6,
+      "cpu_percent": 92,
+      "memory_percent": 50,
+      "cores": [92, 93, 91, 94, 92, 90, 93, 91]
+    },
+    {
+      "minutes": 2,
+      "cpu_percent": 25,
+      "memory_percent": 50,
+      "cores": [25, 26, 24, 27, 25, 23, 26, 24]
+    },
+    {
+      "minutes": 5,
+      "cpu_percent": 92,
+      "memory_percent": 50,
+      "cores": [92, 93, 91, 94, 92, 90, 93, 91]
+    }
+  ],
+  "quiets": ["cpu.sustained_high", "cpu.one_core_pinned"]
+}
