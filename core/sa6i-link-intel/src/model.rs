@@ -258,6 +258,16 @@ pub struct ProcessSample {
     /// threads may read above 100, and a process seen for the first time reads
     /// [`WhyUnknown::NotSampledYet`], because a rate needs two moments.
     pub cpu_percent: MetricState<f32>,
+    /// When the process started, in the collector's own ticks (100 ns units on
+    /// Windows), or why that could not be read.
+    ///
+    /// This is identity, not a measurement. Windows hands a pid to a new process
+    /// as soon as the old one exits, so `pid` alone cannot say whether two
+    /// samples describe the same program — a rule that tracks a process for ten
+    /// minutes needs both halves of the key. It is deliberately **not** published
+    /// by [`Snapshot::metrics`]: an `f64` cannot carry a FILETIME exactly, and a
+    /// path that is nearly right is worse than one that does not exist.
+    pub created: MetricState<u64>,
 }
 
 /// How many processes a snapshot carries. Enough to see the problem, few enough
@@ -464,6 +474,9 @@ impl Snapshot {
                 }
             }
         }
+        // Identity travels in the snapshot, not in here: `created` is a
+        // FILETIME and an `f64` cannot hold one exactly, so a rule that needs to
+        // know *which* process it is reading looks at the sample, not the path.
         for process in &self.processes {
             if let MetricState::Value(bytes) = process.working_set {
                 let path = format!("process.{}.working_set_bytes", process.pid);
@@ -558,6 +571,19 @@ mod tests {
         assert!(!matches_shape("cpu.*", "cpu.percent.extra"));
     }
 
+    #[test]
+    fn identity_is_in_the_sample_and_not_in_the_paths() {
+        let process = process(4242, 64);
+        let json = serde_json::to_string(&process).expect("a process is serialisable");
+        let back: ProcessSample = serde_json::from_str(&json).expect("and deserialisable");
+        // The stamp survives the round trip the history store and the JSON
+        // payload both make...
+        assert_eq!(back.created.value().copied(), Some(4_242_000u64), "{json}");
+        // ...and is deliberately not a metric path, because an f64 cannot carry
+        // a FILETIME exactly. A path that is nearly right is worse than none.
+        assert!(!is_published_path("process.4242.created"));
+    }
+
     fn volume(mount: &str, total: u64, free: u64) -> VolumeSample {
         VolumeSample {
             mount: mount.to_owned(),
@@ -614,6 +640,9 @@ mod tests {
             name: format!("proc{pid}.exe"),
             working_set: MetricState::Value(Bytes(megabytes * 1024 * 1024)),
             cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+            // Distinct per pid, so a test about identity is not accidentally
+            // passing because every process looks the same.
+            created: MetricState::Value(u64::from(pid) * 1_000),
         }
     }
 
@@ -662,6 +691,7 @@ mod tests {
             name: "protected.exe".to_owned(),
             working_set: MetricState::Unknown(WhyUnknown::NeedsElevation),
             cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+            created: MetricState::Unknown(WhyUnknown::NeedsElevation),
         };
         let top = top_processes(vec![mystery, process(7, 10)], TOP_PROCESSES);
         assert_eq!(top[0].pid, 7);

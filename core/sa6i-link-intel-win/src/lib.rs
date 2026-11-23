@@ -564,17 +564,27 @@ mod platform {
             } else {
                 MetricState::Unknown(WhyUnknown::CollectorFailed)
             };
-            let (key, cpu_ms) = if timed.is_ok() {
+            // The stamp is read once and then used for both jobs: it is half the
+            // key the rate tracker remembers, and it is the identity a rule needs
+            // ten minutes later. Two readings of the same clock is how the two
+            // halves drift apart.
+            let (key, cpu_ms, created) = if timed.is_ok() {
+                let created = ticks(creation);
                 let used = ticks(kernel).saturating_add(ticks(user));
-                (Some(ProcessKey { pid, created: ticks(creation) }), used / TICKS_PER_MS)
+                (
+                    Some(ProcessKey { pid, created }),
+                    used / TICKS_PER_MS,
+                    MetricState::Value(created),
+                )
             } else {
-                (None, 0)
+                (None, 0, MetricState::Unknown(WhyUnknown::CollectorFailed))
             };
             let sample = ProcessSample {
                 pid,
                 name,
                 working_set,
                 cpu_percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
+                created,
             };
             Some((sample, key, cpu_ms))
         }
