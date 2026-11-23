@@ -5,7 +5,7 @@ Solid arrows are compile-time dependencies; the dashed edge is runtime only.
 ```mermaid
 graph TD
   subgraph Core["core/ (MPL-2.0)"]
-    INTEL["sa6i-link-intel<br/>model · rules · registry · audit"]
+    INTEL["sa6i-link-intel<br/>model · rules · history · registry · audit"]
     INTELWIN["sa6i-link-intel-win<br/>Windows collectors"]
     CORE["sa6i-link-core<br/>link · protocol · pairing · transfer"]
     PROTO["sa6i-link-protocol"]

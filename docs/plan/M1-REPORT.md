@@ -1,8 +1,9 @@
 # M1 report — telemetry, evidence, rules
 
-The first slice of the intelligence core: measure a machine, prove what was
-measured, and turn it into findings that carry their own evidence. No UI yet,
-no model, no persistence beyond memory.
+The first two slices of the intelligence core: measure a machine, prove what
+was measured, turn it into findings that carry their own evidence, and keep the
+result long enough to say "for three weeks" instead of "right now". No UI yet,
+no model, no actions.
 
 ## What exists now
 
@@ -13,13 +14,15 @@ no model, no persistence beyond memory.
 | The rule engine | `core/sa6i-link-intel/src/rules.rs` | **done** — 3 rules, hysteresis, stable ordering |
 | Sample history | `core/sa6i-link-intel/src/store.rs` | **done** — bounded ring, `held_for` windows |
 | Windows collectors | `core/sa6i-link-intel-win/src/lib.rs` | **done** — CPU, memory, volumes, uptime, no admin |
-| Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** |
-| Monitor page, persistence, TOML rules, disk/GPU/process collectors | — | **not started** (see below) |
+| Durable history | `core/sa6i-link-intel/src/history.rs` | **done** — SQLite, 1 row/min, findings as upserts, retention |
+| Headless proof | `core/sa6i-link-intel-win/src/bin/sa6i-intel-snapshot.rs` | **done** — `--json`, `--history PATH` |
+| Monitor page, TOML rules, disk/GPU/process collectors | — | **not started** (see below) |
 
 ```powershell
 cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot
 cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --samples 700 --interval-ms 1000
 cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
+cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --history %LOCALAPPDATA%\Sa6i\history.db
 ```
 
 The third command is the contract the UI will use: one JSON object with the
@@ -64,6 +67,60 @@ machine's problem), the worst volume is the one reported (three findings saying
 "disk full" is noise), and thresholds are named constants with the fixture that
 pins them.
 
+## Slice 2 — durable history
+
+The ring answers "what happened in the last hour". `History`
+(`core/sa6i-link-intel/src/history.rs`) answers "what happened last week", which
+is the difference between a dashboard and a diagnosis: "96 % full right now" is
+a fact, "96 % full for three weeks" is the thing worth telling someone about.
+
+SQLite, through the `rusqlite` the core already ships (bundled, so no system
+dependency). Two tables:
+
+| Table | Row | Key | Retention |
+| --- | --- | --- | --- |
+| `sample` | the whole `Snapshot` as JSON + `seq`, `monotonic_ms` | `taken_at` | 24 hours raw |
+| `finding` | `rule`, `severity`, `subject`, `title`, `first_seen`, `last_seen`, the finding JSON | `id` | 30 days |
+
+Four decisions that are load-bearing, each with a test:
+
+**One row a minute, not one a second.** A day is 1,440 rows and a few hundred
+kilobytes; the second a rule needs is already in the ring. `record()` is safe to
+call every second and returns whether it wrote, and the newest stored `taken_at`
+is read back when the file is opened, so relaunching the app does not write a
+burst. (`samples_are_written_once_a_minute`,
+`history_survives_being_closed_and_reopened`)
+
+**A clock that goes backwards cannot rewrite the past.** Wall clocks jump —
+a time sync, a manual change, a laptop resuming. A sample whose timestamp is
+behind the newest stored one is stored as "the moment after it" rather than
+being either dropped or written into history under a false time, so
+`ORDER BY taken_at` still means "in the order things happened". The first
+version of this got the order of checks wrong, and a backwards jump was silently
+treated as "inside the same minute" and discarded; the test caught it.
+(`a_clock_that_goes_backwards_cannot_write_into_the_past`)
+
+**Findings are upserts keyed by the stable id.** `first_seen` therefore means
+the first time *this machine* had that problem, across restarts, which is the
+number the UI will show. (`a_finding_keeps_the_first_time_it_was_seen`)
+
+**A newer schema is refused, not mis-read.** `PRAGMA user_version` is checked on
+open; a database written by a newer Sa6i returns
+`HistoryError::NewerSchema(version)` and the file is left untouched — the failure
+mode is a sentence, not corrupted data. (`a_database_from_a_newer_sa6i_is_refused_rather_than_misread`)
+
+Two consequences worth stating plainly: history is **opt-in** (`--history PATH`
+on the CLI; nothing on disk otherwise, because a diagnostics tool that starts
+writing files on first launch is a privacy decision made by accident), and the
+findings themselves are salted into `sample`'s sibling table rather than derived
+again at read time — so an old finding still explains itself with the evidence
+that produced it, even after the rule's thresholds move.
+
+The snapshot is stored as JSON rather than as a column per metric. A schema that
+mirrors `Snapshot` cannot drift from it, and one row a minute is cheap; the
+rollups (`sample_hourly`) wait until there is a week of raw data to validate
+them against, which is why they are not in this slice.
+
 ## What the collectors do not do, on purpose
 
 Per-core CPU, disk throughput, GPU memory and per-process detail are **not** in
@@ -86,10 +143,24 @@ names (only useful once the UI shows them).
 | Rule thresholds | Firing case and near-miss case per rule, including "network drive ignored", "worst volume wins", "unreadable volume is silent" |
 | CPU maths | Tick deltas including an idle machine, a backwards counter, and a kernel/idle disagreement |
 | Ordering | Worst-first, and identical ids across two evaluations of the same store |
+| SQL semantics | The exact statements (schema, upsert, ordering, retention cutoffs, the `MAX`-on-empty → `NULL` path) were replayed against a real SQLite in Python — 17/17 checks pass, so the assumptions the Rust makes are SQLite's actual behaviour, not my memory of it |
 | Every file | Delimiter balance and SPDX header checked mechanically (`balanced`, no long lines) |
 
 **Not verified: it has not been compiled.** There is no Rust toolchain in this
-sandbox. The code was written against the calling conventions already used in
+sandbox, so neither the `windows` calls nor the `rusqlite` calls have been
+through `rustc`; `cargo fmt --check` and `clippy -D warnings` are also unrun on
+this branch. Run, on a machine with one:
+
+```powershell
+cargo fmt --all
+cargo test -p sa6i-link-intel -p sa6i-link-intel-win
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+The `rusqlite` calls are the ones I am most confident of — they are a subset of
+what `sa6i-link-core` already compiles — with one exception: `History` opens the
+file itself, so a locked database surfaces as `HistoryError::Database` rather
+than panicking, and the two-second `busy_timeout` is the only tuning. The code was written against the calling conventions already used in
 this repository (`GetDiskFreeSpaceExW(&HSTRING, Some(&mut u64), ..)` in
 `desktop/app/src/win/mod.rs`, `GetProcessTimes(handle, &mut ft, ..)` in the CLI),
 so the `windows` 0.62 signatures are modelled on working calls rather than
@@ -112,11 +183,14 @@ depends on the API shape.
 1. **M1.1 — the collectors the Monitor page needs:** per-core CPU
    (`NtQuerySystemInformation`), disk throughput (PDH, English counters),
    GPU memory (`QueryVideoMemoryInfo`, Win10+), and a per-process top-N snapshot.
-2. **M1.2 — persistence:** SQLite rollups per the retention table in
-   `docs/architecture/INTELLIGENCE-CORE.md` §9, with the ring unchanged in front.
-3. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
-   Overview tiles and the sparklines that draw gaps as gaps.
-4. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
+2. **M1.3 — the Monitor page:** `IntelHost` (cxx-qt), 1 Hz property updates, the
+   Overview tiles and the sparklines that draw gaps as gaps, reading their
+   history from `History::recent` instead of the ring once the window is longer
+   than an hour.
+3. Then M2: the TOML rule front-end and the twelve-plus Doctor rules.
+
+(`sample_hourly` rollups stay unscheduled on purpose: they need a week of real
+data before the rollup can be checked against what it summarises.)
 
 The two M0 checks (`cargo xtask tokens --check`, `cargo check -p sa6i-link`) are
 still outstanding on a machine with the toolchain; M1's code does not depend on

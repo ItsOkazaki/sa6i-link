@@ -10,11 +10,11 @@
 //! cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json
 //! ```
 
-use std::{thread::sleep, time::Duration};
+use std::{path::Path, thread::sleep, time::Duration};
 
 use sa6i_link_intel::{
-    MetricState, SampleStore, all_clear_sentence, evaluate, human_duration, render_bytes,
-    render_percent,
+    History, MetricState, SampleStore, Timestamp, all_clear_sentence, evaluate, human_duration,
+    render_bytes, render_percent,
 };
 use sa6i_link_intel_win::WindowsCollector;
 
@@ -31,6 +31,7 @@ fn main() {
     let mut interval_ms: u64 = 1000;
     let mut json = false;
     let mut show_findings = true;
+    let mut history_path: Option<String> = None;
 
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -43,10 +44,11 @@ fn main() {
             }
             "--json" => json = true,
             "--no-findings" => show_findings = false,
+            "--history" => history_path = args.next(),
             "--help" | "-h" => {
                 println!(
                     "usage: sa6i-intel-snapshot [--samples N] [--interval-ms MS] \
-                     [--json] [--no-findings]"
+                     [--json] [--no-findings] [--history PATH]"
                 );
                 return;
             }
@@ -71,6 +73,36 @@ fn main() {
 
     let snapshot = store.latest().expect("at least one sample");
     let findings = if show_findings { evaluate(snapshot, &store) } else { Vec::new() };
+
+    // Durable history is opt-in: no file is ever written unless asked for, and a
+    // failure to write it is reported on stderr so `--json` stays pure JSON.
+    if let Some(path) = history_path {
+        match History::open(Path::new(&path)) {
+            Ok(mut history) => {
+                let mut stored = 0usize;
+                for sample in store.samples() {
+                    if matches!(history.record(sample), Ok(true)) {
+                        stored += 1;
+                    }
+                }
+                let pruned = history.prune(Timestamp::now()).unwrap_or(0);
+                if let Err(error) = history.record_findings(&findings) {
+                    eprintln!("history: findings not stored: {error}");
+                }
+                match history.counts() {
+                    Ok((held_samples, held_findings)) => eprintln!(
+                        "history: {stored} of {samples} sample(s) stored, {pruned} pruned — \
+                         {held_samples} sample(s), {held_findings} finding(s) now held in {path}"
+                    ),
+                    Err(error) => eprintln!("history: {error}"),
+                }
+            }
+            Err(error) => {
+                eprintln!("history: can't open {path}: {error}");
+                std::process::exit(1);
+            }
+        }
+    }
 
     if json {
         let payload = serde_json::json!({ "snapshot": snapshot, "findings": findings });

@@ -14,6 +14,7 @@
 //! See `docs/architecture/INTELLIGENCE-CORE.md`.
 
 mod findings;
+mod history;
 mod model;
 mod rules;
 mod store;
@@ -22,6 +23,7 @@ pub use findings::{
     Confidence, Evidence, Finding, Severity, all_clear_sentence, human_duration, render_bytes,
     render_percent,
 };
+pub use history::{History, HistoryError, RECORD_INTERVAL_MS};
 pub use model::{
     Bytes, CpuSample, MemorySample, MetricState, Snapshot, Timestamp, VolumeKind, VolumeSample,
     WhyUnknown,

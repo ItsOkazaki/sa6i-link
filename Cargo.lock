@@ -2534,6 +2534,7 @@ dependencies = [
 name = "sa6i-link-intel"
 version = "0.1.5"
 dependencies = [
+ "rusqlite",
  "serde",
  "serde_json",
  "tracing",

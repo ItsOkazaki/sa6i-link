@@ -219,17 +219,34 @@ that fakes numbers.
 
 ## ## ## 9. Persistence
 
-SQLite via the existing `rusqlite`, in the app's data dir:
+SQLite via the existing `rusqlite` (bundled), in the app's data dir. Slice 2
+implements the first two tables; the rest arrive with the features they serve.
 
-| Table | Contents | Retention |
-| --- | --- | --- |
-| `sample` | compact per-metric rows, 1/min | 24 h raw |
-| `sample_hourly` | rolled up | 30 days |
-| `finding` | first/last seen, state | 30 days |
-| `action_run` | args, pre/post state, verdict | permanent (audit) |
+| Table | Contents | Retention | Shipped |
+| --- | --- | --- | --- |
+| `sample` | the whole `Snapshot` as JSON, keyed by `taken_at`, 1/min | 24 h raw | yes |
+| `finding` | `first_seen`, `last_seen`, severity, the finding JSON | 30 days | yes |
+| `sample_hourly` | rolled up | 30 days | no — needs a week of raw data first |
+| `action_run` | args, pre/post state, verdict | permanent (audit) | no — actions are M3 |
 
-Rollups run in the collector thread; a corrupt or locked database degrades to
-in-memory only, and says so.
+Details that are load-bearing:
+
+- **One row per minute, not per second.** A day is 1,440 rows; the second a rule
+  needs is already in the ring. The interval is enforced in `History::record`,
+  and the newest stored `taken_at` is read back on open, so restarting the app
+  does not write a burst.
+- **A clock that goes backwards cannot rewrite the past.** A sample whose wall
+  clock is behind the newest stored one is stored as "the moment after it", so
+  `ORDER BY taken_at` still means "in the order things happened".
+- **Findings are upserts keyed by the stable id**, so `first_seen` is the first
+  time this machine ever had that problem. That is the sentence the UI shows
+  ("full for three weeks"), and it is why a finding is not just a snapshot row.
+- **`PRAGMA user_version` is checked on open**; a database written by a newer
+  Sa6i is refused with a typed error rather than mis-read.
+- **WAL**, so a reader (the UI) never blocks the recorder (the sampler).
+- History is **opt-in** (`--history PATH` on the CLI): nothing is written to
+  disk unless a caller asks for it. A corrupt or locked database degrades to
+  in-memory only, and says so.
 
 ## ## ## 10. Testing strategy
 
@@ -252,7 +269,8 @@ A rule or action without tests is not merged; demo data exists only behind a
 | --- | --- | --- |
 | §4 data model | `Snapshot` carries CPU, memory, volumes, uptime; GPU, thermal, process summary are absent rather than empty | a field that is always `Unknown` teaches the UI nothing |
 | §5 TOML rules | rules are Rust functions with named constants, behind the same `RuleDef` | the front-end compiles into the same struct; shipping a parser before one rule works would be backwards |
-| §9 SQLite | history is an in-memory ring (`SampleStore`) | the Monitor page's history view is what forces the schema; the engine only needs windows |
+| §9 SQLite | `sample` stores the whole snapshot as JSON, not compact per-metric rows; no `sample_hourly` yet | one row a minute is a few hundred kilobytes a day, and a schema that mirrors `Snapshot` cannot drift from it. Rollups wait until there is a week of raw data to validate them against |
+| §9 SQLite | history is written only when asked (`History::open`) | a diagnostics tool that silently starts writing to disk on first launch is a privacy decision made by accident |
 | §2 crate names | as planned: `sa6i-link-intel`, `sa6i-link-intel-win` | — |
 
 See `docs/plan/M1-REPORT.md`.
