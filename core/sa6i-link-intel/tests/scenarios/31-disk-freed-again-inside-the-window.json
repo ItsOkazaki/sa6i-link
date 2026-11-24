@@ -1,0 +1,25 @@
+{
+  "name": "disk-freed-again-inside-the-window",
+  "about": "Ten gigabytes go, five minutes later they are back, and the volume ends the half hour exactly where it started. Comparing the ends of the window rather than the peak inside it is what keeps this quiet.",
+  "segments": [
+    {
+      "minutes": 10,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 60 }]
+    },
+    {
+      "minutes": 5,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 62 }]
+    },
+    {
+      "minutes": 20,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 60 }]
+    }
+  ],
+  "quiets": ["disk.filling_fast"]
+}

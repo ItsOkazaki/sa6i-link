@@ -1,0 +1,24 @@
+# The numbers the free-space rate rule decides with.
+#
+# `disk.low_free_space` says a volume is nearly full. This one says it is getting
+# there quickly, and they are both needed: a volume at 40 % that lost ten gigabytes
+# in twenty minutes is the more interesting fact, and the level rule cannot see it.
+#
+# What it will not do is forecast. "Full by Thursday" is arithmetic on a rate that
+# has held for half an hour, and it is wrong the moment the copy finishes. The
+# finding reports the drop and the window, and stops.
+
+[[rule]]
+id = "disk.filling_fast"
+severity = "notice"
+confidence = "likely"
+requires = ["volume.*.free_bytes"]
+
+# 5 GiB lost over half an hour. A download, a backup or a recording looks exactly
+# like this and is not a fault - which is why the wording reports a rate.
+fill_mb = 5120
+sustained = "30m"
+
+firing = "disk-filling-fast-for-forty-minutes"
+# 4.5 GiB in the same window: a large file, copied.
+near_miss = "disk-filling-just-under"

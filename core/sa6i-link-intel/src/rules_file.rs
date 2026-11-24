@@ -46,6 +46,10 @@ const SLOW_MS: (u64, u64) = (1, 10_000);
 /// large is a typo in the units.
 const GROWTH_MB: (u64, u64) = (1, 10 * 1024);
 
+/// Free space a volume may lose, in mebibytes. A megabyte is not a rate, and a
+/// terabyte and a half in half an hour is a typo in the units.
+const FILL_MB: (u64, u64) = (1, 1024 * 1024);
+
 /// One rule's numbers, as the file wrote them. Every field is optional: a file
 /// that names one threshold leaves the rest of that rule as the code has it.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -65,6 +69,9 @@ struct Entry {
     /// Growth in mebibytes, for the rule that measures a difference rather than a
     /// level.
     growth_mb: Option<u64>,
+    /// Free space a volume may lose, in mebibytes, for the rule that measures a
+    /// rate rather than a level.
+    fill_mb: Option<u64>,
     /// A latency threshold in milliseconds. Milliseconds because a thresholds file
     /// that says `0.1` without saying of what is a units bug waiting to happen.
     slow_ms: Option<u64>,
@@ -184,6 +191,7 @@ impl RuleFile {
                 ("sustained", entry.sustained.is_some()),
                 ("long_after", entry.long_after.is_some()),
                 ("growth_mb", entry.growth_mb.is_some()),
+                ("fill_mb", entry.fill_mb.is_some()),
                 ("slow_ms", entry.slow_ms.is_some()),
                 ("pages_per_second", entry.pages_per_second.is_some()),
             ] {
@@ -288,6 +296,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
         "memory.commit_pressure" => &["warn_percent", "sustained"],
         "process.runaway_cpu" => &["warn_percent", "sustained"],
         "process.memory_growth" => &["growth_mb", "sustained"],
+        "disk.filling_fast" => &["fill_mb", "sustained"],
         "disk.slow_transfers" => &["slow_ms", "sustained"],
         "memory.paging" => &["pages_per_second", "sustained"],
         "system.long_uptime" => &["long_after"],
@@ -379,6 +388,16 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             }
             if let Some(millis) = window {
                 limits.process_cpu_sustained_ms = millis;
+            }
+        }
+        "disk.filling_fast" => {
+            let lost = ranged_u64(entry.fill_mb, id, "fill_mb", FILL_MB, " MiB", refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            if let Some(megabytes) = lost {
+                limits.disk_fill_bytes = megabytes * 1024 * 1024;
+            }
+            if let Some(millis) = window {
+                limits.disk_fill_window_ms = millis;
             }
         }
         "process.memory_growth" => {
@@ -615,6 +634,7 @@ mod tests {
     use super::*;
 
     const CPU: &str = include_str!("../rules/cpu.toml");
+    const FILL: &str = include_str!("../rules/fill.toml");
     const CORE: &str = include_str!("../rules/core.toml");
     const DISK: &str = include_str!("../rules/disk.toml");
     const MEMORY: &str = include_str!("../rules/memory.toml");
@@ -666,7 +686,7 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [CPU, CORE, DISK, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
+        for text in [CPU, CORE, DISK, FILL, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)

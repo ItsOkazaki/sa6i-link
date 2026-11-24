@@ -229,7 +229,7 @@ pre .g{color:var(--ok)}
         <li><strong>Every volume</strong>, free and total</li>
         <li><strong>Disk latency</strong>: seconds per transfer, not just throughput</li>
         <li><strong>GPU</strong> dedicated usage and limit</li>
-        <li><strong>Ten rules</strong> over all of it, each citing its evidence</li>
+        <li><strong>Eleven rules</strong> over all of it, each citing its evidence</li>
       </ul>
     </div>
   </div>
@@ -287,12 +287,13 @@ pre .g{color:var(--ok)}
 </section>
 
 <!-- 6 ─────────────────────────────────────────────────────────────── -->
-<section class="slide" aria-label="Ten rules">
-  <p class="kicker">Ten rules, each with an argument</p>
+<section class="slide" aria-label="Eleven rules">
+  <p class="kicker">Eleven rules, each with an argument</p>
   <h2>Every rule declares what it needs, and what "sustained" means.</h2>
   <table class="tight">
     <tr><th>rule</th><th>threshold</th><th>window</th><th>severity</th></tr>
     <tr><td class="rid">disk.low_free_space</td><td class="num">90 % · critical 97 %</td><td class="dim">10 min</td><td class="dim">Warning</td></tr>
+    <tr><td class="rid">disk.filling_fast</td><td class="num">5 GiB lost</td><td class="dim">30 min</td><td class="dim">Notice</td></tr>
     <tr><td class="rid">disk.slow_transfers</td><td class="num">0.1 s per transfer</td><td class="dim">10 min</td><td class="dim">Warning</td></tr>
     <tr><td class="rid">memory.pressure</td><td class="num">90 % of physical</td><td class="dim">2 min</td><td class="dim">Notice</td></tr>
     <tr><td class="rid">memory.commit_pressure</td><td class="num">90 % of the commit limit</td><td class="dim">5 min</td><td class="dim">Warning</td></tr>
@@ -305,7 +306,7 @@ pre .g{color:var(--ok)}
   </table>
   <p class="small" style="margin-top:18px">"Sustained" means <strong>every</strong> sample in the
     window — one quiet minute breaks the claim, rather than averaging away.</p>
-  <aside class="notes">If asked why only ten: "ten rules that each ship with a firing case and a
+  <aside class="notes">If asked why only eleven: "eleven rules that each ship with a firing case and a
     near-miss, versus a hundred that fire on every machine." Point out the CPU pair as one
     decision written twice.</aside>
 </section>
@@ -329,7 +330,7 @@ pre .g{color:var(--ok)}
       <p class="small">A program starting and settling, not a machine out of memory. The window is
         broken, so the claim fails. Quiet.</p></div>
   </div>
-  <p class="small" style="margin-top:22px"><strong>28 fixtures</strong> — a machine behaviour and
+  <p class="small" style="margin-top:22px"><strong>31 fixtures</strong> — a machine behaviour and
     its expected findings, compared as an exact set: a new rule that fires on an old fixture
     breaks the build.</p>
   <aside class="notes">This slide is what separates the project from a dashboard. Each example is
@@ -348,7 +349,7 @@ pre .g{color:var(--ok)}
       <span class="what">Windows collectors: PDH, Win32, NT</span>
       <span class="no">may not depend on core</span></div>
     <div class="layer"><span class="name">sa6i-link-intel</span>
-      <span class="what">model · 10 rules · store · findings · TOML loader</span>
+      <span class="what">model · 11 rules · store · findings · TOML loader</span>
       <span class="no">may not touch an OS API, Qt, or a socket</span></div>
     <div class="layer"><span class="name">sa6i-link-core</span>
       <span class="what">link · pairing · transfer · mirroring · protocol</span>
@@ -459,7 +460,7 @@ deletedThroughRedirectedAncestor      true   <span class="c">// and deletion fol
   <h2>What is proven, and what is not — in the same table, on purpose.</h2>
   <div class="ver" style="margin-top:6px">
     <div class="row"><span class="m yes">✓</span><span class="a">phone ↔ PC features</span><span class="b">in use on real devices</span></div>
-    <div class="row"><span class="m yes">✓</span><span class="a">10 rules · 28 fixtures</span><span class="b">written; each rule fires and stays quiet where it must</span></div>
+    <div class="row"><span class="m yes">✓</span><span class="a">11 rules · 31 fixtures</span><span class="b">written; each rule fires and stays quiet where it must</span></div>
     <div class="row"><span class="m yes">✓</span><span class="a">TOML changes no verdict</span><span class="b">the shipped files flatten to exactly the compiled thresholds</span></div>
     <div class="row"><span class="m yes">✓</span><span class="a">nothing leaves the machine</span><span class="b">a test over the dependency graph</span></div>
     <div class="row"><span class="m yes">✓</span><span class="a">cleaner = upstream source</span><span class="b">byte for byte, at a named commit</span></div>
@@ -522,7 +523,7 @@ deletedThroughRedirectedAncestor      true   <span class="c">// and deletion fol
     <div class="col card"><p class="tiny">WORKSPACE</p>
       <p class="mono" style="font-size:17px;line-height:2;color:var(--ink);margin-top:8px">11 crates<br>≈160 000 lines Rust<br>≈31 000 lines QML<br>≈48 000 lines Kotlin<br>871 test functions</p></div>
     <div class="col card"><p class="tiny">DIAGNOSTICS</p>
-      <p class="mono" style="font-size:17px;line-height:2;color:var(--ink);margin-top:8px">10 rules<br>10 TOML files<br>28 fixtures<br>21 thresholds<br>19 metric paths</p></div>
+      <p class="mono" style="font-size:17px;line-height:2;color:var(--ink);margin-top:8px">11 rules<br>11 TOML files<br>31 fixtures<br>23 thresholds<br>19 metric paths</p></div>
     <div class="col card"><p class="tiny">TRUST</p>
       <p class="mono" style="font-size:17px;line-height:2;color:var(--ink);margin-top:8px">closures 62 / 74<br>4096 samples ≈ 68 min<br>1 235 archive entries<br>commit b62bef4<br>0 cleanups run</p></div>
   </div>

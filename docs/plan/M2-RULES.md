@@ -62,7 +62,7 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `system.long_uptime` | `system.uptime_seconds` | instant | Info | **shipped in M1** |
 | `cpu.sustained_high` | `cpu.percent` | 10 min | Warning | **shipped**, and a build is it firing correctly |
 | `cpu.one_core_pinned` | `cpu.core.{n}.percent` vs `cpu.percent` | 10 min | Notice | **shipped**, quiet whenever the machine is over 50 % |
-| `disk.filling_fast` | `volume.{letter}.free_bytes` delta | 30 min | Notice | ready |
+| `disk.filling_fast` | `volume.{letter}.free_bytes` delta | 30 min | Notice | **shipped**, the ends of the window compared, never a forecast |
 | `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | ready, silent where the limit is 0 |
 | `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | **shipped**, identity included |
 | `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | **shipped**, 256 MiB of growth against the same stamp |
@@ -100,12 +100,17 @@ second is cheaper and weaker. This audit prefers publishing the stamp: it is the
 same fact the tracker already uses, and a rule that can be wrong about *which*
 program is at fault is the exact failure this codebase exists to avoid.
 
-**`disk.filling_fast` is a rate of a rate.** Free space falling 5 GB in half an
-hour is a fact; "your disk will fill tomorrow" would be a forecast. The finding
-says the first thing only. The store holds 4096 samples at 1 Hz, which is 68
-minutes, so the window fits today — and a 30-minute window needs the app to be
-open for 30 minutes, which is why the wording must not imply a background service
-that does not exist.
+**`disk.filling_fast` is a rate, not a level.** Free space falling 5 GB in half
+an hour is a fact; "your disk will fill tomorrow" would be a forecast, and the
+finding says the first thing only. It is the pair to `disk.low_free_space`, not a
+replacement: a volume at 40 % that lost ten gigabytes in twenty minutes is the more
+interesting of the two facts, and the level rule cannot see it at all. It compares
+the two ends of the window rather than the peak inside it, so a machine that filled
+ten gigabytes and then deleted them is a machine that is not filling — which is one
+line of arithmetic and three fixtures to defend. The store holds 4096 samples at
+1 Hz, which is 68 minutes, so the window fits today — and a 30-minute window needs
+the app to be open for 30 minutes, which is why the wording never implies a
+background service that does not exist.
 
 **`disk.slow_transfers` is the one rule that answers "why is it slow".**
 Bytes per second is throughput; latency is what a person feels. `PhysicalDisk` is
@@ -294,14 +299,24 @@ rewrites the same line.
    held long enough that the threshold is what keeps it quiet rather than the
    window.
 
-   Two rows of the catalogue are still open, and both are ready for a reason worth
+   `disk.filling_fast` is *done* too, and it needed no new counter: `free_bytes`
+   was already on every volume sample, so the rule reads the history it already
+   keeps. Three fixtures carry it. `disk-filling-fast-for-forty-minutes` is a
+   half-terabyte volume losing ten gigabytes between its two segments;
+   `disk-filling-just-under` is the same machine losing 4.5, held well past the
+   window, so the threshold is what keeps it quiet rather than the timing; and
+   `disk-freed-again-inside-the-window` fills ten gigabytes and deletes them five
+   minutes later, which is the fixture that decides the endpoint comparison is the
+   right one. The unit tests also cover the window that is not spanned: twenty
+   minutes of history is not enough to measure half an hour, and the answer there
+   is "no opinion" rather than "not filling".
+
+   One row of the catalogue is still open, and it is ready for a reason worth
    writing down rather than an oversight: `gpu.vram_pressure`, which must be
-   silent where the adapter publishes no dedicated limit (every integrated GPU),
-   and `disk.filling_fast`, whose window is half an hour of `volume.*.free_bytes`
-   and whose wording has to stop short of a forecast. What is left of M2 after
-   them is `disk.smart_readiness` (an explicitly `Unsupported` row), the rules the
-   plan deferred, and the five-machine review - which is the only part no amount
-   of sandbox work can do.
+   silent where the adapter publishes no dedicated limit (every integrated GPU).
+   What is left of M2 after it is `disk.smart_readiness` (an explicitly
+   `Unsupported` row), the rules the plan deferred, and the five-machine review -
+   which is the only part no amount of sandbox work can do.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

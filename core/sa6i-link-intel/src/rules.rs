@@ -42,6 +42,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: CPU_SUSTAINED_HIGH, evaluate: cpu_sustained_high },
     Rule { def: CPU_ONE_CORE_PINNED, evaluate: cpu_one_core_pinned },
     Rule { def: DISK_LOW_FREE_SPACE, evaluate: disk_low_free_space },
+    Rule { def: DISK_FILLING_FAST, evaluate: disk_filling_fast },
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
     Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
@@ -79,6 +80,18 @@ const DISK_CRITICAL_PERCENT: f32 = 97.0;
 /// How long a volume must stay full before it is a finding. Disk use moves
 /// slowly in normal work; a spike means a download, not a problem.
 const DISK_SUSTAINED_MS: u64 = 10 * 60 * 1000;
+
+/// How much free space a volume may lose, and over how long, before it is worth
+/// saying.
+///
+/// 5 GiB in half an hour. A download, a backup or a screen recording looks exactly
+/// like this and is not a fault — which is why the finding reports the rate it
+/// measured and never a forecast of when the disk fills. The window is the longest
+/// in the catalogue because free space moves in bursts: five gigabytes across ten
+/// minutes is a large file being copied, and the same five across thirty is a disk
+/// that is being written to faster than it is being read from.
+const DISK_FILL_BYTES: u64 = 5 * 1024 * 1024 * 1024;
+const DISK_FILL_WINDOW_MS: u64 = 30 * 60 * 1000;
 
 /// Physical memory pressure, and how long it must last.
 const MEMORY_WARN_PERCENT: f32 = 90.0;
@@ -179,6 +192,10 @@ pub struct Thresholds {
     pub core_pinned_total_below_percent: f32,
     /// …for this long is a program doing all of its work on one thread.
     pub core_pinned_ms: u64,
+    /// A volume losing this many bytes of free space…
+    pub disk_fill_bytes: u64,
+    /// …over this long is being written to faster than it is being read from.
+    pub disk_fill_window_ms: u64,
 }
 
 impl Default for Thresholds {
@@ -205,6 +222,8 @@ impl Default for Thresholds {
             core_pinned_percent: CORE_PINNED_PERCENT,
             core_pinned_total_below_percent: CORE_PINNED_TOTAL_BELOW_PERCENT,
             core_pinned_ms: CORE_PINNED_MS,
+            disk_fill_bytes: DISK_FILL_BYTES,
+            disk_fill_window_ms: DISK_FILL_WINDOW_MS,
         }
     }
 }
@@ -444,6 +463,110 @@ fn disk_low_free_space(
                     _ => "unavailable".to_owned(),
                 },
             ),
+        ],
+        actions: vec!["clean.open_native_scan".to_owned()],
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
+/// A volume has lost a lot of free space in the last half hour.
+///
+/// This is a rate, not a level: the `disk.low_free_space` rule says a volume is
+/// nearly full, this one says it is getting there quickly. Both are needed, because
+/// a volume at 40 % that lost ten gigabytes in twenty minutes is the more
+/// interesting of the two facts and the level rule cannot see it at all.
+///
+/// What it deliberately does not do is forecast. "Your disk will be full by
+/// Thursday" is arithmetic on a rate that has held for half an hour, and it is
+/// wrong the moment the copy finishes. The finding reports the drop and the window
+/// it was measured over, and stops there.
+///
+/// It compares the ends of the window rather than the peak inside it: a machine
+/// that filled ten gigabytes and then deleted them is a machine that is not
+/// filling, and the endpoint difference is the only number that says so.
+pub const DISK_FILLING_FAST: RuleDef = RuleDef {
+    id: "disk.filling_fast",
+    severity: Severity::Notice,
+    confidence: Confidence::Likely,
+    requires: &["volume.*.free_bytes"],
+};
+
+fn disk_filling_fast(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let window_ms = limits.disk_fill_window_ms;
+    // A window the history does not span cannot be answered, and the start of
+    // history is not the start of the window.
+    if store.span_ms() < window_ms {
+        return None;
+    }
+    let start = snapshot.monotonic_ms.saturating_sub(window_ms);
+    let first = store.samples().find(|sample| sample.monotonic_ms >= start)?;
+
+    // The fullest loss, one volume at a time: three findings that say the same
+    // thing is noise, and the user acts on the fastest one first.
+    let mut worst: Option<(&crate::model::VolumeSample, u64, u64, u64)> = None;
+    for volume in &snapshot.volumes {
+        if !volume.kind.is_local_storage() {
+            continue;
+        }
+        let Some(now) = volume.free.value().map(|free| free.0) else {
+            continue;
+        };
+        // A volume that was not mounted when the window opened has no "before",
+        // and a missing before is not a zero drop.
+        let Some(before) = first
+            .volume(volume.letter())
+            .and_then(|earlier| earlier.free.value().map(|free| free.0))
+        else {
+            continue;
+        };
+        let lost = before.saturating_sub(now);
+        if lost < limits.disk_fill_bytes {
+            continue;
+        }
+        if worst.as_ref().is_none_or(|(_, best, _, _)| lost > *best) {
+            worst = Some((volume, lost, before, now));
+        }
+    }
+
+    let (volume, lost, before, now) = worst?;
+    let letter = volume.letter().to_owned();
+    let minutes = snapshot.monotonic_ms.saturating_sub(first.monotonic_ms) / 60_000;
+    let total = match volume.total {
+        MetricState::Value(total) => render_bytes(total.0),
+        _ => "an unknown size".to_owned(),
+    };
+    Some(Finding {
+        id: format!("{}/{letter}", DISK_FILLING_FAST.id),
+        rule: DISK_FILLING_FAST.id.to_owned(),
+        severity: DISK_FILLING_FAST.severity,
+        confidence: DISK_FILLING_FAST.confidence,
+        subject: letter.clone(),
+        title: format!("Drive {letter} is losing free space quickly"),
+        explain: format!(
+            "Drive {letter} has {} free of {total}, {} less than {minutes} minutes ago. \
+             Something is writing: a download, a backup, a recording, or a program filling \
+             a log. That is a fact about the last half hour, not a prediction - if the copy \
+             finishes, the number stops moving, and if it does not, the volume is what runs \
+             out first.",
+            render_bytes(now),
+            render_bytes(lost)
+        ),
+        evidence: vec![
+            Evidence::new(format!("volume.{letter}.free_bytes"), render_bytes(now))
+                .threshold(format!("{} lost", render_bytes(lost)))
+                .over(
+                    first.seq,
+                    snapshot.seq,
+                    snapshot.monotonic_ms.saturating_sub(first.monotonic_ms),
+                ),
+            Evidence::new(format!("volume.{letter}.free_bytes"), render_bytes(before))
+                .threshold(format!("{minutes} minutes ago")),
         ],
         actions: vec!["clean.open_native_scan".to_owned()],
         first_seen: snapshot.taken_at,
@@ -1257,6 +1380,80 @@ mod tests {
     fn with_cores(snapshot: &mut Snapshot, total: f32, cores: &[f32]) {
         snapshot.cpu.percent = MetricState::Value(total);
         snapshot.cpu.per_core = cores.iter().map(|percent| MetricState::Value(*percent)).collect();
+    }
+
+    /// A volume with an exact number of free bytes, for the rate rule.
+    fn with_disk_free(snapshot: &mut Snapshot, free_bytes: u64) {
+        let total = 500 * 1024 * 1024 * 1024u64;
+        snapshot.volumes[0].total = MetricState::Value(Bytes(total));
+        snapshot.volumes[0].free = MetricState::Value(Bytes(free_bytes));
+    }
+
+    const GIB: u64 = 1024 * 1024 * 1024;
+
+    #[test]
+    fn a_disk_losing_five_gibibytes_in_half_an_hour_is_a_finding() {
+        // Ten GiB gone across forty minutes, with the window's start inside the
+        // part where it was already dropping.
+        let store = series(2_400, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let free = if s < 1_200 { 200 * GIB } else { 190 * GIB };
+            with_disk_free(&mut snap, free);
+            snap
+        });
+        let findings = findings_of(&store);
+        let fill = findings
+            .iter()
+            .find(|finding| finding.rule == DISK_FILLING_FAST.id)
+            .unwrap_or_else(|| panic!("ten gibibytes in forty minutes: {findings:?}"));
+        assert_eq!(fill.subject, "C:");
+        assert_eq!(fill.severity, Severity::Notice);
+        assert_eq!(fill.evidence[0].metric, "volume.C.free_bytes");
+        assert!(
+            fill.evidence[0].threshold.as_deref() == Some("10.0 GB lost"),
+            "{:?}",
+            fill.evidence[0]
+        );
+        // Half an hour of evidence, not one sample of it.
+        assert_eq!(fill.evidence[0].held_for_ms, 30 * 60 * 1000);
+        assert!(fill.evidence[0].from_seq < fill.evidence[0].to_seq, "{:?}", fill.evidence[0]);
+    }
+
+    #[test]
+    fn a_disk_that_filled_and_was_cleaned_up_inside_the_window_is_quiet() {
+        // Ten gibibytes went, then came back. Comparing the ends of the window is
+        // the whole point: nothing was lost over the half hour that counts.
+        let store = series(2_400, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let free = if (900..1_500).contains(&s) { 190 * GIB } else { 200 * GIB };
+            with_disk_free(&mut snap, free);
+            snap
+        });
+        assert!(findings_of(&store).is_empty(), "a cleanup is not a leak");
+    }
+
+    #[test]
+    fn a_disk_under_the_line_is_not_filling_fast() {
+        // 4 GiB in forty minutes: a large file, copied. Held long past the window.
+        let store = series(2_400, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let free = if s < 1_200 { 200 * GIB } else { 196 * GIB };
+            with_disk_free(&mut snap, free);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn a_half_hour_of_history_is_not_enough_to_measure_a_half_hour() {
+        // The same ten gibibytes, in twenty minutes: the window is not spanned, so
+        // the answer is "no opinion" rather than "not filling".
+        let store = series(1_200, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_disk_free(&mut snap, if s < 600 { 200 * GIB } else { 190 * GIB });
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
     }
 
     #[test]

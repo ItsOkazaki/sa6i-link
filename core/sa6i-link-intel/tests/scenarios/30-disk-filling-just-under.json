@@ -1,0 +1,19 @@
+{
+  "name": "disk-filling-just-under",
+  "about": "The same half-terabyte volume loses 4.5 gigabytes across forty minutes: under the five-gigabyte line, and held well past the window. A large file being copied is not a disk filling up.",
+  "segments": [
+    {
+      "minutes": 20,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 60 }]
+    },
+    {
+      "minutes": 20,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 60.9 }]
+    }
+  ],
+  "quiets": ["disk.filling_fast", "disk.low_free_space"]
+}
