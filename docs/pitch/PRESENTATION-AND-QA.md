@@ -12,8 +12,8 @@ the code cannot back up.
 > **The numbers in this file are checked.** `python3 scripts/check-pitch.py` recounts
 > the rule, fixture, threshold and TOML counts in this pack and in the deck against
 > the repository, and fails if either says something the code no longer is. A slide
-> that still says eleven rules after the twelfth shipped is exactly the kind of
-> confident sentence this project is built to avoid.
+> whose count is stale by one is exactly the kind of confident sentence this project
+> is built to avoid — and the checker found its first one in this paragraph.
 
 > **The slides are a separate file.** `deck.html` — one self-contained page, no network,
 > no PowerPoint; open it in a browser and press `→`. Seventeen slides with speaker notes
