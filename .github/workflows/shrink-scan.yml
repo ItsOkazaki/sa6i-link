@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Dead code, dependencies and unused assets, scanned but never cut.
+#
+# `shrink-anything` deletes what nothing calls and keeps each cut only if your own
+# tests still pass. This repository cannot satisfy that condition yet: the intel
+# crates have never been compiled, so no cut could be proved by anything. The
+# workflow therefore runs `scan`, which changes nothing, and stops there. The day
+# `cargo test` passes on a runner, `cut -- cargo test` becomes a decision someone
+# can take deliberately - not a scheduled event.
+#
+# Why CI rather than a laptop: the binary needs glibc 2.39 or newer, and the
+# sandbox this code is written in has 2.36, so the first honest run of this tool
+# is either here or on the machine that has the toolchain. See
+# docs/audit/DEAD-CODE-SCAN.md.
+name: Dead code scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays, 06:17 UTC: a week of commits, before anyone plans the next one.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: shrink-anything scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Scan, which changes nothing
+        run: |
+          set -o pipefail
+          npx --yes @el4cteo/shrink-anything@0.1.0 scan --all --app 2>&1 | tee shrink-scan.txt
+          npx --yes @el4cteo/shrink-anything@0.1.0 scan --all --app --json > shrink-scan.json || true
+          echo "---"
+          grep -c . shrink-scan.txt || true
+
+      - name: Say what the scan is allowed to mean
+        if: always()
+        run: |
+          echo "Nothing was deleted: this job runs 'scan', not 'cut'."
+          echo "A cut may only follow a check that passes, and this repository has no"
+          echo "compiled test suite yet; see docs/audit/DEAD-CODE-SCAN.md."
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shrink-scan
+          path: |
+            shrink-scan.txt
+            shrink-scan.json
+
+      - name: Post a summary
+        # The artifact is the evidence; this is the part people actually read.
+        if: always()
+        run: |
+          {
+            echo "### shrink-anything scan"
+            echo ""
+            echo "Nothing was deleted. \`scan\` does not change files; \`cut\` would need"
+            echo "a check that passes, and this repository cannot run one yet."
+            echo ""
+            echo '```text'
+            head -60 shrink-scan.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
