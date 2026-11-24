@@ -132,12 +132,42 @@ at line 126, one at line 67. They are left for whoever next touches that script,
 because it runs against the Electron bundle and this sandbox has no bundle to run it
 against — a fix nobody can execute is a guess with a diff.
 
-**cargo-machete** — Rust, reads the manifests and greps the crates' sources: the
-answer to "is `sa6i-vcam` really unused", which shrink-anything raised and could not
-settle. Its prebuilt release is served from `release-assets.githubusercontent.com`,
-which this sandbox cannot reach, so it runs in CI instead, in the same workflow. The
-first run will say whether the dependency finding was real; this page will be updated
-with what it says rather than with what is expected.
+**cargo-machete 0.10.1** — Rust, reads the manifests and greps the crates' sources:
+the answer to "is `sa6i-vcam` really unused", which shrink-anything raised and could
+not settle. Its prebuilt release is served from `release-assets.githubusercontent.com`,
+which this sandbox cannot reach, so it ran in CI instead. It found **six** unused
+dependencies across four manifests, exit code 1:
+
+| crate | unused | checked |
+| --- | --- | --- |
+| `desktop/app` | `anyhow`, `sa6i-vcam` | 0 mentions of either in `src/` |
+| `core/sa6i-link-intel-win` | `serde`, `tracing` | the crate uses `serde_json` only; 0 mentions of `tracing` |
+| `core/sa6i-link-adb` | `tracing` | 0 mentions |
+| `third_party/iroh-mdns-address-lookup` | `derive_more` | not ours: vendored code, left alone by convention |
+
+So the `sa6i-vcam` finding was real, and two tools that decide by different rules —
+name counting across the tree, manifest against source — agreed on the same crate.
+That is the strongest result of the three runs, and the reason to keep both.
+
+**None of them were removed.** `cargo machete --fix` is one command, and so is the
+build that would prove the workspace still compiles without them; this sandbox has
+neither, and deleting a dependency nobody can rebuild is the same mistake as deleting
+code nobody can test. The five that belong to this project are named above so the
+first person with a toolchain can run `--fix`, `cargo test --locked`, and watch the
+workspace shrink by five manifest lines and whatever they were pulling in.
+
+### Where the CI outputs land
+
+Artifacts are the evidence, and this sandbox cannot download them: the artifact URL is
+a signed `blob.core.windows.net` link, and the release host earlier in this page is
+blocked too. So a manual run — or any change to the workflow file — also writes the
+three outputs into one rolling issue, [`#18 Dead code scan`][issue]. The weekly
+schedule does not, because a scanner that mails people is a scanner people mute.
+
+[issue]: https://github.com/ItsOkazaki/sa6i-link/issues/18
+
+The first CI run reproduced vulture's list minus the three items fixed above, which is
+what makes the fixes checkable rather than claimed: the lists agree line for line.
 
 ## What this does not license
 
