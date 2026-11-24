@@ -87,7 +87,7 @@ formats, this is the answer:
 | | State | The honest clause |
 | --- | --- | --- |
 | Link (phone ↔ PC) | **working** | the genuine asset: transport, capability matrix, transfer, mirroring — though the Windows package people download is a patched build, not a source build |
-| Intel (measure + diagnose) | **built, not yet validated on hardware** | written, simulated against 31 fixtures, never compared with Task Manager |
+| Intel (measure + diagnose) | **built, not yet validated on hardware** | written, simulated against 34 fixtures, never compared with Task Manager |
 | Clean | **hardened candidate** | runs in the user's window on Windows 7 + VxKex; no cleanup has ever been executed |
 | Assistant (local model) | **not built** | designed as an optional leaf so the product is complete without it |
 
@@ -118,7 +118,7 @@ Then stop. Do not fill the silence.
 >
 > The other direction is the diagnosis. The PC measures itself: CPU, memory
 > including commit charge and paging, every volume, disk latency, GPU, the heaviest
-> processes. Eleven rules run over those numbers, and a finding is only allowed to exist
+> processes. Twelve rules run over those numbers, and a finding is only allowed to exist
 > if it carries the measurement behind it — no evidence, no finding. A measurement
 > that failed is not a zero; it says *why* it failed, on screen.
 >
@@ -159,7 +159,7 @@ Total 300 seconds. The right-hand column is what you actually say; keep to it.
 | 1 | Two stills: the phone home screen, the PC Monitor page | "Two devices. One carries your life, the other does your work. I build the bridge — and then I make the PC tell the truth about itself." (20) |
 | 2 | The three questions: *what is slow · why · is it safe to clean* | "Every support conversation I have had comes down to these three. Existing tools answer one each, and none of them show their work." (25) |
 | 3 | Link features, one line each, no icons | "Notifications you can reply to, SMS and calls, clipboard both ways, transfer that resumes, mirroring with control, phone as webcam. This half is built and tested." (40) |
-| 4 | Monitor page + one finding with its evidence line | "Then the PC measures itself. Eleven rules. A finding cannot exist without the measurement behind it — this line here is the reason it fired, not a sentence I wrote." (45) |
+| 4 | Monitor page + one finding with its evidence line | "Then the PC measures itself. Twelve rules. A finding cannot exist without the measurement behind it — this line here is the reason it fired, not a sentence I wrote." (45) |
 | 5 | The `MetricState` idea: value / unknown + reason / unsupported + reason | "The rule that shaped the whole design: a missing measurement is not a zero. It carries why it is missing, and the page shows that instead of a flat line at the bottom." (35) |
 | 6 | Clean, in the same window, plus the guard diagram | "The cleaner is not ours. We proved what's inside it, then found a deletion path that follows a redirected folder — a junction above a cache root — and closed it." (45) |
 | 7 | The two-column honesty table: verified / not verified | "What's verified is verified by a test or a hash. What isn't, is written down as not verified. No cleanup has ever been run — and I'd rather tell you that than have you find out." (45) |
@@ -178,9 +178,9 @@ For a technical track, a jury with engineers, or a university defence.
 | 2 | The architecture | Show `docs/architecture/MODULE-MAP.md`'s diagram: `intel` (no OS, no Qt, no HTTP) → `intel-win` (Windows collectors) → shell (Qt/QML); `core` (transport) separate; CLI depends on everything and proves it headless. |
 | 3 | Why the boundaries are compile-time facts | "Diagnostics must not require a phone, a pairing or a transport. If telemetry lived in `core`, every diagnostics fix would be a protocol change and 'does the doctor work without a phone?' would be a runtime question. It is now a compile error." |
 | 4 | The model | `Snapshot` → `metrics()` publishes 19 path shapes. `MetricState::{Value, Unknown(reason), Unsupported(reason)}`. A path that a snapshot does not publish cannot be cited as evidence. |
-| 5 | The rules | Eleven rules, each a pure function of `(snapshot, store, thresholds)`. Every rule declares `requires`; a config file may not cite a path that no snapshot publishes. Evidence with `from_seq`/`to_seq`/`held_for_ms`: a finding is re-derivable from recorded samples. |
+| 5 | The rules | Twelve rules, each a pure function of `(snapshot, store, thresholds)`. Every rule declares `requires`; a config file may not cite a path that no snapshot publishes. Evidence with `from_seq`/`to_seq`/`held_for_ms`: a finding is re-derivable from recorded samples. |
 | 6 | The front-end | TOML overrides numbers only — never identity. The loader refuses: an unknown rule id, an unknown key, another rule's key, an unpublished path, a scenario that does not exist, a rule claimed twice, a percentage outside 1–99.9. And the shipped files must flatten to exactly the compiled defaults, so the front-end provably changed no verdict. |
-| 7 | The fixtures | 31 fixtures, each a machine behaviour and its expected findings, including the near-misses: 89.9 % held past the window, a pid recycled mid-window, an idle disk reading 0 ms per transfer, a window broken in the middle. A rule with no firing case *and* no near-miss does not ship. |
+| 7 | The fixtures | 34 fixtures, each a machine behaviour and its expected findings, including the near-misses: 89.9 % held past the window, a pid recycled mid-window, an idle disk reading 0 ms per transfer, a window broken in the middle. A rule with no firing case *and* no near-miss does not ship. |
 | 8 | Privacy as a test, not a promise | 871 test functions across the workspace; `tests/privacy.rs` reads `Cargo.lock`, builds the dependency graph by name, and fails if either intel crate can reach a socket-capable crate (closures of 62 and 74 crates). The network stack is not "not used" — it is not reachable. |
 | 9 | Clean: the hard part | Three screens, three sentences: (a) provenance — packaged JS matched upstream source byte for byte, including `main.js`, `preload.cjs`, the React bundle; (b) hosting — hash-pinned executables, a native child in a same-process clipping container so a foreign process cannot paint over the header; (c) the guard — upstream followed a junction above a cache root on real NTFS; ours refuses it; protected paths (`Windows`, `Desktop`, `.ssh`) are blocked. |
 | 10 | What is not done, and the plan to close it | Read the "not verified" column aloud. Then one slide of what closes it: `scripts/verify-m1.ps1` for the numbers, a disposable Windows installation for cleanup, signing and a rights-holder grant for distribution. |
@@ -220,12 +220,12 @@ One A1 sheet, portrait, read at 1.2 m distance.
 │ · resumable file transfer       │ core       transport, iroh/QUIC   │
 │ · mirroring, webcam             │ shell      Qt 6 / QML over cxx-qt │
 │ · measures the machine          │ CLI        proves it headless     │
-│ · 11 rules, with evidence       │                                   │
+│ · 12 rules, with evidence       │                                   │
 │ · one window, one Back          │                                   │
 ├─────────────────────────────────┼───────────────────────────────────┤
 │ THE IDEA                        │ VERIFIED / NOT VERIFIED           │
 │ a missing number is not a zero: │ ✓ transfer, mirroring, pairing    │
-│ it carries the reason.          │ ✓ 11 rules, 31 fixtures           │
+│ it carries the reason.          │ ✓ 12 rules, 34 fixtures           │
 │ a finding without evidence      │ ✓ privacy: no socket reachable    │
 │ is not a finding.               │ ✓ cleaner JS = upstream source    │
 │                                 │ ✓ guard stops redirected delete   │
@@ -280,7 +280,7 @@ video or on a borrowed laptop, and say so in one sentence before anyone notices.
 > to, SMS and calls, a shared clipboard, resumable file transfer, screen mirroring
 > and the phone as a webcam. The same application measures the PC it runs on — CPU,
 > memory including commit charge and hard faults, every volume, disk latency, GPU and
-> the heaviest processes — and runs eleven rules over those numbers. Every finding
+> the heaviest processes — and runs twelve rules over those numbers. Every finding
 > carries the measurement that produced it, and a measurement that failed is shown
 > as the reason it failed rather than as zero. Sa6i Clean, a separately verified
 > hosted build of the Cleanly cleaner, runs inside the same window behind guards that
@@ -348,7 +348,7 @@ dependency direction may never reverse.
 
 | Crate | Owns | May not |
 | --- | --- | --- |
-| `sa6i-link-intel` | model, 11 rules, store, findings, TOML loader | touch an OS API, Qt, or a socket |
+| `sa6i-link-intel` | model, 12 rules, store, findings, TOML loader | touch an OS API, Qt, or a socket |
 | `sa6i-link-intel-win` | the Windows collectors | depend on `core` — diagnosis must not need a phone |
 | `sa6i-link-core` | link, protocol, pairing, transfer, mirroring | know that diagnostics exist |
 | `sa6i-link-protocol` | CBOR messages, capability registry | anything platform-specific |
@@ -390,7 +390,7 @@ dependency direction may never reverse.
 - **Model** — one `Snapshot` per second, 19 published path shapes, plus identity
   (a process's creation stamp) that travels in the sample because a pid is not an
   identity and an `f64` cannot hold a FILETIME.
-- **Judge** — eleven rules over the snapshot and the store. "Sustained" means every
+- **Judge** — twelve rules over the snapshot and the store. "Sustained" means every
   sample in the window satisfies the predicate; one quiet sample breaks the claim.
   An idle disk reading 0 ms and an idle machine reading 0 pages/s are readings, not
   findings.
@@ -540,8 +540,8 @@ with the threshold, how long it held, and the sample range — so a finding is
 re-derivable from the recorded history. And it says *why* a number is missing instead
 of drawing zero.
 
-**B4. Eleven rules seems few.**
-Eleven rules that each ship with a firing case and a near-miss, versus a hundred that
+**B4. Twelve rules seems few.**
+Twelve rules that each ship with a firing case and a near-miss, versus a hundred that
 fire on every machine. The near-miss is the expensive one: 89.9 % held past the
 window, a pid recycled mid-window, an idle disk reading 0 ms per transfer, a
 half-hour window with one quiet minute in the middle.
@@ -612,7 +612,7 @@ What is missing is the side-by-side run. — `--samples 60 --interval-ms 1000 --
 next to Task Manager's Performance tab, on one machine, closes it.
 
 **D2. Then why should a judge believe any of it?**
-Because the design is checkable without trusting me: 31 fixtures with expected
+Because the design is checkable without trusting me: 34 fixtures with expected
 finding sets, evidence that carries `from_seq`/`to_seq` so a finding can be
 re-derived, and a repository that says which of the six exit criteria are closed. If
 you only believe the verified column, the product still stands.
@@ -735,9 +735,9 @@ that test does not prove.
 
 **G2. If it was never compiled, how do you know it compiles?**
 I don't — and the milestone documents say so in those words. What I can show is that
-the logic was checked another way: the eleven rules were re-implemented independently,
-in `scripts/check-fixtures.py`, and run against all 31 fixtures, the eleven TOML files
-were parsed and shown to flatten to the 23 compiled thresholds, and structs were
+the logic was checked another way: the twelve rules were re-implemented independently,
+in `scripts/check-fixtures.py`, and run against all 34 fixtures, the twelve TOML files
+were parsed and shown to flatten to the 25 compiled thresholds, and structs were
 brace-checked for fields that a compiler would have caught. That is not a build. It is why the first `cargo test` on a real
 machine is the next milestone, not a formality.
 
@@ -838,7 +838,7 @@ all.
 | Claim | State | Evidence in the repository |
 | --- | --- | --- |
 | Phone ↔ PC features work | **in use on real devices** — the shipped Windows binary is a patched build | the link half; capability matrix tests |
-| 11 rules, 31 fixtures | **written and simulated** | `core/sa6i-link-intel/tests/scenarios/` |
+| 12 rules, 34 fixtures | **written and simulated** | `core/sa6i-link-intel/tests/scenarios/` |
 | TOML can never change a verdict | **proven by test** | `the_shipped_files_restate_the_compiled_numbers` |
 | Nothing leaves the machine | **proven by test** | `tests/privacy.rs`, closures of 62/74 crates |
 | Cleaner JS = upstream source | **proven byte for byte** | `verify_upstream_equivalence.py` at `b62bef4` |
@@ -884,7 +884,7 @@ all.
 | --- | --- |
 | Workspace | 11 crates, ≈160 000 lines of Rust, ≈31 000 of QML, ≈48 000 of Kotlin |
 | Tests | 871 `#[test]` functions across the workspace |
-| Diagnostics | 11 rules · 11 TOML files · 31 fixtures · 23 thresholds · 19 metric path shapes |
+| Diagnostics | 12 rules · 12 TOML files · 34 fixtures · 25 thresholds · 19 metric path shapes |
 | Privacy | dependency closures of 62 and 74 crates, both socket-free |
 | History | 4096 samples ≈ 68 minutes at 1 Hz |
 | Cleaner | Cleanly 0.2.0, commit `b62bef4`; 1,235 archive entries, CRC-checked |

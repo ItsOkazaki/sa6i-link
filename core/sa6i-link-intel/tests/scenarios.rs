@@ -22,8 +22,9 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use sa6i_link_intel::{
-    Bytes, CpuSample, DiskIoSample, Finding, MemorySample, MetricState, ProcessSample, RULES,
-    SampleStore, Severity, Snapshot, Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
+    Bytes, CpuSample, DiskIoSample, Finding, GpuAdapter, GpuSample, MemorySample, MetricState,
+    ProcessSample, RULES, SampleStore, Severity, Snapshot, Timestamp, VolumeKind, VolumeSample,
+    WhyUnknown, evaluate,
 };
 
 /// A fixed wall-clock base so the fixtures are deterministic: 2023-11-14T22:13:20Z.
@@ -70,6 +71,11 @@ struct Segment {
     commit_percent: Option<f32>,
     #[serde(default)]
     volumes: Vec<VolumeSpec>,
+    /// Graphics adapters, when the scenario is about VRAM. Absent means the
+    /// machine has no GPU counters — every Windows 8.1 and older box — and is
+    /// not the same thing as an adapter using no memory.
+    #[serde(default)]
+    gpus: Vec<GpuSpec>,
     #[serde(default = "default_uptime")]
     uptime_days: f64,
     /// Average seconds per disk transfer during this segment. Absent means the
@@ -112,6 +118,20 @@ struct ProcessSpec {
 
 fn default_working_set() -> u64 {
     100
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GpuSpec {
+    /// The counter instance name, e.g. `luid_0x00000000_0x0000FB33_phys_0`.
+    instance: String,
+    /// MiB in use. Absent means the counter gave no number.
+    #[serde(default)]
+    used_mb: Option<u64>,
+    /// MiB the adapter owns. `Some(0)` is an integrated GPU and is a fact;
+    /// absent means the counter refused.
+    #[serde(default)]
+    limit_mb: Option<u64>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -222,10 +242,38 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
             },
             None => DiskIoSample::unavailable(WhyUnknown::NotCollectedYet),
         },
-        gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
+        gpu: gpu(segment),
         processes: segment.processes.iter().map(process).collect(),
         uptime: MetricState::Value((segment.uptime_days * 86_400.0) as u64),
     }
+}
+
+/// The graphics adapters a segment describes.
+///
+/// A scenario without a `gpus` list is a machine whose GPU counters nobody read,
+/// which is what every Windows 8.1 and older machine is — not a machine with no
+/// graphics card.
+fn gpu(segment: &Segment) -> MetricState<GpuSample> {
+    if segment.gpus.is_empty() {
+        return MetricState::Unknown(WhyUnknown::NotCollectedYet);
+    }
+    MetricState::Value(GpuSample {
+        adapters: segment
+            .gpus
+            .iter()
+            .map(|spec| GpuAdapter {
+                instance: spec.instance.clone(),
+                dedicated_used: match spec.used_mb {
+                    Some(mb) => MetricState::Value(Bytes(mb * MIB)),
+                    None => MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                },
+                dedicated_limit: match spec.limit_mb {
+                    Some(mb) => MetricState::Value(Bytes(mb * MIB)),
+                    None => MetricState::Unknown(WhyUnknown::NotCollectedYet),
+                },
+            })
+            .collect(),
+    })
 }
 
 fn memory(segment: &Segment) -> MemorySample {
@@ -380,6 +428,7 @@ fn the_json_a_page_receives_has_the_field_names_it_expects() {
         disk_seconds_per_transfer: None,
         pages_input_per_second: None,
         cores: Vec::new(),
+        gpus: Vec::new(),
     };
     let json = serde_json::to_value(snapshot(0, &segment)).expect("a snapshot is serialisable");
     assert_eq!(

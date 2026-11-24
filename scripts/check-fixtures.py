@@ -1,4 +1,4 @@
-"""Check the eleven rules against every fixture, and the TOML against the code.
+"""Check the twelve rules against every fixture, and the TOML against the code.
 
     python3 scripts/check-fixtures.py
 
@@ -46,6 +46,8 @@ DEFAULTS = {
     "core_pinned_ms": 600_000,
     "disk_fill_bytes": 5 * 1024**3,
     "disk_fill_window_ms": 1_800_000,
+    "gpu_vram_warn_percent": 95.0,
+    "gpu_vram_sustained_ms": 300_000,
 }
 
 REQUIRES = {
@@ -53,6 +55,10 @@ REQUIRES = {
     "cpu.one_core_pinned": ["cpu.core.*.percent", "cpu.percent"],
     "disk.low_free_space": ["volume.*.percent_used"],
     "disk.filling_fast": ["volume.*.free_bytes"],
+    "gpu.vram_pressure": [
+        "gpu.adapter.*.dedicated_used_bytes",
+        "gpu.adapter.*.dedicated_limit_bytes",
+    ],
     "memory.pressure": ["memory.percent_used"],
     "memory.commit_pressure": ["memory.commit_used_bytes", "memory.commit_limit_bytes"],
     "process.runaway_cpu": ["process.*.cpu_percent"],
@@ -67,6 +73,7 @@ ALLOWED_KEYS = {
     "cpu.one_core_pinned": {"warn_percent", "total_below_percent", "sustained"},
     "disk.low_free_space": {"warn_percent", "critical_percent", "sustained"},
     "disk.filling_fast": {"fill_mb", "sustained"},
+    "gpu.vram_pressure": {"warn_percent", "sustained"},
     "memory.pressure": {"warn_percent", "sustained"},
     "memory.commit_pressure": {"warn_percent", "sustained"},
     "process.runaway_cpu": {"warn_percent", "sustained"},
@@ -81,6 +88,7 @@ SEVERITY = {
     "cpu.one_core_pinned": "Notice",
     "disk.low_free_space": "Warning",
     "disk.filling_fast": "Notice",
+    "gpu.vram_pressure": "Warning",
     "memory.pressure": "Notice",
     "memory.commit_pressure": "Warning",
     "process.runaway_cpu": "Notice",
@@ -123,6 +131,14 @@ def snapshot(index, segment):
         "seconds_per_transfer": segment.get("disk_seconds_per_transfer"),
         "volumes": volumes,
         "uptime": int(segment.get("uptime_days", 2.0) * 86_400),
+        "gpus": [
+            {
+                "instance": spec["instance"],
+                "used": None if spec.get("used_mb") is None else spec["used_mb"] * MIB,
+                "limit": None if spec.get("limit_mb") is None else spec["limit_mb"] * MIB,
+            }
+            for spec in segment.get("gpus", [])
+        ],
         "processes": [
             {
                 "pid": spec["pid"],
@@ -203,6 +219,38 @@ def cpu_one_core_pinned(store, t):
     if held_for(store, t["core_pinned_ms"], holds) is None:
         return None
     return ("cpu.one_core_pinned", "Notice", "system")
+
+
+def gpu_percent(adapter):
+    """The adapter's share of its own memory, or None when that has no meaning."""
+    if adapter["used"] is None or adapter["limit"] is None or adapter["limit"] == 0:
+        return None
+    return (min(adapter["used"], adapter["limit"]) / adapter["limit"]) * 100.0
+
+
+def gpu_vram_pressure(store, t):
+    warn = t["gpu_vram_warn_percent"]
+    worst = None
+    for adapter in store[-1]["gpus"]:
+        percent = gpu_percent(adapter)
+        if percent is None or percent < warn:
+            continue
+        if worst is None or percent > worst[1]:
+            worst = (adapter["instance"], percent)
+    if worst is None:
+        return None
+    instance, _ = worst
+
+    def holds(sample):
+        return any(
+            a["instance"] == instance and (gpu_percent(a) or 0.0) >= warn
+            for a in sample["gpus"]
+        )
+
+    if held_for(store, t["gpu_vram_sustained_ms"], holds) is None:
+        return None
+    index = [a["instance"] for a in store[-1]["gpus"]].index(instance)
+    return ("gpu.vram_pressure", "Warning", "GPU %d" % (index + 1))
 
 
 def disk_low_free_space(store, t):
@@ -376,6 +424,7 @@ RULES = [
     cpu_one_core_pinned,
     disk_low_free_space,
     disk_filling_fast,
+    gpu_vram_pressure,
     memory_pressure,
     memory_commit_pressure,
     process_runaway_cpu,
@@ -386,6 +435,29 @@ RULES = [
 ]
 
 
+# The keys the Rust structs accept. `deny_unknown_fields` is on every one of them,
+# so a misspelled key is not a default: it is a fixture the test harness refuses to
+# read. That failure only appears under `cargo test`, which is why this file -
+# which has to run without a compiler - checks the names too.
+KEYS = {
+    "scenario": {"name", "about", "segments", "expect", "quiets"},
+    "segment": {
+        "minutes", "cpu_percent", "memory_percent", "commit_percent", "volumes", "gpus",
+        "uptime_days", "disk_seconds_per_transfer", "pages_input_per_second", "processes",
+        "cores",
+    },
+    "volume": {"letter", "kind", "percent_used"},
+    "gpu": {"instance", "used_mb", "limit_mb"},
+    "process": {"pid", "name", "cpu_percent", "working_set_mb", "created"},
+    "expect": {"rule", "severity", "subject"},
+}
+
+
+def unknown_keys(where, payload, kind):
+    extra = set(payload) - KEYS[kind]
+    return [f"{where}: {sorted(extra)} are not a {kind}'s keys"] if extra else []
+
+
 def check_scenarios():
     failures, names = [], []
     fired = {name: 0 for name in REQUIRES}
@@ -393,6 +465,18 @@ def check_scenarios():
     for path in sorted(SCENARIOS.glob("*.json")):
         scenario = json.loads(path.read_text())
         names.append(scenario["name"])
+        failures.extend(unknown_keys(path.name, scenario, "scenario"))
+        for index, segment in enumerate(scenario["segments"]):
+            where = f"{path.name}[{index}]"
+            failures.extend(unknown_keys(where, segment, "segment"))
+            for volume in segment.get("volumes", []):
+                failures.extend(unknown_keys(where, volume, "volume"))
+            for gpu in segment.get("gpus", []):
+                failures.extend(unknown_keys(where, gpu, "gpu"))
+            for process in segment.get("processes", []):
+                failures.extend(unknown_keys(where, process, "process"))
+        for expected in scenario.get("expect", []):
+            failures.extend(unknown_keys(path.name, expected, "expect"))
         store = samples_of(scenario)
         actual = {f for f in (rule(store, DEFAULTS) for rule in RULES) if f}
         expected = {(w["rule"], w["severity"], w["subject"]) for w in scenario.get("expect", [])}
@@ -435,6 +519,9 @@ def apply(rule_id, entry, limits):
     elif rule_id == "disk.filling_fast":
         limits["disk_fill_bytes"] = int(entry["fill_mb"]) * MIB
         limits["disk_fill_window_ms"] = duration_ms(entry["sustained"])
+    elif rule_id == "gpu.vram_pressure":
+        limits["gpu_vram_warn_percent"] = float(entry["warn_percent"])
+        limits["gpu_vram_sustained_ms"] = duration_ms(entry["sustained"])
     elif rule_id == "memory.pressure":
         limits["memory_warn_percent"] = float(entry["warn_percent"])
         limits["memory_sustained_ms"] = duration_ms(entry["sustained"])

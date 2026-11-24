@@ -1,0 +1,25 @@
+# The numbers the VRAM rule decides with.
+#
+# Dedicated memory only. An integrated GPU has none, reports a limit of 0, and the
+# model refuses the division rather than printing "0 % of nothing" - so this rule
+# is silent on those machines, which is the honest answer rather than a zero.
+#
+# The counters behind it exist from Windows 10 1709 and need a WDDM 2.0 driver. On
+# the Windows 7 test machine the counter set is absent, so the machine reports a
+# version fact and the rule says nothing.
+
+[[rule]]
+id = "gpu.vram_pressure"
+severity = "warning"
+confidence = "likely"
+requires = ["gpu.adapter.*.dedicated_used_bytes", "gpu.adapter.*.dedicated_limit_bytes"]
+
+# 95 % of the adapter's own memory, held for five minutes. One frame of a game near
+# the line is a level loading; five minutes of it is a driver that has started
+# moving data into system memory, which is what a stutter is.
+warn_percent = 95.0
+sustained = "5m"
+
+firing = "gpu-vram-over-the-line-for-six-minutes"
+# 94.8 % held for twelve minutes: the threshold is what keeps this quiet.
+near_miss = "gpu-just-under-the-line"

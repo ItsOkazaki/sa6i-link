@@ -1,0 +1,19 @@
+{
+  "name": "gpu-just-under-the-line",
+  "about": "The same adapter at 7770 of 8192 MiB - 94.8 % - held for twelve minutes. One percent under, held long past the window: the threshold is what keeps this quiet rather than the timing.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 30,
+      "memory_percent": 60,
+      "gpus": [
+        {
+          "instance": "luid_0x00000000_0x0000FB33_phys_0",
+          "used_mb": 7770,
+          "limit_mb": 8192
+        }
+      ]
+    }
+  ],
+  "quiets": ["gpu.vram_pressure"]
+}

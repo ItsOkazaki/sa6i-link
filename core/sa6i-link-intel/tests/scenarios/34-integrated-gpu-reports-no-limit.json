@@ -1,0 +1,19 @@
+{
+  "name": "integrated-gpu-reports-no-limit",
+  "about": "An integrated adapter: 512 MiB in use, no dedicated memory of its own, so the counter reports a limit of 0. There is no percentage of nothing, and the rule says nothing instead of 100 %.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 30,
+      "memory_percent": 60,
+      "gpus": [
+        {
+          "instance": "luid_0x00000000_0x0000D1A1_phys_0",
+          "used_mb": 512,
+          "limit_mb": 0
+        }
+      ]
+    }
+  ],
+  "quiets": ["gpu.vram_pressure"]
+}

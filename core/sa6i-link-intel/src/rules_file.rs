@@ -297,6 +297,7 @@ fn allowed_keys(id: &str) -> &'static [&'static str] {
         "process.runaway_cpu" => &["warn_percent", "sustained"],
         "process.memory_growth" => &["growth_mb", "sustained"],
         "disk.filling_fast" => &["fill_mb", "sustained"],
+        "gpu.vram_pressure" => &["warn_percent", "sustained"],
         "disk.slow_transfers" => &["slow_ms", "sustained"],
         "memory.paging" => &["pages_per_second", "sustained"],
         "system.long_uptime" => &["long_after"],
@@ -399,6 +400,13 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             if let Some(millis) = window {
                 limits.disk_fill_window_ms = millis;
             }
+        }
+        "gpu.vram_pressure" => {
+            let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
+            let window =
+                period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            limits.gpu_vram_warn_percent = warn.unwrap_or(limits.gpu_vram_warn_percent);
+            limits.gpu_vram_sustained_ms = window.unwrap_or(limits.gpu_vram_sustained_ms);
         }
         "process.memory_growth" => {
             let grown = ranged_u64(entry.growth_mb, id, "growth_mb", GROWTH_MB, " MiB", refusals);
@@ -635,6 +643,7 @@ mod tests {
 
     const CPU: &str = include_str!("../rules/cpu.toml");
     const FILL: &str = include_str!("../rules/fill.toml");
+    const GPU: &str = include_str!("../rules/gpu.toml");
     const CORE: &str = include_str!("../rules/core.toml");
     const DISK: &str = include_str!("../rules/disk.toml");
     const MEMORY: &str = include_str!("../rules/memory.toml");
@@ -686,7 +695,9 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [CPU, CORE, DISK, FILL, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
+        for text in [
+            CPU, CORE, DISK, FILL, GPU, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM,
+        ] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
             let limits = file
                 .thresholds_with_scenarios(&known)

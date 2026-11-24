@@ -63,7 +63,7 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 | `cpu.sustained_high` | `cpu.percent` | 10 min | Warning | **shipped**, and a build is it firing correctly |
 | `cpu.one_core_pinned` | `cpu.core.{n}.percent` vs `cpu.percent` | 10 min | Notice | **shipped**, quiet whenever the machine is over 50 % |
 | `disk.filling_fast` | `volume.{letter}.free_bytes` delta | 30 min | Notice | **shipped**, the ends of the window compared, never a forecast |
-| `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | ready, silent where the limit is 0 |
+| `gpu.vram_pressure` | `gpu.adapter.{n}.dedicated_used_bytes` / `…_limit_bytes` | 5 min | Warning | **shipped**, silent where the limit is 0 |
 | `process.runaway_cpu` | `process.{pid}.cpu_percent` | 10 min | Notice | **shipped**, identity included |
 | `process.memory_growth` | `process.{pid}.working_set_bytes` | 30 min | Notice | **shipped**, 256 MiB of growth against the same stamp |
 | `memory.commit_pressure` | `memory.commit_used_bytes` / `memory.commit_limit_bytes` | 5 min | Warning | **shipped** |
@@ -73,10 +73,12 @@ Twelve rules that ship with M2, sorted by what they need. Severity is the
 ### The caveats that decide whether a rule is honest
 
 **`gpu.vram_pressure` and integrated GPUs.** The `Dedicated Limit` counter is
-genuinely 0 on an iGPU, and slice 8 already refuses to divide by it. The rule must
-therefore run only on adapters that publish a limit, and say nothing about the
+genuinely 0 on an iGPU, and the model already refuses to divide by it. The rule
+therefore runs only on adapters that publish a limit, and says nothing about the
 others — not "0 %", and not "cannot tell" on a page that looks otherwise complete.
-The Limits card already lists unmeasured tiles; this is the same rule.
+`integrated-gpu-reports-no-limit` is the fixture that holds it to that: 512 MiB in
+use, a limit of 0, twelve minutes, no finding. The Limits card already lists
+unmeasured tiles; this is the same rule.
 
 **`cpu.sustained_high` and `cpu.one_core_pinned` are one decision, not two.**
 The first asks whether the machine is busy; the second whether one core is busy
@@ -311,12 +313,23 @@ rewrites the same line.
    minutes of history is not enough to measure half an hour, and the answer there
    is "no opinion" rather than "not filling".
 
-   One row of the catalogue is still open, and it is ready for a reason worth
-   writing down rather than an oversight: `gpu.vram_pressure`, which must be
-   silent where the adapter publishes no dedicated limit (every integrated GPU).
-   What is left of M2 after it is `disk.smart_readiness` (an explicitly
-   `Unsupported` row), the rules the plan deferred, and the five-machine review -
-   which is the only part no amount of sandbox work can do.
+   `gpu.vram_pressure` is *done* too, and it is the last row of the catalogue.
+   The model and the collector were already there - `GpuCounters` reads
+   `\GPU Adapter Memory(*)\Dedicated Usage` and `…\Dedicated Limit` in English,
+   because counter display names are localised and asking for the English name on
+   an Arabic Windows is how a collector reports 0 forever - so this slice is a
+   rule, a TOML file and three fixtures. The silences are the design: an adapter
+   with a limit of 0 is an integrated GPU with no memory of its own, where a
+   percentage has no meaning, and a machine with no GPU counters at all is
+   Windows 8.1 or older reporting an absent counter set as a version fact. Both
+   are quiet, and neither is the same thing as a machine that answered "no".
+
+   Every rule in the catalogue now has a firing case and a near-miss, which is
+   what `every_rule_has_a_firing_case_and_a_near_miss` refuses to let anyone
+   forget. What is left of M2 is `disk.smart_readiness` (an explicitly
+   `Unsupported` row, because reading SMART needs an admin channel this design
+   does not have), the rules the plan deferred, and the five-machine review - the
+   only part no amount of sandbox work can do.
 4. **`Avg. Disk sec/Transfer`**, then `disk.slow_transfers` and `memory.paging`.
 5. **The five-machine review**, then whatever the review changed.
 

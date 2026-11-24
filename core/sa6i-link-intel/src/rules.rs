@@ -43,6 +43,7 @@ pub static RULES: &[Rule] = &[
     Rule { def: CPU_ONE_CORE_PINNED, evaluate: cpu_one_core_pinned },
     Rule { def: DISK_LOW_FREE_SPACE, evaluate: disk_low_free_space },
     Rule { def: DISK_FILLING_FAST, evaluate: disk_filling_fast },
+    Rule { def: GPU_VRAM_PRESSURE, evaluate: gpu_vram_pressure },
     Rule { def: MEMORY_PRESSURE, evaluate: memory_pressure },
     Rule { def: MEMORY_COMMIT_PRESSURE, evaluate: memory_commit_pressure },
     Rule { def: PROCESS_RUNAWAY_CPU, evaluate: process_runaway_cpu },
@@ -92,6 +93,19 @@ const DISK_SUSTAINED_MS: u64 = 10 * 60 * 1000;
 /// that is being written to faster than it is being read from.
 const DISK_FILL_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 const DISK_FILL_WINDOW_MS: u64 = 30 * 60 * 1000;
+
+/// Share of an adapter's own memory that is in use, and for how long.
+///
+/// Dedicated memory only. An integrated GPU has none, reports a limit of 0, and
+/// is therefore silent here rather than "0 % of nothing" — the model refuses the
+/// division and this rule inherits the refusal.
+///
+/// The counters behind it exist from Windows 10 1709 and need WDDM 2.0, which is
+/// why the collector reports their absence as a version fact rather than a
+/// failure: on the Windows 7 test machine there is nothing to read, and the rule
+/// says nothing rather than saying zero.
+const GPU_VRAM_WARN_PERCENT: f32 = 95.0;
+const GPU_VRAM_SUSTAINED_MS: u64 = 5 * 60 * 1000;
 
 /// Physical memory pressure, and how long it must last.
 const MEMORY_WARN_PERCENT: f32 = 90.0;
@@ -196,6 +210,10 @@ pub struct Thresholds {
     pub disk_fill_bytes: u64,
     /// …over this long is being written to faster than it is being read from.
     pub disk_fill_window_ms: u64,
+    /// An adapter using this share of its own memory…
+    pub gpu_vram_warn_percent: f32,
+    /// …for this long is spilling.
+    pub gpu_vram_sustained_ms: u64,
 }
 
 impl Default for Thresholds {
@@ -224,6 +242,8 @@ impl Default for Thresholds {
             core_pinned_ms: CORE_PINNED_MS,
             disk_fill_bytes: DISK_FILL_BYTES,
             disk_fill_window_ms: DISK_FILL_WINDOW_MS,
+            gpu_vram_warn_percent: GPU_VRAM_WARN_PERCENT,
+            gpu_vram_sustained_ms: GPU_VRAM_SUSTAINED_MS,
         }
     }
 }
@@ -569,6 +589,114 @@ fn disk_filling_fast(
                 .threshold(format!("{minutes} minutes ago")),
         ],
         actions: vec!["clean.open_native_scan".to_owned()],
+        first_seen: snapshot.taken_at,
+        last_seen: snapshot.taken_at,
+        snapshot_seq: snapshot.seq,
+    })
+}
+
+/// An adapter has been using nearly all of its own memory for five minutes.
+///
+/// The interesting consequence is not that a game uses VRAM — that is the job —
+/// but that the driver has started moving things it would rather keep, and the
+/// place it moves them to is system memory over the PCIe bus. That is what a
+/// stutter is, and it is the one symptom of this condition that Windows itself
+/// never reports.
+///
+/// Two silences are deliberate. An adapter whose limit is 0 is an integrated GPU
+/// with no memory of its own, so the percentage has no meaning and the rule has
+/// nothing to say. An adapter whose counters are missing — Windows 8.1 and older,
+/// or a driver without WDDM 2.0 — is a machine where the question cannot be asked,
+/// which is different from a machine that answered "no".
+pub const GPU_VRAM_PRESSURE: RuleDef = RuleDef {
+    id: "gpu.vram_pressure",
+    severity: Severity::Warning,
+    confidence: Confidence::Likely,
+    requires: &[
+        "gpu.adapter.*.dedicated_used_bytes",
+        "gpu.adapter.*.dedicated_limit_bytes",
+    ],
+};
+
+fn gpu_vram_pressure(
+    snapshot: &Snapshot,
+    store: &SampleStore,
+    limits: &Thresholds,
+) -> Option<Finding> {
+    let warn = limits.gpu_vram_warn_percent;
+    let MetricState::Value(gpu) = &snapshot.gpu else {
+        return None;
+    };
+
+    // The fullest adapter, one at a time: two findings saying "the GPU is full"
+    // is noise, and the one a person acts on is the one closest to the line.
+    let mut worst: Option<(usize, &crate::model::GpuAdapter, f32)> = None;
+    for (index, adapter) in gpu.adapters.iter().enumerate() {
+        let Some(percent) = adapter.percent_used() else {
+            continue;
+        };
+        if percent < warn {
+            continue;
+        }
+        if worst.is_none_or(|(_, _, best)| percent > best) {
+            worst = Some((index, adapter, percent));
+        }
+    }
+    let (index, adapter, percent) = worst?;
+
+    // Held, not measured once. The adapter is identified by its counter instance
+    // rather than by its position in the list, because the list is sorted by
+    // memory and a second adapter appearing would move everything down.
+    let instance = adapter.instance.clone();
+    let window = store.held_for(limits.gpu_vram_sustained_ms, move |sample| {
+        sample.gpu.value().is_some_and(|gpu| {
+            gpu.adapters.iter().any(|adapter| {
+                adapter.instance == instance
+                    && adapter.percent_used().is_some_and(|percent| percent >= warn)
+            })
+        })
+    })?;
+
+    let (used, limit) = match (adapter.dedicated_used, adapter.dedicated_limit) {
+        (MetricState::Value(used), MetricState::Value(limit)) => (used.0, limit.0),
+        // `percent_used` already demanded both; this arm exists so the numbers
+        // below cannot be conjured out of an unknown.
+        _ => return None,
+    };
+    let line = (limit as f64 * f64::from(warn) / 100.0) as u64;
+    Some(Finding {
+        id: format!("{}/{index}", GPU_VRAM_PRESSURE.id),
+        rule: GPU_VRAM_PRESSURE.id.to_owned(),
+        severity: GPU_VRAM_PRESSURE.severity,
+        confidence: GPU_VRAM_PRESSURE.confidence,
+        subject: format!("GPU {}", index + 1),
+        title: "GPU memory is almost used up".to_owned(),
+        explain: format!(
+            "GPU {} is using {} of its {} of dedicated memory - {percent:.0} %, held for {} \
+             minutes. At that point the driver starts moving what it would rather keep into \
+             system memory across the PCIe bus, which is what a stutter is. That is the one \
+             symptom of this that Windows never reports.",
+            index + 1,
+            render_bytes(used),
+            render_bytes(limit),
+            window.held_for_ms / 60_000
+        ),
+        evidence: vec![
+            Evidence::new(
+                format!("gpu.adapter.{index}.dedicated_used_bytes"),
+                render_bytes(used),
+            )
+            .threshold(render_bytes(line))
+            .over(window.from_seq, window.to_seq, window.held_for_ms),
+            Evidence::new(
+                format!("gpu.adapter.{index}.dedicated_limit_bytes"),
+                render_bytes(limit),
+            )
+            // The instance name, because "GPU 1" is an ordinal this program made
+            // up and the counter instance is what Windows actually said.
+            .threshold(adapter.instance.clone()),
+        ],
+        actions: Vec::new(),
         first_seen: snapshot.taken_at,
         last_seen: snapshot.taken_at,
         snapshot_seq: snapshot.seq,
@@ -1118,9 +1246,11 @@ pub fn evaluate_with(
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, DiskIoSample, MemorySample, ProcessSample, VolumeKind, VolumeSample,
-        WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, GpuAdapter, GpuSample, MemorySample, ProcessSample,
+        VolumeKind, VolumeSample, WhyUnknown,
     };
+
+    const MIB: u64 = 1024 * 1024;
 
     /// A machine that is fine: 20 % CPU, half the memory, half of C:.
     fn healthy(seq: u64, monotonic_ms: u64) -> Snapshot {
@@ -1390,6 +1520,78 @@ mod tests {
     }
 
     const GIB: u64 = 1024 * 1024 * 1024;
+
+    /// A machine with one adapter, in the units the fixtures speak.
+    fn with_gpu(snapshot: &mut Snapshot, used_mb: u64, limit_mb: u64) {
+        snapshot.gpu = MetricState::Value(GpuSample {
+            adapters: vec![GpuAdapter {
+                instance: "luid_0x00000000_0x0000FB33_phys_0".to_owned(),
+                dedicated_used: MetricState::Value(Bytes(used_mb * MIB)),
+                dedicated_limit: MetricState::Value(Bytes(limit_mb * MIB)),
+            }],
+        });
+    }
+
+    #[test]
+    fn a_gpu_over_the_line_for_six_minutes_is_a_finding() {
+        // 7865 of 8192 MiB is 96.0 %, held past the five-minute window.
+        let store = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_gpu(&mut snap, 7_865, 8_192);
+            snap
+        });
+        let findings = findings_of(&store);
+        let vram = findings
+            .iter()
+            .find(|finding| finding.rule == GPU_VRAM_PRESSURE.id)
+            .unwrap_or_else(|| panic!("96 % for ten minutes: {findings:?}"));
+        assert_eq!(vram.subject, "GPU 1");
+        assert_eq!(vram.severity, Severity::Warning);
+        assert_eq!(vram.evidence[0].metric, "gpu.adapter.0.dedicated_used_bytes");
+        assert_eq!(vram.evidence[1].metric, "gpu.adapter.0.dedicated_limit_bytes");
+        // The line is the threshold, and it is a number of bytes rather than a
+        // percentage, because the metric it sits next to is a number of bytes.
+        assert_eq!(vram.evidence[0].threshold.as_deref(), Some("7.6 GB"));
+        assert_eq!(vram.evidence[0].held_for_ms, 5 * 60 * 1000);
+        assert!(vram.evidence[1].threshold.is_some(), "the instance name is cited");
+    }
+
+    #[test]
+    fn a_gpu_just_under_the_line_is_quiet() {
+        // 7770 of 8192 is 94.8 %, held well past the window: the threshold is
+        // what keeps this quiet, not the timing.
+        let store = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_gpu(&mut snap, 7_770, 8_192);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn an_integrated_gpu_with_no_memory_of_its_own_is_quiet() {
+        // A limit of 0 is a fact about the hardware, not a failure: there is no
+        // percentage of nothing, and the rule says nothing rather than 100 %.
+        let store = series(600, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            with_gpu(&mut snap, 512, 0);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
+
+    #[test]
+    fn a_gpu_that_drops_below_the_line_inside_the_window_is_quiet() {
+        // Over the line, then under it: the window restarts, and six minutes of
+        // history with four of them above the line is not five held.
+        let store = series(360, |s| {
+            let mut snap = healthy(s + 1, s * 1000);
+            let used = if s < 180 { 7_865 } else { 6_000 };
+            with_gpu(&mut snap, used, 8_192);
+            snap
+        });
+        assert!(findings_of(&store).is_empty());
+    }
 
     #[test]
     fn a_disk_losing_five_gibibytes_in_half_an_hour_is_a_finding() {
