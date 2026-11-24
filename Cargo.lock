@@ -2423,7 +2423,6 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
- "tracing",
 ]
 
 [[package]]
@@ -2550,9 +2549,7 @@ name = "sa6i-link-intel-win"
 version = "0.1.5"
 dependencies = [
  "sa6i-link-intel",
- "serde",
  "serde_json",
- "tracing",
  "windows",
 ]
 
