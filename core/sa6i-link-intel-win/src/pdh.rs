@@ -389,35 +389,36 @@ mod imp {
             MetricState::Unknown(WhyUnknown::CollectorFailed)
         }
     }
+
+    /// A formatted double counter, as `f32`.
+    ///
+    /// The same two checks as [`formatted`] - the call and the counter's own status -
+    /// and one more: a negative or non-finite value is a broken counter. Zero is kept,
+    /// because "no transfers happened" and "nothing faulted" are real readings and the
+    /// rules know what they mean.
+    ///
+    /// It carries no unit in its name on purpose: it reads a duration in seconds and a
+    /// rate in pages per second, and a function called `seconds` returning a rate is
+    /// how a units bug gets written.
+    #[allow(unsafe_code)]
+    fn number(counter: PDH_HCOUNTER) -> MetricState<f32> {
+        let mut value = PDH_FMT_COUNTERVALUE::default();
+        // SAFETY: `value` is a valid writable PDH_FMT_COUNTERVALUE, and the union is
+        // read as the variant the requested format filled in.
+        let status = unsafe { PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, None, &mut value) };
+        if status != 0 || value.CStatus != 0 {
+            return MetricState::Unknown(WhyUnknown::CollectorFailed);
+        }
+        // SAFETY: `doubleValue` is the member PDH_FMT_DOUBLE fills.
+        let number = unsafe { value.Anonymous.doubleValue };
+        if number.is_finite() && number >= 0.0 {
+            MetricState::Value(number as f32)
+        } else {
+            MetricState::Unknown(WhyUnknown::CollectorFailed)
+        }
+    }
 }
 
-/// A formatted double counter, as `f32`.
-///
-/// The same two checks as [`formatted`] - the call and the counter's own status -
-/// and one more: a negative or non-finite value is a broken counter. Zero is kept,
-/// because "no transfers happened" and "nothing faulted" are real readings and the
-/// rules know what they mean.
-///
-/// It carries no unit in its name on purpose: it reads a duration in seconds and a
-/// rate in pages per second, and a function called `seconds` returning a rate is
-/// how a units bug gets written.
-#[allow(unsafe_code)]
-fn number(counter: PDH_HCOUNTER) -> MetricState<f32> {
-    let mut value = PDH_FMT_COUNTERVALUE::default();
-    // SAFETY: `value` is a valid writable PDH_FMT_COUNTERVALUE, and the union is
-    // read as the variant the requested format filled in.
-    let status = unsafe { PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, None, &mut value) };
-    if status != 0 || value.CStatus != 0 {
-        return MetricState::Unknown(WhyUnknown::CollectorFailed);
-    }
-    // SAFETY: `doubleValue` is the member PDH_FMT_DOUBLE fills.
-    let number = unsafe { value.Anonymous.doubleValue };
-    if number.is_finite() && number >= 0.0 {
-        MetricState::Value(number as f32)
-    } else {
-        MetricState::Unknown(WhyUnknown::CollectorFailed)
-    }
-}
 
 #[cfg(not(windows))]
 mod imp {

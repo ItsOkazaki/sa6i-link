@@ -27,10 +27,15 @@
 use std::time::{Duration, Instant};
 
 use sa6i_link_intel::{
-    Bytes, Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessCpu,
-    ProcessKey, ProcessSample, SampleStore, Snapshot, TOP_PROCESSES, Timestamp, VolumeSample,
-    WhyUnknown, top_processes,
+    Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessCpu,
+    ProcessSample, SampleStore, Snapshot, Timestamp, VolumeSample, WhyUnknown,
 };
+
+// Named only by the Windows process collector. A build for another platform is a
+// check, not a target, and on one of those an import nobody reads is a warning -
+// and this workspace treats warnings as failures.
+#[cfg(windows)]
+use sa6i_link_intel::{Bytes, ProcessKey, TOP_PROCESSES, top_processes};
 
 mod pdh;
 pub mod report;
