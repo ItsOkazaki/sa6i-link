@@ -116,7 +116,10 @@ jobs:
           fi
           git config user.name "rust-check"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          # Only what rustfmt owns. `git add -A` committed an unrelated Cargo.lock
+          # rewrite that the xtask step had made on the runner, and the next run
+          # committed it into the branch.
+          git add -u -- '*.rs'
           git commit -m "style: cargo fmt --all
 
           Nothing has ever formatted this source, and rustfmt is the only thing here
