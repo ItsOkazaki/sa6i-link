@@ -571,6 +571,14 @@ pub enum Refusal {
     DisagreesWithCode { id: String, field: &'static str },
     /// A `requires` path that no snapshot publishes.
     UnpublishedPath { id: String, path: String },
+    /// A duration that is not one: no unit, a unit no rule uses, or a sign in
+    /// front of it. `value` is the text exactly as it was written, because the
+    /// user has to find it in their own file.
+    BadDuration {
+        id: String,
+        key: &'static str,
+        value: String,
+    },
     /// A number outside the range its rule can mean. `expected` is the range,
     /// rendered with its unit.
     OutOfRange {
@@ -612,6 +620,10 @@ impl fmt::Display for Refusal {
             Self::UnpublishedPath { id, path } => write!(
                 f,
                 "`{id}` requires `{path}`, which no snapshot publishes, so evidence could not cite it"
+            ),
+            Self::BadDuration { id, key, value } => write!(
+                f,
+                "`{id}` {key} = {value} is not a duration; write it as `90s`, `10m` or `2h`"
             ),
             Self::OutOfRange {
                 id,

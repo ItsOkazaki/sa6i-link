@@ -790,6 +790,9 @@ mod tests {
                 write_bytes_per_second: MetricState::Unknown(WhyUnknown::CollectorFailed),
                 avg_seconds_per_transfer: MetricState::Value(0.004),
             },
+            // Nothing here is about graphics, and this test is about disk lines:
+            // saying so is what keeps it from implying an empty adapter list.
+            gpu: MetricState::Unknown(WhyUnknown::NotCollectedYet),
             processes: Vec::new(),
             uptime: MetricState::Value(60),
         };
