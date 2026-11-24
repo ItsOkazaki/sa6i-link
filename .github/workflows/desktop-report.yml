@@ -63,7 +63,7 @@ jobs:
           # Qt 6.12's repository layout needs a current aqtinstall.
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
 
-      - name: Clippy the app, and build it in release
+      - name: Clippy the app, test it, and build it in release
         run: |
           set +e
           {
@@ -74,6 +74,10 @@ jobs:
             cargo clippy --locked -p sa6i-link -p sa6i-vcam -p s1-qt-rust \
               --all-targets -- -D warnings 2>&1
             echo "EXIT:clippy:$?"
+            echo
+            echo "## cargo test --locked -p sa6i-link -p sa6i-vcam"
+            cargo test --locked --no-fail-fast -p sa6i-link -p sa6i-vcam 2>&1
+            echo "EXIT:test:$?"
             echo
             echo "## cargo build --locked --release -p sa6i-link -p sa6i-vcam"
             cargo build --locked --release -p sa6i-link -p sa6i-vcam 2>&1
@@ -97,6 +101,12 @@ jobs:
             echo '```text'
             grep -E -A 6 '^(error(\[E[0-9]+\])?:|warning: unused)' "$RUNNER_TEMP/report.txt" \
               | head -300 || true
+            echo '```'
+            echo
+            echo "#### What the tests said"
+            echo '```text'
+            grep -E -B 3 -A 14 '^(---- |failures:)' "$RUNNER_TEMP/report.txt" | head -320 || true
+            grep -E '^test result:' "$RUNNER_TEMP/report.txt" | head -40 || true
             echo '```'
             echo
             echo "#### The last forty lines"
