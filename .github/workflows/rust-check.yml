@@ -47,14 +47,10 @@ jobs:
         # behind `#[cfg(windows)]`, which a Linux build never looks at. Neither
         # builds the app, which needs Qt.
         os: [ubuntu-latest, windows-latest]
-    # Job level, not workflow level: the `runner` context does not exist up there, and
-    # a workflow that names it at the top fails to parse - which GitHub reports as a
-    # run with zero jobs and no message this sandbox can read.
-    env:
-      # Outside the checkout on purpose: the formatting step commits with
-      # `git add -A`, and the first run committed this report into the repository.
-      REPORT: ${{ runner.temp }}/report.txt
-      BODY: ${{ runner.temp }}/body.md
+    # Artifacts go to \$RUNNER_TEMP, which the shell expands, and not through an
+    # `env:` entry: the `runner` context is not available to `jobs.<id>.env`, and a
+    # workflow that names it there does not parse - which GitHub reports as a run with
+    # zero jobs and nothing readable in it. Learned the slow way, twice.
     defaults:
       run:
         shell: bash
@@ -88,7 +84,7 @@ jobs:
               -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-cli \
               -p sa6i-link-adb -p sa6i-link-intel -p sa6i-link-intel-win 2>&1
             echo "EXIT:test:$?"
-          } > "$REPORT"
+          } > "$RUNNER_TEMP/report.txt"
           # The step itself always succeeds: publishing is the next step's job, and the
           # exit codes are recorded above where nothing can swallow them.
           exit 0
@@ -124,7 +120,7 @@ jobs:
               -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel \
               -p sa6i-link-intel-win -p xtask -- -D warnings 2>&1
             echo "EXIT:clippy:$?"
-          } >> "$REPORT"
+          } >> "$RUNNER_TEMP/report.txt"
           exit 0
 
       - name: Publish the errors into one rolling issue
@@ -137,25 +133,25 @@ jobs:
             echo
             echo "Commit [\`${GITHUB_SHA:0:7}\`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) ·"
             echo "[\`cargo check\`](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) ·"
-            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' "$REPORT" | tr '\n' ' ')\`"
+            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | tr '\n' ' ')\`"
             echo
             echo "#### What the compiler refused"
             echo '```text'
-            grep -E -A 5 '^(error(\[E[0-9]+\])?|warning: unused)' "$REPORT" | head -260 || true
+            grep -E -A 5 '^(error(\[E[0-9]+\])?|warning: unused)' "$RUNNER_TEMP/report.txt" | head -260 || true
             echo '```'
             echo
             echo "#### What the tests said"
             echo '```text'
-            grep -E -B 3 -A 14 '^(---- |failures:)' "$REPORT" | head -320 || true
-            grep -E '^test result:' "$REPORT" | head -40 || true
+            grep -E -B 3 -A 14 '^(---- |failures:)' "$RUNNER_TEMP/report.txt" | head -320 || true
+            grep -E '^test result:' "$RUNNER_TEMP/report.txt" | head -40 || true
             echo '```'
             echo
             echo "#### The last thirty lines"
             echo '```text'
-            tail -30 "$REPORT"
+            tail -30 "$RUNNER_TEMP/report.txt"
             echo '```'
-          } > "$BODY"
-          head -c 55000 "$BODY" > "$BODY.cut"
+          } > "$RUNNER_TEMP/body.md"
+          head -c 55000 "$RUNNER_TEMP/body.md" > "$RUNNER_TEMP/body.md.cut"
           # Filter in jq rather than in the query: parentheses and two in:title
           # qualifiers are not something to bet an update on.
           n=$(gh issue list --search 'in:title "Rust check"' --limit 50 \
@@ -163,17 +159,17 @@ jobs:
                 --jq '.[] | select(.title | contains("(${{ matrix.os }})")) | .number' \
                 | head -1 || true)
           if [ -n "$n" ]; then
-            gh issue edit "$n" --body-file "$BODY.cut"
+            gh issue edit "$n" --body-file "$RUNNER_TEMP/body.md.cut"
             echo "updated issue #$n"
           else
-            gh issue create --title "Rust check (${{ matrix.os }})" --body-file "$BODY.cut"
+            gh issue create --title "Rust check (${{ matrix.os }})" --body-file "$RUNNER_TEMP/body.md.cut"
           fi
 
       - name: Fail when the compiler did not agree
         run: |
-          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' "$REPORT" | cut -d: -f3 | sort -u | tr '\n' ' ')
+          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | cut -d: -f3 | sort -u | tr '\n' ' ')
           echo "exit codes: $codes"
-          if grep -q 'EXIT:[a-z]*:[1-9]' "$REPORT"; then
+          if grep -q 'EXIT:[a-z]*:[1-9]' "$RUNNER_TEMP/report.txt"; then
             echo "something did not compile or did not pass; issue carries the text"
             exit 1
           fi
