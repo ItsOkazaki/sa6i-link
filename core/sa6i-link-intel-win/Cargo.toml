@@ -10,9 +10,7 @@ repository.workspace = true
 
 [dependencies]
 sa6i-link-intel.workspace = true
-serde.workspace = true
 serde_json.workspace = true
-tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [

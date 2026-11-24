@@ -440,7 +440,9 @@ mod tests {
     #[test]
     fn the_interval_is_a_minute_of_wall_clock() {
         assert_eq!(RECORD_INTERVAL_MS, 60_000);
-        assert!(RAW_RETENTION_MS > RECORD_INTERVAL_MS);
-        assert!(FINDING_RETENTION_MS > RAW_RETENTION_MS);
+        // Every term here is a constant, so this is not a test - it is a build
+        // failure waiting to happen, and the compiler can hold it now instead.
+        const _: () = assert!(RAW_RETENTION_MS > RECORD_INTERVAL_MS);
+        const _: () = assert!(FINDING_RETENTION_MS > RAW_RETENTION_MS);
     }
 }

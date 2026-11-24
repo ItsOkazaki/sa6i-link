@@ -12,7 +12,6 @@ repository.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["net"] }
 tokio-util.workspace = true
-tracing.workspace = true
 
 [lints]
 workspace = true

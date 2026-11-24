@@ -292,7 +292,9 @@ mod platform {
         let mut needed = 0u32;
         // SAFETY: with a null pointer and a zero length the call writes nothing;
         // it only reports the size it would need.
-        unsafe {
+        // The status is not the answer: this call is only asked how much room the
+        // list needs, and a zero length says the same thing as a failure here.
+        let _ = unsafe {
             NtQuerySystemInformation(
                 SystemProcessorPerformanceInformation,
                 std::ptr::null_mut(),

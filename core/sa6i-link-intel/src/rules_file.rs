@@ -180,15 +180,15 @@ impl RuleFile {
                 }
             }
 
-            if let Some(word) = &entry.severity {
-                if !def.severity.label().eq_ignore_ascii_case(word) {
-                    refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "severity" });
-                }
+            if let Some(word) = &entry.severity
+                && !def.severity.label().eq_ignore_ascii_case(word)
+            {
+                refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "severity" });
             }
-            if let Some(word) = &entry.confidence {
-                if !def.confidence.label().eq_ignore_ascii_case(word) {
-                    refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "confidence" });
-                }
+            if let Some(word) = &entry.confidence
+                && !def.confidence.label().eq_ignore_ascii_case(word)
+            {
+                refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "confidence" });
             }
             if let Some(paths) = &entry.requires {
                 for path in paths {
@@ -212,14 +212,14 @@ impl RuleFile {
                 [("firing", entry.firing.as_deref()), ("near_miss", entry.near_miss.as_deref())]
             {
                 let Some(name) = name else { continue };
-                if let Some(known) = scenarios {
-                    if !known.contains(&name) {
-                        refusals.push(Refusal::ScenarioNotKnown {
-                            id: entry.id.clone(),
-                            field,
-                            name: name.to_owned(),
-                        });
-                    }
+                if let Some(known) = scenarios
+                    && !known.contains(&name)
+                {
+                    refusals.push(Refusal::ScenarioNotKnown {
+                        id: entry.id.clone(),
+                        field,
+                        name: name.to_owned(),
+                    });
                 }
                 // Resolved to an owned value first: the borrow has to end before
                 // the `None` arm can push, which is the one thing a match on
@@ -292,11 +292,11 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
             let critical = ranged_f32(entry.critical_percent, id, "critical_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
-            if let (Some(warn), Some(critical)) = (warn, critical) {
-                if warn >= critical {
-                    refusals
-                        .push(Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" });
-                }
+            if let (Some(warn), Some(critical)) = (warn, critical)
+                && warn >= critical
+            {
+                refusals
+                    .push(Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" });
             }
             if let Some(warn) = warn {
                 limits.disk_warn_percent = warn;
