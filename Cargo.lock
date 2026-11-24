@@ -2417,6 +2417,169 @@ dependencies = [
 ]
 
 [[package]]
+name = "sa6i-link-adb"
+version = "0.1.5"
+dependencies = [
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "sa6i-link-cli"
+version = "0.1.5"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dirs",
+ "hostname",
+ "libc",
+ "sa6i-link-core",
+ "sa6i-link-intel",
+ "sa6i-link-intel-win",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "windows",
+]
+
+[[package]]
+name = "sa6i-link-core"
+version = "0.1.5"
+dependencies = [
+ "blake3",
+ "bytes",
+ "data-encoding",
+ "iroh",
+ "iroh-mdns-address-lookup",
+ "libc",
+ "material-colors",
+ "n0-future",
+ "sa6i-link-adb",
+ "sa6i-link-protocol",
+ "noq-proto",
+ "rand",
+ "ring",
+ "rusqlite",
+ "rustls",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "sha2",
+ "socket2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "windows",
+]
+
+[[package]]
+name = "sa6i-link"
+version = "0.1.5"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "cc",
+ "cxx",
+ "cxx-qt",
+ "cxx-qt-build",
+ "cxx-qt-lib",
+ "data-encoding",
+ "dirs",
+ "embed-resource",
+ "hostname",
+ "libc",
+ "material-colors",
+ "sa6i-link-core",
+ "sa6i-link-intel",
+ "sa6i-link-intel-win",
+ "sa6i-vcam",
+ "pkg-config",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wayland-client",
+ "wayland-protocols",
+ "windows",
+ "windows-core",
+ "zbus",
+]
+
+[[package]]
+name = "sa6i-link-ffi"
+version = "0.1.5"
+dependencies = [
+ "jni-sys 0.4.1",
+ "sa6i-link-core",
+ "paranoid-android",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uniffi",
+]
+
+[[package]]
+name = "sa6i-link-intel"
+version = "0.1.5"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "toml",
+ "tracing",
+]
+
+[[package]]
+name = "sa6i-link-intel-win"
+version = "0.1.5"
+dependencies = [
+ "sa6i-link-intel",
+ "serde_json",
+ "windows",
+]
+
+[[package]]
+name = "sa6i-link-protocol"
+version = "0.1.5"
+dependencies = [
+ "ciborium",
+ "data-encoding",
+ "hmac",
+ "serde",
+ "serde_bytes",
+ "sha2",
+ "thiserror 2.0.21",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "sa6i-vcam"
+version = "0.1.5"
+dependencies = [
+ "ab_glyph",
+ "embed-resource",
+ "libc",
+ "windows",
+ "windows-core",
+]
+
+[[package]]
 name = "netdev"
 version = "0.45.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3418,169 +3581,6 @@ dependencies = [
  "cxx-qt-build",
  "cxx-qt-lib",
  "windows",
-]
-
-[[package]]
-name = "sa6i-link"
-version = "0.1.5"
-dependencies = [
- "anyhow",
- "blake3",
- "cc",
- "cxx",
- "cxx-qt",
- "cxx-qt-build",
- "cxx-qt-lib",
- "data-encoding",
- "dirs",
- "embed-resource",
- "hostname",
- "libc",
- "material-colors",
- "pkg-config",
- "qrcode",
- "sa6i-link-core",
- "sa6i-link-intel",
- "sa6i-link-intel-win",
- "sa6i-vcam",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wayland-client",
- "wayland-protocols",
- "windows",
- "windows-core",
- "zbus",
-]
-
-[[package]]
-name = "sa6i-link-adb"
-version = "0.1.5"
-dependencies = [
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
-name = "sa6i-link-cli"
-version = "0.1.5"
-dependencies = [
- "anyhow",
- "clap",
- "dirs",
- "hostname",
- "libc",
- "qrcode",
- "sa6i-link-core",
- "sa6i-link-intel",
- "sa6i-link-intel-win",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "windows",
-]
-
-[[package]]
-name = "sa6i-link-core"
-version = "0.1.5"
-dependencies = [
- "blake3",
- "bytes",
- "data-encoding",
- "iroh",
- "iroh-mdns-address-lookup",
- "libc",
- "material-colors",
- "n0-future",
- "noq-proto",
- "rand",
- "ring",
- "rusqlite",
- "rustls",
- "rustls-pki-types",
- "sa6i-link-adb",
- "sa6i-link-protocol",
- "serde",
- "serde_json",
- "sha2",
- "socket2",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
- "windows",
-]
-
-[[package]]
-name = "sa6i-link-ffi"
-version = "0.1.5"
-dependencies = [
- "jni-sys 0.4.1",
- "paranoid-android",
- "sa6i-link-core",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uniffi",
-]
-
-[[package]]
-name = "sa6i-link-intel"
-version = "0.1.5"
-dependencies = [
- "rusqlite",
- "serde",
- "serde_json",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "sa6i-link-intel-win"
-version = "0.1.5"
-dependencies = [
- "sa6i-link-intel",
- "serde_json",
- "windows",
-]
-
-[[package]]
-name = "sa6i-link-protocol"
-version = "0.1.5"
-dependencies = [
- "ciborium",
- "data-encoding",
- "hmac",
- "serde",
- "serde_bytes",
- "sha2",
- "thiserror 2.0.21",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "sa6i-vcam"
-version = "0.1.5"
-dependencies = [
- "ab_glyph",
- "embed-resource",
- "libc",
- "windows",
- "windows-core",
 ]
 
 [[package]]
