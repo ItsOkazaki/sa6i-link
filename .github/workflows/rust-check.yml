@@ -89,6 +89,35 @@ jobs:
           # exit codes are recorded above where nothing can swallow them.
           exit 0
 
+      - name: Regenerate what the tools own, format, and commit that
+        # On a push only: a pull request from a fork cannot be pushed to, and the
+        # commit is the point. Idempotent - a clean tree commits nothing.
+        if: github.event_name == 'push'
+        run: |
+          # `tokens --check` and `strings --check` failed on main because the files
+          # they generate were behind, and their own message says what to do about it:
+          # "run `cargo xtask tokens`". This runs the tools that own those files, and
+          # commits their output rather than a hand-written copy of it.
+          cargo xtask tokens || echo "tokens: xtask refused; the report says why"
+          cargo xtask strings || echo "strings: xtask refused; the report says why"
+          cargo fmt --all
+          if git diff --quiet; then
+            echo "nothing to regenerate or format"
+            exit 0
+          fi
+          git config user.name "rust-check"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Only what these three tools own. `git add -A` once committed an unrelated
+          # Cargo.lock rewrite that a previous step had made on the runner.
+          git add -u -- '*.rs' '*.kt' '*.qml' '*.h'
+          git commit -m "style: cargo fmt, and the files xtask generates
+
+          rustfmt and xtask are the only things here that decide what these files say;
+          this commit is their output and nothing else."
+          # A push that lands first is not this step's failure: the next run does the
+          # work. Failing here would report a race as a broken build.
+          git push || echo "another commit landed first; the next run will regenerate"
+
       - name: The generated files xtask owns
         run: |
           set +e
@@ -103,31 +132,6 @@ jobs:
             echo "EXIT:strings:$?"
           } >> "$RUNNER_TEMP/report.txt"
           exit 0
-
-      - name: Format the source, and commit it when that changed something
-        # On a push only: a pull request from a fork cannot be pushed to, and the
-        # commit is the point. Idempotent - a formatted tree commits nothing.
-        if: github.event_name == 'push'
-        run: |
-          cargo fmt --all
-          if git diff --quiet; then
-            echo "already formatted"
-            exit 0
-          fi
-          git config user.name "rust-check"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Only what rustfmt owns. `git add -A` committed an unrelated Cargo.lock
-          # rewrite that the xtask step had made on the runner, and the next run
-          # committed it into the branch.
-          git add -u -- '*.rs'
-          git commit -m "style: cargo fmt --all
-
-          Nothing has ever formatted this source, and rustfmt is the only thing here
-          that gets to decide what formatted means. This commit is rustfmt's output and
-          nothing else."
-          # A push that lands first is not this step's failure: the next run formats
-          # what is left. Failing here would report a race as a broken build.
-          git push || echo "another commit landed first; the next run will format it"
 
       - name: Lint the way ci.yml lints
         run: |

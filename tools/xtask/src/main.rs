@@ -23,7 +23,7 @@ use serde_json::{Map, Value};
 
 const TOKENS: &str = "docs/design/tokens.json";
 const QML_OUT: &str = "desktop/app/qml/Tokens.qml";
-const KOTLIN_OUT: &str = "android/app/src/main/kotlin/app/sa6i-link/android/ui/theme/Tokens.kt";
+const KOTLIN_OUT: &str = "android/app/src/main/kotlin/app/nectarlink/android/ui/theme/Tokens.kt";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
