@@ -105,11 +105,11 @@ fn dependency_graph(lock: &str) -> BTreeMap<String, BTreeSet<String>> {
         if dependencies.is_some() {
             if line == "]" {
                 close_block(&mut name, &mut dependencies, &mut graph);
-            } else if let Some(entry) = quoted(line) {
-                if let Some(deps) = dependencies.as_mut() {
-                    // `"serde 1.0.0"` and `"serde"` both mean the crate `serde`.
-                    deps.insert(entry.split(' ').next().unwrap_or_default().to_owned());
-                }
+            } else if let Some(entry) = quoted(line)
+                && let Some(deps) = dependencies.as_mut()
+            {
+                // `"serde 1.0.0"` and `"serde"` both mean the crate `serde`.
+                deps.insert(entry.split(' ').next().unwrap_or_default().to_owned());
             }
             continue;
         }
