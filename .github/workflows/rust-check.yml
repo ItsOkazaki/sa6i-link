@@ -36,8 +36,18 @@ env:
 
 jobs:
   check:
-    name: Compile and test what needs no Qt
-    runs-on: ubuntu-latest
+    name: Compile and test what needs no Qt (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux type-checks the platform-free code; Windows type-checks the half
+        # behind `#[cfg(windows)]`, which a Linux build never looks at. Neither
+        # builds the app, which needs Qt.
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -102,12 +112,17 @@ jobs:
             echo '```'
           } > body.md
           head -c 55000 body.md > body-cut.md
-          n=$(gh issue list --search 'in:title "Rust check"' --json number --jq '.[0].number' || true)
+          # Filter in jq rather than in the query: parentheses and two in:title
+          # qualifiers are not something to bet an update on.
+          n=$(gh issue list --search 'in:title "Rust check"' --limit 50 \
+                --json number,title \
+                --jq '.[] | select(.title | contains("(${{ matrix.os }})")) | .number' \
+                | head -1 || true)
           if [ -n "$n" ]; then
             gh issue edit "$n" --body-file body-cut.md
             echo "updated issue #$n"
           else
-            gh issue create --title "Rust check" --body-file body-cut.md
+            gh issue create --title "Rust check (${{ matrix.os }})" --body-file body-cut.md
           fi
 
       - name: Fail when the compiler did not agree
