@@ -34,9 +34,17 @@ dismissing.
 It does not work, for five reasons, and the first is fatal.
 
 **1. Bit width.** Boxedwine runs *"a 32-bit version of Wine"* and *"16/32-bit Windows
-programs"* — its words. The shipped build is 64-bit: read from the PE header of
-`sa6i/baseline/windows-arabic-v8/Sa6i-Link-Win7-UI-v8.exe`, signature `PE\0\0`,
-machine `0x8664`, 41,177,088 bytes. It would not start at all.
+programs"* — its words. Every Windows binary this repository ships is 64-bit, read
+from the PE header of each rather than inferred from a filename:
+
+| machine | size | file |
+| --- | --- | --- |
+| `0x8664` | 41.18 MB | `sa6i/baseline/windows-arabic-v8/Sa6i-Link-Win7-UI-v8.exe` |
+| `0x8664` | 0.08 MB | `sa6i/baseline/windows-arabic-v8/Start Sa6i Link v8.exe` |
+| `0x8664` | 0.08 MB | `sa6i/baseline/windows-arabic-v8/sa6i-icon-hook-v4.dll` |
+
+Three PE files in the whole tree, and not one of them would start. (`file` says the
+same thing: `PE32+ executable ... x86-64`.)
 
 **2. What the binary needs besides Windows.** Qt 6 through cxx-qt 0.10, the Qt DLLs
 beside it, a `cldapi.dll`, and — on Windows 7 — VxKex enabled for the executable,
