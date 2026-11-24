@@ -9,6 +9,11 @@ Everything in it is drawn from this repository, and the last two sections exist 
 keep you out of the one trap that costs more than a weak demo: claiming something
 the code cannot back up.
 
+> **The slides are a separate file.** `deck.html` — one self-contained page, no network,
+> no PowerPoint; open it in a browser and press `→`. Seventeen slides with speaker notes
+> (`n`), a backup pair at the end (`b`), and `p` to print to PDF. It is generated from
+> `deck.src.html` by `python3 scripts/build-deck.py`, and `--check` proves it is current.
+
 > **Read this first.** The project has a genuinely unusual selling point for a
 > competition, and it is not the feature list. It is that the repository records,
 > in writing, the difference between what is measured and what is believed. Present
