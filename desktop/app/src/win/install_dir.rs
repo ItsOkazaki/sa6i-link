@@ -63,7 +63,10 @@ pub fn default_dir() -> PathBuf {
 /// The install folder for a folder the user picked: a `Sa6iLink` folder in
 /// it, unless they picked one with that name.
 pub fn target_dir(chosen: &Path) -> PathBuf {
-    let named = chosen.file_name().is_some_and(|name| name.eq_ignore_ascii_case(FOLDER_NAME));
+    let named = chosen
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(crate::naming::is_own_name);
     if named { chosen.to_path_buf() } else { chosen.join(FOLDER_NAME) }
 }
 

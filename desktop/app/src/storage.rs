@@ -419,7 +419,10 @@ mod imp {
         let root_parts: Vec<&str> = root_norm.split('\\').filter(|s| !s.is_empty()).collect();
         let full_parts: Vec<&str> = full_norm.split('\\').filter(|s| !s.is_empty()).collect();
         if full_parts.len() < root_parts.len()
-            || !root_parts.iter().zip(&full_parts).all(|(a, b)| a.to_lowercase() == b.to_lowercase())
+            || !root_parts
+                .iter()
+                .zip(&full_parts)
+                .all(|(a, b)| crate::naming::same_component(a, b))
         {
             return None;
         }

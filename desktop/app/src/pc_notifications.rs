@@ -51,8 +51,11 @@ pub fn build_pc_notification(
 #[cfg(any(target_os = "linux", test))]
 pub fn is_blocked_self_source(app_name: &str) -> bool {
     let lower = app_name.trim().to_lowercase();
+    // `contains`, not `==`: the desktop entry is "sa6i-link", the window title is
+    // "Sa6i Link", and a notification from either is this application talking to
+    // itself, which must not be forwarded to a phone.
     lower.is_empty()
-        || lower.contains("sa6i-link")
+        || crate::naming::squashed(&lower).contains("sa6ilink")
         || lower == "notify-send"
         || lower == "org.freedesktop.notifications"
 }

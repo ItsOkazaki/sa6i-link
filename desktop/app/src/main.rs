@@ -22,6 +22,7 @@ mod feed;
 mod folder_sync;
 mod hotspot;
 mod i18n;
+mod naming;
 mod icons;
 mod input_share;
 mod launch;

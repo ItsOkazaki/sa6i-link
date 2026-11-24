@@ -68,8 +68,21 @@ pub fn is_installed(exe: &Path) -> bool {
 }
 
 fn is_installed_in(exe: &Path, installed_to: Option<&str>) -> bool {
-    let exe = exe.to_string_lossy().to_lowercase();
-    let under = |dir: &str| exe.starts_with(&format!("{}\\", dir.to_lowercase().trim_end_matches('\\')));
+    // Component by component: case-insensitive like Windows, with the application's
+    // own folder accepted in any spelling, so that `D:\\Apps\\Sa6iLink` and
+    // `d:\\apps\\sa6i-link` are one folder and every other name has to match.
+    let exe: Vec<String> = exe
+        .to_string_lossy()
+        .split('\\')
+        .filter(|part| !part.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let under = |dir: &str| {
+        let parts: Vec<&str> = dir.split('\\').filter(|part| !part.is_empty()).collect();
+        !parts.is_empty()
+            && exe.len() > parts.len()
+            && parts.iter().zip(&exe).all(|(want, got)| crate::naming::same_component(want, got))
+    };
     ["ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"]
         .iter()
         .filter_map(|var| std::env::var(var).ok())
