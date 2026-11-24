@@ -55,12 +55,9 @@ fn describe_gpu(gpu: &MetricState<GpuSample>) -> String {
     };
     match (adapter.dedicated_used.value(), adapter.dedicated_limit.value()) {
         (Some(used), Some(limit)) => match adapter.percent_used() {
-            Some(percent) => format!(
-                "{} of {} ({})",
-                render_bytes(used.0),
-                render_bytes(limit.0),
-                render_percent(percent)
-            ),
+            Some(percent) => {
+                format!("{} of {} ({})", render_bytes(used.0), render_bytes(limit.0), render_percent(percent))
+            }
             // An integrated GPU: memory in use, nothing of its own to be a
             // percentage of.
             None => format!("{} used, no dedicated memory", render_bytes(used.0)),
@@ -121,11 +118,9 @@ pub fn report_lines(snapshot: &Snapshot, average: Option<&WindowSummary>) -> Vec
         lines.push(format!("  processes  {}", describe_processes(&snapshot.processes)));
     }
     match (snapshot.memory.percent_used(), snapshot.memory.total) {
-        (MetricState::Value(percent), MetricState::Value(total)) => lines.push(format!(
-            "  memory     {} used of {}",
-            render_percent(percent),
-            render_bytes(total.0)
-        )),
+        (MetricState::Value(percent), MetricState::Value(total)) => {
+            lines.push(format!("  memory     {} used of {}", render_percent(percent), render_bytes(total.0)))
+        }
         (state, _) => lines.push(format!("  memory     {}", describe(&state))),
     }
     for volume in &snapshot.volumes {
@@ -196,10 +191,8 @@ pub fn process_cpu_time() -> Option<Duration> {
     let mut user = FILETIME::default();
     // SAFETY: the handle is a pseudo-handle that is not closed, and all four
     // out-pointers point at locals that outlive the call.
-    unsafe { GetProcessTimes(GetCurrentProcess(), &mut creation, &mut exit, &mut kernel, &mut user) }
-        .ok()?;
-    let ticks =
-        |time: FILETIME| (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime);
+    unsafe { GetProcessTimes(GetCurrentProcess(), &mut creation, &mut exit, &mut kernel, &mut user) }.ok()?;
+    let ticks = |time: FILETIME| (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime);
     Some(Duration::from_nanos(ticks(kernel).saturating_add(ticks(user)).saturating_mul(100)))
 }
 
@@ -212,9 +205,7 @@ pub fn process_cpu_time() -> Option<Duration> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sa6i_link_intel::{
-        CpuSample, MemorySample, Timestamp, VolumeKind, VolumeSample, WhyUnknown,
-    };
+    use sa6i_link_intel::{CpuSample, MemorySample, Timestamp, VolumeKind, VolumeSample, WhyUnknown};
 
     fn bytes(value: u64) -> MetricState<Bytes> {
         MetricState::Value(Bytes(value))

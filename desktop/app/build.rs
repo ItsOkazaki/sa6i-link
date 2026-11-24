@@ -401,8 +401,8 @@ fn main() {
         && std::env::var("SA6I_CLEAN_EXPERIMENT").as_deref() == Ok("1");
     // An independent, explicitly selected build can exercise the full cleaner.
     // This is still an experiment: it can permanently delete selected files.
-    let full_clean_fixture = clean_experiment
-        && std::env::var("SA6I_CLEAN_FULL_FIXTURE").as_deref() == Ok("1");
+    let full_clean_fixture =
+        clean_experiment && std::env::var("SA6I_CLEAN_FULL_FIXTURE").as_deref() == Ok("1");
     // Use the same build-time decision in Rust and C++: this must never depend
     // on an environment variable supplied to an already-built executable.
     println!("cargo::rustc-check-cfg=cfg(sa6i_clean_experiment)");
@@ -410,9 +410,14 @@ fn main() {
         println!("cargo::rustc-cfg=sa6i_clean_experiment");
     }
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR"));
-    write_if_changed(&out_dir.join("sa6i_clean_config.h"),
-        format!("#define SA6I_CLEAN_EXPERIMENT {}\n#define SA6I_CLEAN_FULL_FIXTURE {}\n",
-            u8::from(clean_experiment), u8::from(full_clean_fixture)));
+    write_if_changed(
+        &out_dir.join("sa6i_clean_config.h"),
+        format!(
+            "#define SA6I_CLEAN_EXPERIMENT {}\n#define SA6I_CLEAN_FULL_FIXTURE {}\n",
+            u8::from(clean_experiment),
+            u8::from(full_clean_fixture)
+        ),
+    );
     let mut builder = CxxQtBuilder::new_qml_module(module).qt_module("Quick").include_dir(&out_dir);
     if clean_experiment {
         builder = builder.include_dir("../../sa6i/clean").cpp_files([

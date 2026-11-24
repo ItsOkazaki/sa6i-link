@@ -41,11 +41,7 @@ impl Average {
                 measured += 1;
             }
         }
-        Self {
-            mean: (measured > 0).then(|| (total / measured as f64) as f32),
-            measured,
-            of: count,
-        }
+        Self { mean: (measured > 0).then(|| (total / measured as f64) as f32), measured, of: count }
     }
 
     /// How many samples could not be read.
@@ -85,9 +81,7 @@ impl WindowSummary {
             samples: samples.len(),
             span_ms,
             cpu: Average::of(samples.iter().map(|sample| sample.cpu.percent.value().copied())),
-            memory: Average::of(
-                samples.iter().map(|sample| sample.memory.percent_used().value().copied()),
-            ),
+            memory: Average::of(samples.iter().map(|sample| sample.memory.percent_used().value().copied())),
         }
     }
 
@@ -105,9 +99,7 @@ impl WindowSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{
-        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, Timestamp, WhyUnknown,
-    };
+    use crate::model::{Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, Timestamp, WhyUnknown};
 
     fn bytes(value: u64) -> MetricState<Bytes> {
         MetricState::Value(Bytes(value))
@@ -156,9 +148,8 @@ mod tests {
 
     #[test]
     fn the_span_runs_from_the_first_sample_to_the_last() {
-        let samples: Vec<Snapshot> = (1..=4)
-            .map(|seq| sample(seq, MetricState::Value(50.0), bytes(8 * 1024 * 1024 * 1024)))
-            .collect();
+        let samples: Vec<Snapshot> =
+            (1..=4).map(|seq| sample(seq, MetricState::Value(50.0), bytes(8 * 1024 * 1024 * 1024))).collect();
         let summary = WindowSummary::of(&samples);
         assert_eq!(summary.samples, 4);
         assert_eq!(summary.span_ms, 3_000);
@@ -176,11 +167,7 @@ mod tests {
             // The first second cannot know a rate.
             sample(2, MetricState::Unknown(WhyUnknown::NotSampledYet), bytes(4 * 1024 * 1024 * 1024)),
             // Memory unreadable that second.
-            sample(
-                3,
-                MetricState::Value(30.0),
-                MetricState::Unknown(WhyUnknown::CollectorFailed),
-            ),
+            sample(3, MetricState::Value(30.0), MetricState::Unknown(WhyUnknown::CollectorFailed)),
         ];
         let summary = WindowSummary::of(&samples);
         assert_eq!(summary.cpu.mean, Some(20.0));

@@ -27,8 +27,7 @@ mod view;
 pub use budget::{CPU_SHARE, Cost, RATE_TOLERANCE, SAMPLE_SHARE, Verdict};
 pub use cpu::{ProcessCpu, ProcessKey};
 pub use findings::{
-    Confidence, Evidence, Finding, Severity, all_clear_sentence, human_duration, render_bytes,
-    render_percent,
+    Confidence, Evidence, Finding, Severity, all_clear_sentence, human_duration, render_bytes, render_percent,
 };
 pub use history::{History, HistoryError, RECORD_INTERVAL_MS};
 pub use model::{

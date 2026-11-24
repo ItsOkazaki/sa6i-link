@@ -105,8 +105,7 @@ fn main() {
         }
     }
 
-    let summary =
-        average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
+    let summary = average.then(|| WindowSummary::of(&store.samples().cloned().collect::<Vec<_>>()));
 
     // The verdict is computed before the output choice, so `--budget` means the
     // same thing in both formats and `--json --budget` is not a silent no-op.
@@ -134,12 +133,7 @@ fn main() {
     }
 
     println!("Sa6i — this machine, measured");
-    println!(
-        "  sample {} of {} (history covers {} s)",
-        snapshot.seq,
-        samples,
-        store.span_ms() / 1000
-    );
+    println!("  sample {} of {} (history covers {} s)", snapshot.seq, samples, store.span_ms() / 1000);
     println!();
     for line in report::report_lines(snapshot, summary.as_ref()) {
         println!("{line}");

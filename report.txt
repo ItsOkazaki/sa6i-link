@@ -1,0 +1,650 @@
+## toolchain
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+cargo 1.100.0 (3acc79c0c 2026-11-05)
+
+## cargo check --locked --all-targets
+warning: missing `[lints]` to inherit `[workspace.lints]`
+  --> spikes/s1-qt-rust/Cargo.toml
+   = note: `cargo::missing_lints_inheritance` is set to `warn` by default
+help: to inherit `workspace.lints, add:
+   |
+30 ~ cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+31 + [lints]
+32 + workspace = true
+   |
+help: to clarify your intent to not inherit, add:
+   |
+30 ~ cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+31 + [lints]
+   |
+warning: `s1-qt-rust` (manifest) generated 1 warning
+    Updating crates.io index
+    Checking iroh-mdns-address-lookup v0.6.1 (/home/runner/work/sa6i-link/sa6i-link/third_party/iroh-mdns-address-lookup)
+    Checking sa6i-link-protocol v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-protocol)
+    Checking sa6i-link-intel v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-intel)
+    Checking sa6i-link-adb v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-adb)
+    Checking xtask v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/tools/xtask)
+    Checking sa6i-link-intel-win v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-intel-win)
+    Checking sa6i-link-core v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-core)
+    Checking sa6i-link-cli v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-cli)
+    Checking sa6i-link-ffi v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-ffi)
+warning: unused dependency `tracing`
+  --> core/sa6i-link-adb/Cargo.toml:15:1
+   |
+15 | tracing.workspace = true
+   | ^^^^^^^
+   |
+   = note: `cargo::unused_dependencies` is set to `warn` by default
+help: consider removing the dependency on `tracing`
+warning: `sa6i-link-adb` (manifest) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.64s
+EXIT:check:0
+
+## cargo test --locked
+warning: missing `[lints]` to inherit `[workspace.lints]`
+  --> spikes/s1-qt-rust/Cargo.toml
+   = note: `cargo::missing_lints_inheritance` is set to `warn` by default
+help: to inherit `workspace.lints, add:
+   |
+30 ~ cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+31 + [lints]
+32 + workspace = true
+   |
+help: to clarify your intent to not inherit, add:
+   |
+30 ~ cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+31 + [lints]
+   |
+warning: `s1-qt-rust` (manifest) generated 1 warning
+   Compiling sa6i-link-intel v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-intel)
+   Compiling sa6i-link-protocol v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-protocol)
+   Compiling sa6i-link-adb v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-adb)
+   Compiling iroh-mdns-address-lookup v0.6.1 (/home/runner/work/sa6i-link/sa6i-link/third_party/iroh-mdns-address-lookup)
+   Compiling sa6i-link-intel-win v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-intel-win)
+   Compiling sa6i-link-core v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-core)
+   Compiling sa6i-link-cli v0.1.5 (/home/runner/work/sa6i-link/sa6i-link/core/sa6i-link-cli)
+warning: unused dependency `tracing`
+  --> core/sa6i-link-adb/Cargo.toml:15:1
+   |
+15 | tracing.workspace = true
+   | ^^^^^^^
+   |
+   = note: `cargo::unused_dependencies` is set to `warn` by default
+help: consider removing the dependency on `tracing`
+warning: `sa6i-link-adb` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 31.69s
+     Running unittests src/lib.rs (target/debug/build/sa6i-link-adb/9a766ffd74aa5ca7/out/sa6i_link_adb-9a766ffd74aa5ca7)
+
+running 7 tests
+test tests::empty_serial_is_rejected_and_valid_serials_are_allowed ... ok
+test tests::only_bind_failures_count_as_bind_failures ... ok
+test tests::only_serials_made_of_serial_characters_are_allowed ... ok
+test tests::parse_devices_l_parses_metadata ... ok
+test tests::shell_picks_the_device_then_streams_the_commands_output ... ok
+test tests::mock_adb_server_forward_killforward_and_track_devices ... ok
+test tests::forward_tries_another_port_only_when_adb_cannot_bind ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/build/sa6i-link-cli/960e589f826c664b/out/sa6i_link-960e589f826c664b)
+
+running 5 tests
+test tests::linux_watch_opens_self_and_rejects_invalid_pid ... ok
+test tests::parses_live_notification_flags ... ok
+test tests::parses_notify_when_pid_and_command_args ... ok
+test tests::linux_desktop_dir_lock_detection_and_request_queueing ... ok
+test tests::linux_watch_waits_for_short_lived_child ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src/lib.rs (target/debug/build/sa6i-link-core/8b5170fcb54adc11/out/sa6i_link_core-8b5170fcb54adc11)
+
+running 155 tests
+test actions::tests::power_actions_round_trip ... ok
+test calls::tests::commands_fit_the_call ... ok
+test calls::tests::a_call_left_ringing_goes_stale ... ok
+test actions::tests::only_web_links_go ... ok
+test calls::tests::commands_round_trip ... ok
+test calls::tests::only_calls_in_progress_are_kept ... ok
+test clip_kind::tests::debug_does_not_leak_target ... ok
+test clip_kind::tests::emails_vs_handles_and_filenames ... ok
+test clip_kind::tests::street_designators_are_sorted_for_binary_search ... ok
+test clip_kind::tests::street_addresses_across_countries_vs_sentences ... ok
+test clip_kind::tests::phone_numbers_vs_amounts_dates_and_otps ... ok
+test clip_kind::tests::tracking_numbers_vs_ordinary_long_numbers ... ok
+test clip_kind::tests::web_links_vs_file_paths_and_text ... ok
+test clipboard_history::tests::migrates_v0_1_clipboard_history_entry_without_kind_html_rtf_fields ... ok
+test clipboard_history::tests::stores_encrypted_at_rest_and_excludes_otps ... ok
+test config::tests::transport_overrides_parse_and_bad_values_keep_the_defaults ... ok
+test continuity_camera::tests::request_id_validation ... ok
+test deck::tests::action_validation_enforces_http_exe_lnk_and_shortcuts ... ok
+test clipboard_history::tests::evicts_unpinned_entries_older_than_7_days_and_keeps_pinned ... ok
+test deck::tests::default_deck_matches_wire_layout_and_is_valid ... ok
+test deck::tests::wire_layout_and_debug_never_expose_paths_urls_or_commands ... ok
+test elevated_usb::tests::the_helper_command_and_its_answer ... ok
+test deck::tests::deck_config_persists_to_disk_and_falls_back_on_corrupt_file ... ok
+test features::tests::a_phone_and_a_pc_have_no_android_pair_features ... ok
+test features::tests::a_phone_and_a_tablet_get_the_android_pair_features ... ok
+test features::tests::basic_phone_matches_the_documented_examples ... ok
+test features::tests::elevated_phone_unlocks_everything_it_offers ... ok
+test features::tests::linux_desktop_maps_to_desktop_role_and_matches_windows_feature_matrix ... ok
+test features::tests::macos_desktop_matrix_reflects_supported_and_unsupported_features ... ok
+test features::tests::missing_capability_at_the_right_power_is_unsupported ... ok
+test features::tests::missing_permission_offers_the_permission ... ok
+test features::tests::os_versions_parse ... ok
+test features::tests::old_systems_are_unsupported ... ok
+test features::tests::pairs_without_a_phone_and_a_desktop_are_unsupported ... ok
+test features::tests::registry_is_consistent ... ok
+test features::tests::phone_toggles_reflect_permissions_hardware_and_power ... ok
+test features::tests::same_on_both_devices ... ok
+test features::tests::sanitizes_announced_capabilities ... ok
+test features::tests::the_easiest_upgrade_is_offered_first ... ok
+test features::tests::toggles_lock_features_and_default_sensibly ... ok
+test handoff::tests::a_link_host_never_includes_user_info ... ok
+test features::tests::unknown_kinds_fall_back_to_the_os ... ok
+test handoff::tests::allowlists_safe_handoff_documents_and_rejects_executables ... ok
+test handoff::tests::extracts_and_formats_map_locations ... ok
+test handoff::tests::extracts_and_updates_video_timestamps ... ok
+test handoff::tests::formats_friendly_timeline_link_titles_and_keeps_raw_url_in_detail ... ok
+test handoff::tests::handles_multibyte_utf8_at_char_boundaries_without_panicking ... ok
+test identity::tests::install_ids_are_stable_salted_and_well_formed ... ok
+test identity::tests::key_file_does_not_contain_the_plain_key_when_protected ... ok
+test identity::tests::creates_then_reloads_the_same_key ... ok
+test identity::tests::rejects_corrupt_and_mismatched_files ... ok
+test identity::tests::key_file_has_0600_permissions_on_unix ... ok
+test localsend::tests::a_known_https_peer_isnt_moved_to_http ... ok
+test localsend::tests::chunked_upload_must_match_the_offered_size ... ok
+test localsend::tests::incoming_folders_are_capped_in_depth_and_name_length ... ok
+test localsend::tests::persists_identity_and_enabled_flag_encrypted_on_disk ... ok
+test localsend::tests::self_signed_cert_completes_tls_handshake_and_matches_fingerprint ... ok
+test localsend::tests::sha256_file_hex_matches_a_known_digest ... ok
+test localsend::tests::upload_must_match_the_offered_size ... ok
+test media::tests::actions_round_trip ... ok
+test mirror::tests::a_full_queue_drops_frames_until_a_keyframe ... ok
+test mirror::tests::a_queued_keyframe_replaces_what_is_ahead_of_it ... ok
+test mirror::tests::a_slower_path_replaces_the_round_trip_it_remembers ... ok
+test mirror::tests::a_wait_lasts_until_everything_arrived_and_measures_the_link ... ok
+test mirror::tests::reports_of_more_than_was_sent_are_ignored ... ok
+test mirror::tests::sound_drops_only_what_doesnt_fit ... ok
+test mirror::tests::video_is_held_only_once_it_is_too_far_ahead ... ok
+test node::away_tests::a_new_attempt_at_a_transfer_waits_for_the_old_one_to_stop ... ok
+test node::away_tests::away_switch_reaches_a_real_relay_while_running ... ignored, reaches the real relays
+test node::away_tests::turning_away_off_stops_internet_services_without_a_restart ... ok
+test node::away_tests::turning_away_on_starts_internet_services_without_a_restart ... ok
+test node::away_tests::what_is_published_has_no_device_name ... ok
+test otp::tests::detects_real_world_positive_examples ... ok
+test clip_kind::tests::fuzz_clip_kind_classify_arbitrary_unicode_10k ... ok
+test otp::tests::grouped_codes_are_bare_codes_with_a_dash_or_a_space ... ok
+test otp::tests::identifies_otp_clips_for_history_exclusion ... ok
+test otp::tests::rejects_real_world_negative_examples ... ok
+test pairing::tests::pairing_links_carry_the_useful_addresses ... ok
+test pairing::tests::pairing_links_keep_the_lan_address_beside_virtual_adapters ... ok
+test pairing::tests::second_nearby_ceremony_is_refused_without_clobbering_decision ... ok
+test pairing::tests::the_default_route_address_is_a_real_one ... ok
+test palette::tests::extreme_phone_seeds_keep_calm_surfaces_and_wcag_contrast ... ok
+test palette::tests::grey_images_have_no_seed ... ok
+test palette::tests::has_the_structure_of_the_token_presets ... ok
+test palette::tests::json_has_every_role_in_both_modes ... ok
+test palette::tests::monochrome_and_noisy_bw_artworks_produce_neutral_scheme ... ok
+test palette::tests::picks_the_dominant_color_of_an_image ... ok
+test localsend::tests::fuzz_localsend_http_parser_and_dtos_10k ... ok
+test photos::tests::sanitizing_cleans_albums_items_and_thumbs ... ok
+test play_on_phone::tests::anything_else_streams ... ok
+test play_on_phone::tests::lookalike_hosts_are_not_the_service ... ok
+test play_on_phone::tests::protected_services_open_in_their_app ... ok
+test play_on_phone::tests::the_host_ignores_case_ports_and_user_info ... ok
+test play_on_phone::tests::youtube_streams_from_the_pc_and_can_open_at_the_same_second ... ok
+test remote::tests::prompt_is_emitted_once_per_peer ... ok
+test remote::tests::token_bucket_enforces_burst_and_refills ... ok
+test session::tests::a_public_address_the_peer_announced_over_mdns_counts_as_lan ... ok
+test session::tests::ipv6_same_subnet_matches_dual_stack_router_prefix_and_rejects_cellular ... ok
+test session::tests::lan_ip_accepts_private_local_and_tailnet_and_rejects_wan ... ok
+test session::tests::pc_audio_frames_must_be_whole_16_bit_frames_at_a_sane_rate ... ok
+test session::tests::tailnet_ip_matches_only_tailscale_ranges ... ok
+test session::wake::tests::send_magic_packet_succeeds_on_loopback ... ok
+test sms::tests::an_item_too_large_for_a_frame_is_an_error_not_an_empty_list ... ok
+test sms::tests::long_lists_are_cut_to_fit_a_frame ... ok
+test storage::tests::folder_storage_rejects_traversal_and_symlinks_outside_root ... ok
+test storage::tests::renames_never_replace_a_file_and_trash_keeps_both ... ok
+test store::tests::a_chat_stamped_in_the_future_does_not_age_out_the_others ... ok
+test store::tests::a_finished_queue_item_isnt_moved_back_to_sending_or_waiting ... ok
+test store::tests::a_paired_device_cannot_claim_another_ones_install_id_later ... ok
+test store::tests::an_older_notification_doesnt_replace_the_newest_snippet ... ok
+test store::tests::capabilities_and_toggles ... ok
+test store::tests::chat_notifications_deduplicate_reply_and_prune ... ok
+test store::tests::cleanup_peers_merges_only_the_same_install_id ... ok
+test store::tests::clearing_kinds_leaves_other_kinds ... ok
+test store::tests::clips_are_removed_at_their_deadline_and_files_stay_for_retry ... ok
+test store::tests::clips_queued_before_sealing_are_sealed_at_startup ... ok
+test store::tests::data_retention_counts_and_clear_all_preserves_peers_and_meta ... ok
+test store::tests::lists_in_pairing_order_and_persists ... ok
+test store::tests::migrates_from_every_historical_schema_version_v1_through_v6_to_v7 ... ok
+test store::tests::peer_lifecycle ... ok
+test store::tests::queued_clips_are_sealed_on_disk_and_read_back_whole ... ok
+test store::tests::queued_images_are_sealed_and_files_are_left_alone ... ok
+test store::tests::re_pairing_with_an_install_id_replaces_the_old_entry ... ok
+test store::tests::refuses_a_database_from_a_newer_version ... ok
+test store::tests::send_queue_clipboard_image_size_cap_and_active_bytes_accounting ... ok
+test store::tests::send_queue_fifo_clipboard_replacement_capacity_ttl_recovery_and_reassign ... ok
+test palette::tests::twenty_four_real_artworks_match_expected_dominant_hue ... ok
+test store::tests::send_queue_wake_ms_ignores_offline_peer_retries_and_clears_retry_delays ... ok
+test store::tests::staging_cleanup_never_deletes_outside_the_items_staging_folder ... ok
+test store::tests::send_queue_preserved_on_clear_history_and_staged_files_deleted_on_all_terminal_paths ... ok
+test store::tests::timeline_crud_filters_and_retention ... ok
+test store::tests::upgrades_a_version_1_database ... ok
+test store::tests::wake_info_persists_across_reopen ... ok
+test timeline::tests::formats_quoted_paths_urls_and_text_for_timeline ... ok
+test timeline::tests::sessions_say_what_they_were_whatever_their_title ... ok
+test transfer::tests::files_go_back_to_their_part_files_when_one_cant_be_saved ... ok
+test transfer::tests::folders_are_walked ... ok
+test transfer::tests::free_space_is_read_for_a_real_folder ... ok
+test transfer::tests::ids_are_valid ... ok
+test transfer::tests::items_are_files_and_folders ... ok
+test transfer::tests::names_are_made_safe ... ok
+test transfer::tests::names_windows_can_store ... ok
+test transfer::tests::storage_writes_are_swept_one_part_file_at_a_time ... ok
+test transfer::tests::taken_names_get_a_number ... ok
+test usb::tests::a_second_profile_is_paired_by_hand_once_one_is_paired ... ok
+test usb::tests::a_second_profile_takes_the_next_port ... ok
+test clipboard_history::tests::caps_at_50_keeps_pinned_and_clears_disk ... ok
+test otp::tests::fuzz_otp_extract_arbitrary_unicode_10k ... ok
+test usb::tests::a_tunnel_whose_far_end_stops_answering_is_closed ... ok
+test usb::tests::emulators_are_not_auto_paired ... ok
+test usb::tests::no_listener_when_every_profile_port_is_taken ... ok
+test usb::tests::port_zero_binds_any_free_port ... ok
+test store::tests::timeline_5000_entries_paging_is_fast ... ok
+test usb::tests::a_tunnel_that_keeps_answering_stays_open ... ok
+test usb::tests::a_tunnel_stuck_writing_after_its_last_answer_is_closed ... ok
+
+test result: ok. 154 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.27s
+
+     Running tests/scale_tests.rs (target/debug/build/sa6i-link-core/45222b974bf37d4c/out/scale_tests-45222b974bf37d4c)
+
+running 5 tests
+test scale_10000_notifications_in_history_and_search ... ignored, scale benchmark with timing limits; run with --ignored
+test scale_4gb_file_transfer_with_pause_resume_interruption_and_blake3 ... ignored, scale benchmark with timing limits; run with --ignored
+test scale_5000_timeline_entries_and_200_chat_threads ... ignored, scale benchmark with timing limits; run with --ignored
+test scale_50_large_clips_encrypted_history ... ignored, scale benchmark with timing limits; run with --ignored
+test relayed_wake_and_pc_audio_pcm_roundtrip ... ok
+
+test result: ok. 1 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/two_devices.rs (target/debug/build/sa6i-link-core/7361d6bb45315cc3/out/two_devices-7361d6bb45315cc3)
+
+running 99 tests
+test a_capture_the_pc_never_asked_for_isnt_saved ... ok
+test a_pc_hears_when_the_phone_declines_its_microphone_request ... ok
+test a_phone_browses_a_pcs_shared_folders ... ok
+test a_paired_device_is_left_out_of_localsend_nearby ... ok
+test a_phone_can_start_its_microphone_for_a_pc_itself ... ok
+test a_folder_too_big_for_one_answer_is_listed_whole ... ok
+test a_pc_without_mic_listen_refuses_a_phones_microphone ... ok
+test a_phones_notifications_show_on_a_paired_tablet_that_shows_them ... ok
+test a_phone_streams_its_microphone_when_its_user_agrees ... ok
+test a_reinstalled_phone_replaces_its_old_pairing ... ok
+test a_phone_keeps_its_notifications_from_a_phone_that_doesnt_show_them ... ok
+test a_video_stream_outlasts_its_reports ... ok
+test bench_file_throughput ... ignored, benchmark
+test battery_signal_strength_and_peer_diagnostics_flow ... ok
+test call_log_and_dial_work_and_respect_permissions_and_toggles ... ok
+test calls_show_on_the_pc_which_can_answer_them ... ok
+test capabilities_follow_power_and_toggles ... ok
+test clearing_removes_queued_clips_and_links_but_not_files ... ok
+test clipboard_history_tracks_text_and_images_and_excludes_otps ... ok
+test clipboard_text_goes_both_ways_with_consent ... ok
+test contacts_list_search_page_and_respect_permissions_and_toggles ... ok
+test continuity_camera_cancel_propagates ... ok
+test continuity_camera_photo_and_scan_flow ... ok
+test continuity_camera_respects_photos_toggle ... ok
+test clipboard_images_go_both_ways_with_consent ... ok
+test data_retention_counts_and_clear_all_local_data_preserves_pairing_and_settings ... ok
+test elevated_over_usb_is_refused_without_a_usb_connection ... ok
+test deck_layout_and_state_arrive_press_runs_action_and_respects_toggles_and_unknown_tile ... ok
+test files_arrive_intact_under_free_names ... ok
+test folders_arrive_with_their_layout ... ok
+test gallery_albums_paging_thumbs_download_and_toggles ... ok
+test a_phone_stopped_and_started_again_in_the_same_process_reconnects ... ok
+test a_resume_that_overtakes_its_pause_still_resumes ... ok
+test localsend_declining_transfer_returns_denied_to_sender ... ok
+test live_notifications_and_task_notify_flow_end_to_end ... ok
+test localsend_discovers_peer_requires_accept_and_transfers_files_over_https ... ok
+test localsend_refuses_duplicate_ids_and_records_a_cancelled_partial_delivery ... ok
+test localsend_coexists_when_port_is_already_bound ... ok
+test localsend_turns_on_from_a_thread_outside_the_runtime ... ok
+test media_is_shared_and_controlled_with_consent ... ok
+test material_you_accent_syncs_updates_live_and_persists_offline ... ok
+test messaging_style_notifications_populate_unified_chat_threads_and_reply ... ok
+test mms_image_attachments_send_over_sms_service ... ok
+test nearby_pairing_fails_if_either_user_declines ... ok
+test nearby_pairing_with_matching_codes ... ok
+test localsend_is_off_by_default_and_persists_setting ... ok
+test new_photos_reach_the_pc_and_come_when_asked ... ok
+test files_need_the_toggle_and_can_be_cancelled ... ok
+test notification_history_keeps_the_newest_thousand ... ok
+test notification_toggles_are_honored_on_both_devices ... ok
+test notifications_mirror_to_the_pc_and_actions_reach_the_phone ... ok
+test pairing_requires_pairing_mode ... ok
+test pc_audio_reaches_the_phone_over_both_paths ... ok
+test pc_audio_volume_mute_output_devices_and_smart_clipboard_context_chips_flow_end_to_end ... ok
+test one_time_screen_consent_ends_with_the_pairing ... ok
+test phone_apps_open_in_windows_of_their_own ... ok
+test phone_toggles_arrive_on_connect_change_and_respect_capabilities_and_toggle ... ok
+test phone_storage_lists_reads_ranges_writes_resumes_mutates_and_enforces_security ... ok
+test play_on_phone_lets_the_phone_watch_only_what_the_pc_offered ... ok
+test play_on_phone_needs_a_phone_that_can_watch ... ok
+test qr_pairing_connects_both_devices ... ok
+test queue_cancel_waiting_and_mid_transfer_cleans_up_and_unpair_drops_queue ... ok
+test play_on_phone_offers_a_video_file_the_phone_reads_in_ranges ... ok
+test phones_lock_pcs_and_links_open_on_either_side ... ok
+test queue_offline_fifo_clipboard_replacement_and_drain_on_reconnect ... ok
+test queue_offline_no_busy_loop_timeline_only_on_delivery_and_clear_history_preserves_queue ... ok
+test reconnects_after_a_restart ... ok
+test remote_input_needs_toggle_and_delivers_motion_keys_and_slides ... ok
+test reverse_mirror_requires_pc_consent_and_remote_input_toggle ... ok
+test ring_and_battery_flow_between_devices ... ok
+test screen_mirroring_prefers_hevc_only_when_the_receiver_advertises_it ... ok
+test screen_mirroring_uses_h264_for_receivers_without_hevc_support ... ok
+test second_nearby_pairing_is_refused_while_one_awaits_confirmation ... ok
+test slow_rpc_does_not_block_control_stream ... ok
+test queue_source_file_deleted_or_modified_fails_cleanly_and_retry_works ... ok
+test the_pc_reads_and_sends_texts_through_the_phone ... ok
+test the_phone_camera_streams_to_the_pc_as_a_webcam ... ok
+test the_phone_negotiates_hevc_only_with_an_advertising_receiver ... ok
+test the_phone_screen_streams_to_the_pc ... ok
+test the_phone_sound_plays_on_the_pc_without_its_screen ... ok
+test timeline_records_files_clips_links_photos_recordings_and_sessions_without_duplicating_clips ... ok
+test too_many_failed_nearby_attempts_end_pairing_mode ... ok
+test too_many_wrong_attempts_end_pairing_mode ... ok
+test mirror_open_waits_for_a_connection_that_is_coming_back ... ok
+test queue_survives_node_restart_and_delivers_on_reconnect ... ok
+test transfer_blake3_integrity_verified_and_mismatch_keeps_partial ... ok
+test two_profiles_on_one_phone_each_get_their_own_usb_port ... ok
+test unpairing_is_mirrored_on_the_other_device ... ok
+test update_hints_reach_peers_now_and_on_connect ... ok
+test transfer_manual_pause_and_resume_both_sides ... ok
+test usb_transport_carries_features_when_wifi_unavailable ... ok
+test usb_upgrade_reconnect_and_realtime_pcm_do_not_starve_control_rpcs ... ok
+test voice_recordings_arrive_with_markers_and_respect_capability_and_toggle ... ok
+test transfers_resume_after_the_receiver_restarts ... ok
+test wake_relay_is_only_for_a_paired_pcs_own_address ... ok
+test wrong_pairing_secret_is_rejected ... ok
+test stop_reconnecting_keeps_a_device_disconnected_until_turned_back_on ... ok
+test wake_info_syncs_persists_respects_toggle_and_sends_magic_packet ... ok
+test usb_auto_pair_requires_consent_on_both_sides_and_connects_over_usb ... ok
+
+test result: ok. 98 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 28.61s
+
+     Running unittests src/lib.rs (target/debug/build/sa6i-link-intel/151c2908eda95bf8/out/sa6i_link_intel-151c2908eda95bf8)
+
+running 119 tests
+test budget::tests::a_clean_run_passes ... ok
+test budget::tests::a_run_that_drifted_fails_the_rate ... ok
+test budget::tests::a_greedy_process_fails_the_cpu_share ... ok
+test budget::tests::a_slow_sample_fails_the_run ... ok
+test budget::tests::an_empty_run_does_not_divide_by_zero ... ok
+test budget::tests::an_unmeasured_cpu_cost_does_not_fail_and_does_not_pass_silently ... ok
+test budget::tests::one_sample_has_no_rate_to_hold ... ok
+test cpu::tests::a_busy_process_may_exceed_one_core ... ok
+test cpu::tests::a_counter_that_went_backwards_is_not_a_negative_rate ... ok
+test cpu::tests::a_rate_needs_two_readings ... ok
+test cpu::tests::a_recycled_pid_is_a_different_process ... ok
+test cpu::tests::processes_that_went_away_are_forgotten ... ok
+test cpu::tests::the_same_moment_is_not_a_span ... ok
+test findings::tests::a_finding_without_evidence_is_not_supported ... ok
+test findings::tests::bytes_use_the_units_a_user_sees_in_explorer ... ok
+test findings::tests::durations_read_like_a_person_wrote_them ... ok
+test findings::tests::evidence_sentences_are_checkable ... ok
+test findings::tests::severity_never_relies_on_colour_alone ... ok
+test history::tests::a_database_from_a_newer_sa6i_is_refused_rather_than_misread ... ok
+test history::tests::a_fresh_database_has_the_schema_and_no_rows ... ok
+test history::tests::a_finding_keeps_the_first_time_it_was_seen ... ok
+test history::tests::a_clock_that_goes_backwards_cannot_write_into_the_past ... ok
+test history::tests::samples_are_written_once_a_minute ... ok
+test history::tests::pruning_removes_what_the_retention_table_says ... ok
+test history::tests::the_interval_is_a_minute_of_wall_clock ... ok
+test model::tests::a_busy_process_outranks_a_big_idle_one ... ok
+test model::tests::a_measured_core_is_plotted_and_an_unmeasured_core_is_not ... ok
+test model::tests::a_missing_measurement_is_never_zero ... ok
+test model::tests::a_process_list_is_cut_to_the_limit_and_never_grows ... ok
+test model::tests::a_process_whose_memory_is_unknown_sorts_last_rather_than_looking_empty ... ok
+test history::tests::recent_returns_oldest_first_and_respects_the_limit ... ok
+test model::tests::a_published_path_matches_exactly_one_key_at_a_time ... ok
+test model::tests::gpu_percentage_refuses_to_divide_by_nothing ... ok
+test model::tests::memory_percent_carries_the_reason_it_is_missing ... ok
+test model::tests::identity_is_in_the_sample_and_not_in_the_paths ... ok
+test model::tests::metric_paths_are_stable_and_lettered ... ok
+test model::tests::percent_used_is_bounded_and_survives_nonsense ... ok
+test model::tests::the_heaviest_adapter_is_the_one_with_the_most_memory ... ok
+test model::tests::throughput_is_plotted_when_it_exists_and_absent_when_it_does_not ... ok
+test model::tests::timestamps_saturate_instead_of_panicking ... ok
+test model::tests::serialization_keeps_the_reason ... ok
+test model::tests::with_no_rate_known_the_heaviest_processes_come_first ... ok
+test rules::tests::a_core_one_point_under_the_line_is_not_pinned ... ok
+test rules::tests::a_disk_under_the_line_is_not_filling_fast ... ok
+test rules::tests::a_disk_losing_five_gibibytes_in_half_an_hour_is_a_finding ... ok
+test rules::tests::a_disk_that_filled_and_was_cleaned_up_inside_the_window_is_quiet ... ok
+test rules::tests::a_full_disk_needs_ten_minutes_before_it_is_a_finding ... ok
+test rules::tests::a_gpu_just_under_the_line_is_quiet ... ok
+test rules::tests::a_gpu_over_the_line_for_six_minutes_is_a_finding ... ok
+test rules::tests::a_gpu_that_drops_below_the_line_inside_the_window_is_quiet ... ok
+test rules::tests::a_half_hour_of_history_is_not_enough_to_measure_a_half_hour ... ok
+test rules::tests::a_machine_busy_on_every_core_is_not_a_pinned_one ... ok
+test rules::tests::a_leak_is_measured_against_the_same_process_half_an_hour_ago ... ok
+test rules::tests::a_nearly_empty_disk_is_critical_not_just_a_warning ... ok
+test rules::tests::a_pinned_core_is_found_where_the_overview_looks_calm ... ok
+test rules::tests::a_healthy_machine_produces_nothing ... ok
+test rules::tests::a_process_without_a_stamp_is_not_accused ... ok
+test rules::tests::a_reused_pid_is_two_processes_not_ten_minutes ... ok
+test rules::tests::a_rule_runs_at_the_numbers_it_is_given ... ok
+test rules::tests::a_process_that_started_inside_the_window_has_nothing_to_answer_for ... ok
+test rules::tests::a_tenth_of_a_second_per_transfer_for_ten_minutes_is_a_finding ... ok
+test rules::tests::a_volume_without_a_reading_is_silent_rather_than_guessed ... ok
+test rules::tests::a_zero_commit_limit_is_no_opinion_rather_than_a_division ... ok
+test rules::tests::commit_pressure_moves_with_its_threshold ... ok
+test rules::tests::an_idle_disk_is_not_a_slow_one ... ok
+test rules::tests::an_integrated_gpu_with_no_memory_of_its_own_is_quiet ... ok
+test rules::tests::every_declared_input_is_a_path_a_snapshot_publishes ... ok
+test rules::tests::every_rule_declares_what_it_needs ... ok
+test rules::tests::cores_that_were_not_measured_are_not_idle_ones ... ok
+test rules::tests::long_uptime_is_information_not_an_alarm ... ok
+test rules::tests::commit_pressure_needs_five_minutes_and_then_says_so ... ok
+test rules::tests::memory_pressure_needs_two_minutes ... ok
+test rules::tests::network_drives_are_not_the_users_problem ... ok
+test rules::tests::findings_are_ordered_worst_first_and_stable ... ok
+test rules::tests::paging_is_faults_that_stay_high_never_zero ... ok
+test rules::tests::the_defaults_are_the_numbers_m1_shipped ... ok
+test rules::tests::ten_minutes_of_one_core_is_one_finding ... ok
+test rules_file::tests::a_duration_that_is_not_one_is_refused ... ok
+test rules_file::tests::a_file_may_set_a_number ... ok
+test rules::tests::ten_minutes_at_the_ceiling_is_a_finding_and_a_spike_is_not ... ok
+test rules_file::tests::a_key_from_another_rule_is_refused ... ok
+test rules_file::tests::a_key_nobody_knows_is_refused_even_at_the_top ... ok
+test rules_file::tests::a_key_that_does_not_exist_is_refused ... ok
+test rules_file::tests::a_percentage_that_is_a_typo_is_refused ... ok
+test rules::tests::the_worst_volume_is_the_one_reported ... ok
+test rules_file::tests::a_requires_path_nothing_publishes_is_refused ... ok
+test rules_file::tests::a_rule_the_code_does_not_have_is_refused ... ok
+test rules_file::tests::a_scenario_claimed_twice_is_refused ... ok
+test rules_file::tests::a_severity_the_code_does_not_say_is_refused ... ok
+test rules_file::tests::a_warning_above_its_critical_is_refused ... ok
+test rules_file::tests::a_window_no_rule_could_mean_is_refused ... ok
+test rules_file::tests::durations_parse_where_they_should ... ok
+test rules_file::tests::an_uptime_is_measured_in_days_not_minutes ... ok
+test rules_file::tests::every_refusal_names_what_it_refused ... ok
+test rules_file::tests::no_file_means_the_defaults ... ok
+test rules_file::tests::a_scenario_no_fixture_has_is_refused ... ok
+test rules_file::tests::restating_the_code_is_allowed ... ok
+test rules_file::tests::the_same_rule_twice_is_refused ... ok
+test store::tests::a_window_the_store_cannot_cover_is_not_a_pass ... ok
+test rules_file::tests::the_two_cpu_rules_do_not_share_a_ceiling_key ... ok
+test store::tests::one_bad_sample_breaks_the_window ... ok
+test store::tests::pruning_keeps_the_newest ... ok
+test store::tests::the_ring_drops_the_oldest_and_never_grows ... ok
+test summary::tests::a_mean_uses_only_what_was_measured_and_says_so ... ok
+test summary::tests::a_window_with_gaps_averages_the_samples_it_has ... ok
+test summary::tests::nothing_measured_is_not_a_zero ... ok
+test summary::tests::the_span_runs_from_the_first_sample_to_the_last ... ok
+test view::tests::a_sparkline_holds_one_minute_and_drops_the_oldest ... ok
+test view::tests::a_sparkline_keeps_a_missing_sample_as_a_gap ... ok
+test view::tests::an_integrated_gpu_reports_its_memory_not_a_percentage_of_nothing ... ok
+test view::tests::an_unreadable_tile_says_why_and_never_says_zero ... ok
+test view::tests::the_detail_view_gets_the_fields_it_reads ... ok
+test view::tests::the_history_draws_only_what_was_measured ... ok
+test view::tests::the_overview_shows_four_numbers_with_the_facts_under_them ... ok
+test view::tests::the_process_table_keeps_unreadable_rows_out_of_the_numbers ... ok
+test view::tests::the_wire_format_keeps_unknown_out_of_the_numbers ... ok
+test view::tests::volumes_are_listed_with_their_share_and_kind ... ok
+test rules_file::tests::the_shipped_files_restate_the_compiled_numbers ... ok
+test history::tests::history_survives_being_closed_and_reopened ... ok
+
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+
+     Running tests/privacy.rs (target/debug/build/sa6i-link-intel/0f3f5f4a5de6147c/out/privacy-0f3f5f4a5de6147c)
+
+running 3 tests
+test the_lock_parser_reads_names_and_dependency_lists ... ok
+test the_core_crate_is_below_the_shell_and_the_link_stack ... ok
+test neither_intel_crate_can_open_a_socket ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scenarios.rs (target/debug/build/sa6i-link-intel/537f2e705a7a99ce/out/scenarios-537f2e705a7a99ce)
+
+running 4 tests
+test the_json_a_page_receives_has_the_field_names_it_expects ... ok
+test every_rule_has_a_firing_case_and_a_near_miss ... ok
+test a_severity_word_is_never_invented_by_a_scenario ... ok
+test every_scenario_produces_exactly_the_findings_it_promises ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/build/sa6i-link-intel-win/d76b40b9b6838711/out/sa6i_link_intel_win-d76b40b9b6838711)
+
+running 12 tests
+test report::tests::one_sample_says_what_it_cannot_confirm ... ok
+test tests::a_backwards_core_counter_does_not_poison_the_other_cores ... ok
+test report::tests::the_average_lands_before_the_uptime ... ok
+test report::tests::the_lines_say_what_was_measured_and_what_was_not ... ok
+test tests::a_collector_that_runs_reports_its_own_sequence ... ok
+test tests::a_core_with_no_previous_reading_is_unknown_not_zero ... ok
+test tests::an_idle_machine_is_zero_not_unknown ... ok
+test tests::cpu_percent_is_a_ratio_of_the_interval ... ok
+test tests::no_interval_or_a_backwards_counter_is_unknown ... ok
+test tests::per_core_starts_unknown_then_reports_each_core ... ok
+test tests::percent_is_clamped_when_the_kernel_counter_disagrees ... ok
+test tests::the_process_list_is_bounded_named_and_unmeasured_at_first ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/sa6i-intel-snapshot.rs (target/debug/build/sa6i-link-intel-win/63268f58fa336fcb/out/sa6i_intel_snapshot-63268f58fa336fcb)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/build/sa6i-link-protocol/5a07e4939c1fdce8/out/sa6i_link_protocol-5a07e4939c1fdce8)
+
+running 69 tests
+test envelope::tests::garbage_is_a_bad_message ... ok
+test envelope::tests::ignores_unknown_fields ... ok
+test envelope::tests::remote_errors_surface_through_expect ... ok
+test envelope::tests::round_trips_through_cbor ... ok
+test error::tests::codes_round_trip_and_tolerate_unknown_values ... ok
+test frame::tests::length_prefix_boundaries ... ok
+test frame::tests::partial_and_malformed_input ... ok
+test frame::tests::rejects_oversized_frames ... ok
+test frame::tests::async_round_trip ... ok
+test frame::tests::truncated_stream_is_an_error ... ok
+test id::tests::display_round_trips ... ok
+test id::tests::rejects_bad_input ... ok
+test id::tests::zbase32_matches_reference_vector ... ok
+test messages::tests::audit_73_validation_rules ... ok
+test messages::tests::battery_signal_strength_round_trips_sanitizes_and_is_backwards_compatible ... ok
+test messages::tests::calls_are_validated ... ok
+test messages::tests::call_log_dial_and_contacts_round_trip_and_hide_private_fields ... ok
+test messages::tests::clip_set_rich_text_validates_and_round_trips ... ok
+test messages::tests::continuity_camera_messages_round_trip ... ok
+test messages::tests::conversation_notifications_are_sanitized_and_hide_content_in_debug ... ok
+test messages::tests::debug_output_hides_content ... ok
+test messages::tests::device_names_are_cleaned_and_capped ... ok
+test messages::tests::elevated_usb_only_runs_the_apps_own_helper_and_grants ... ok
+test messages::tests::file_blake3_and_control_are_validated ... ok
+test messages::tests::file_offers_are_validated ... ok
+test messages::tests::folders_are_validated ... ok
+test messages::tests::deck_layout_state_and_press_validate_sanitize_and_round_trip ... ok
+test frame::tests::fuzz_frame_decode_arbitrary_bytes_10k ... ok
+test messages::tests::gallery_messages_round_trip_and_hide_private_fields ... ok
+test messages::tests::hello_localsend_fingerprint_is_hex_or_nothing ... ok
+test messages::tests::hello_round_trips ... ok
+test messages::tests::ipv4_broadcast_from_ip_and_prefix ... ok
+test messages::tests::live_notification_round_trips_and_sanitizes ... ok
+test messages::tests::magic_packet_has_sync_header_and_sixteen_mac_copies ... ok
+test messages::tests::mirror_input_gamepad_round_trips_and_validates ... ok
+test messages::tests::mirror_input_is_checked ... ok
+test messages::tests::notifications_round_trip_with_binary_icons ... ok
+test messages::tests::notifications_without_content_or_key_are_dropped ... ok
+test envelope::tests::fuzz_frame_decode_arbitrary_bytes_10k ... ok
+test messages::tests::ongoing_is_only_sent_when_set_and_older_phones_read_as_dismissable ... ok
+test messages::tests::photos_are_validated ... ok
+test messages::tests::phone_toggles_validate_and_round_trip ... ok
+test messages::tests::power_level_wire_names ... ok
+test messages::tests::play_on_phone_messages_validate ... ok
+test messages::tests::recording_offers_and_markers_are_validated ... ok
+test messages::tests::remote_input_validates_and_round_trips ... ok
+test messages::tests::sanitizing_enforces_the_limits ... ok
+test messages::tests::screen_shape_and_battery_full_in_round_trip_and_sanitize ... ok
+test messages::tests::sound_only_is_the_phones_sound_and_nothing_else ... ok
+test messages::tests::task_notify_validates_round_trips_and_formats_duration ... ok
+test messages::tests::storage_paths_and_messages_validate_and_round_trip ... ok
+test messages::tests::texts_to_send_are_checked ... ok
+test messages::tests::unknown_enum_values_are_tolerated ... ok
+test messages::tests::update_hints_take_known_channels_and_plain_versions_only ... ok
+test messages::tests::wake_info_validates_sanitizes_and_round_trips ... ok
+test messages::tests::wake_relay_and_audio_pcm_cbor_roundtrip ... ok
+test messages::tests::webcam_messages_validate_and_round_trip ... ok
+test pairing::tests::proof_binds_secret_and_both_ids ... ok
+test pairing::tests::commitment_checks ... ok
+test pairing::tests::sas_is_six_digits_and_order_sensitive ... ok
+test pairing::tests::uri_errors ... ok
+test pairing::tests::uri_round_trips ... ok
+test pairing::tests::uri_without_addresses ... ok
+test tests::negotiates_lowest_common_version ... ok
+test tests::rejects_versions_below_minimum ... ok
+test video::tests::bad_packets_are_rejected ... ok
+test video::tests::packets_round_trip ... ok
+test messages::tests::fuzz_screen_shape_decode_and_sanitize_10k ... ok
+test messages::tests::fuzz_all_message_bodies_cbor_and_json_10k ... ok
+
+test result: ok. 69 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+   Doc-tests sa6i_link_adb
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sa6i_link_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sa6i_link_intel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sa6i_link_intel_win
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sa6i_link_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+EXIT:test:0

@@ -100,9 +100,8 @@ impl qobject::IntelHost {
         self.as_mut().rust_mut().running = running.clone();
         self.as_mut().set_live(true);
         let qt = self.qt_thread();
-        let spawned = std::thread::Builder::new()
-            .name("sa6i-intel".to_owned())
-            .spawn(move || sampler(running, qt));
+        let spawned =
+            std::thread::Builder::new().name("sa6i-intel".to_owned()).spawn(move || sampler(running, qt));
         if spawned.is_err() {
             // No thread means no Monitor; say so rather than showing a page
             // that will never move.

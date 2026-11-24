@@ -33,10 +33,7 @@ impl Default for SampleStore {
 impl SampleStore {
     /// A store that keeps at most `capacity` snapshots.
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            samples: VecDeque::with_capacity(capacity.min(DEFAULT_CAPACITY)),
-            capacity: capacity.max(2),
-        }
+        Self { samples: VecDeque::with_capacity(capacity.min(DEFAULT_CAPACITY)), capacity: capacity.max(2) }
     }
 
     /// Add a snapshot, dropping the oldest when full.
@@ -80,11 +77,7 @@ impl SampleStore {
     /// not a finding, and a rule that fires on one is a rule the user learns to
     /// ignore. Returns `None` when the store does not yet cover the window —
     /// not covering it is not the same as passing it.
-    pub fn held_for(
-        &self,
-        window_ms: u64,
-        mut holds: impl FnMut(&Snapshot) -> bool,
-    ) -> Option<HeldWindow> {
+    pub fn held_for(&self, window_ms: u64, mut holds: impl FnMut(&Snapshot) -> bool) -> Option<HeldWindow> {
         let last = self.samples.back()?;
         // A window the store does not span cannot be satisfied, no matter what
         // the samples inside it say. Without this, a two-minute history answers
@@ -114,11 +107,7 @@ impl SampleStore {
             }
             from_seq = Some(sample.seq);
         }
-        Some(HeldWindow {
-            from_seq: from_seq?,
-            to_seq: to_seq?,
-            held_for_ms: window_ms,
-        })
+        Some(HeldWindow { from_seq: from_seq?, to_seq: to_seq?, held_for_ms: window_ms })
     }
 
     /// Drop snapshots older than `older_than` on the monotonic clock.
@@ -150,8 +139,7 @@ pub struct HeldWindow {
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample,
-        WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample, WhyUnknown,
     };
 
     fn snapshot(seq: u64, monotonic_ms: u64, cpu: f32, disk_used: f32) -> Snapshot {

@@ -38,11 +38,7 @@ pub fn render(size: usize) -> Vec<u8> {
     // never invents detail; beyond the largest, enlarge the largest.
     let index = SIZES.iter().position(|&s| s >= size).unwrap_or(SIZES.len() - 1);
     let source = SIZES[index];
-    if source > size {
-        downscale(ART[index], source, size)
-    } else {
-        upscale(ART[index], source, size)
-    }
+    if source > size { downscale(ART[index], source, size) } else { upscale(ART[index], source, size) }
 }
 
 /// Averages the source box behind each target pixel ("area" reduction).

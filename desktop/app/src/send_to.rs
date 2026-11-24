@@ -360,25 +360,25 @@ fn send(device: String, paths: Vec<PathBuf>) {
         let Some((id, name)) = name else {
             return failed("Couldn't send", "That device isn't paired with this PC anymore.");
         };
-        let outgoing =
-            match tokio::task::spawn_blocking(move || sa6i_link_core::outgoing_paths(&paths)).await {
-                Ok(Ok(files)) if !files.is_empty() => files,
-                Ok(Ok(_)) => {
-                    return failed(
-                        &tr!("SendTo", "Couldn't send to %1", name),
-                        "There's nothing to send in there.",
-                    );
-                }
-                Ok(Err(Error::TooLarge)) => {
-                    return failed(
-                        &tr!("SendTo", "Couldn't send to %1", name),
-                        "That's too many files to send at once.",
-                    );
-                }
-                Ok(Err(_)) | Err(_) => {
-                    return failed(&tr!("SendTo", "Couldn't send to %1", name), "Those files can't be read.");
-                }
-            };
+        let outgoing = match tokio::task::spawn_blocking(move || sa6i_link_core::outgoing_paths(&paths)).await
+        {
+            Ok(Ok(files)) if !files.is_empty() => files,
+            Ok(Ok(_)) => {
+                return failed(
+                    &tr!("SendTo", "Couldn't send to %1", name),
+                    "There's nothing to send in there.",
+                );
+            }
+            Ok(Err(Error::TooLarge)) => {
+                return failed(
+                    &tr!("SendTo", "Couldn't send to %1", name),
+                    "That's too many files to send at once.",
+                );
+            }
+            Ok(Err(_)) | Err(_) => {
+                return failed(&tr!("SendTo", "Couldn't send to %1", name), "Those files can't be read.");
+            }
+        };
         match node.send_files(id, outgoing).await {
             Ok(transfer_id) => {
                 let _ = crate::bridge::app::show_offline_queued_toast(id, Some(transfer_id.clone()));

@@ -372,15 +372,17 @@ mod imp {
     // Keep adapter-specific enumeration where available; otherwise skip that
     // optional pass and use the existing generic MFTEnumEx pass below.
     #[cfg(windows)]
-    fn mft_enum2() -> Option<unsafe extern "system" fn(
-        windows::core::GUID,
-        u32,
-        *const MFT_REGISTER_TYPE_INFO,
-        *const MFT_REGISTER_TYPE_INFO,
-        *mut std::ffi::c_void,
-        *mut *mut Option<IMFActivate>,
-        *mut u32,
-    ) -> windows::core::HRESULT> {
+    fn mft_enum2() -> Option<
+        unsafe extern "system" fn(
+            windows::core::GUID,
+            u32,
+            *const MFT_REGISTER_TYPE_INFO,
+            *const MFT_REGISTER_TYPE_INFO,
+            *mut std::ffi::c_void,
+            *mut *mut Option<IMFActivate>,
+            *mut u32,
+        ) -> windows::core::HRESULT,
+    > {
         use std::sync::OnceLock;
         type Enum2 = unsafe extern "system" fn(
             windows::core::GUID,
@@ -393,7 +395,8 @@ mod imp {
         ) -> windows::core::HRESULT;
         static FOUND: OnceLock<Option<Enum2>> = OnceLock::new();
         *FOUND.get_or_init(|| unsafe {
-            let module = LoadLibraryExW(windows::core::w!("mfplat.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
+            let module =
+                LoadLibraryExW(windows::core::w!("mfplat.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
             let function = GetProcAddress(module, windows::core::s!("MFTEnum2"))?;
             // SAFETY: the signature matches the documented Media Foundation export.
             Some(std::mem::transmute::<unsafe extern "system" fn() -> isize, Enum2>(function))
@@ -440,7 +443,8 @@ mod imp {
                     attributes.as_ref().map_or(std::ptr::null_mut(), |value| value.as_raw()),
                     &mut activates,
                     &mut count,
-                ).ok()?;
+                )
+                .ok()?;
             } else {
                 MFTEnumEx(
                     MFT_CATEGORY_VIDEO_ENCODER,

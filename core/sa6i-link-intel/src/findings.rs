@@ -181,11 +181,7 @@ pub fn human_duration(ms: u64) -> String {
         3600..=86_399 => (seconds / 3600, "hour"),
         _ => (seconds / 86_400, "day"),
     };
-    if count == 1 {
-        format!("1 {unit}")
-    } else {
-        format!("{count} {unit}s")
-    }
+    if count == 1 { format!("1 {unit}") } else { format!("{count} {unit}s") }
 }
 
 /// `"94.2 %"`, `"12.4 GB"`, `"3 days"`.
@@ -202,11 +198,7 @@ pub fn render_bytes(bytes: u64) -> String {
         value /= 1024.0;
         unit += 1;
     }
-    if unit == 0 {
-        format!("{} {}", bytes, UNITS[unit])
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
-    }
+    if unit == 0 { format!("{} {}", bytes, UNITS[unit]) } else { format!("{value:.1} {}", UNITS[unit]) }
 }
 
 /// The one sentence a snapshot can say about itself when nothing is wrong.
@@ -216,15 +208,12 @@ pub fn render_bytes(bytes: u64) -> String {
 /// machine is healthy.
 pub fn all_clear_sentence(snapshot: &Snapshot) -> String {
     let measured = snapshot.metrics().len();
-    let unreadable: Vec<&'static str> = [
-        snapshot.cpu.percent.why(),
-        snapshot.memory.percent_used().why(),
-        snapshot.uptime.why(),
-    ]
-    .into_iter()
-    .flatten()
-    .map(WhyUnknown::explain)
-    .collect();
+    let unreadable: Vec<&'static str> =
+        [snapshot.cpu.percent.why(), snapshot.memory.percent_used().why(), snapshot.uptime.why()]
+            .into_iter()
+            .flatten()
+            .map(WhyUnknown::explain)
+            .collect();
     if unreadable.is_empty() {
         format!("Nothing needs attention. {measured} measurements are current.")
     } else {
@@ -258,13 +247,8 @@ mod tests {
 
     #[test]
     fn evidence_sentences_are_checkable() {
-        let e = Evidence::new("volume.C.percent_used", "94.2 %")
-            .threshold("90.0 %")
-            .over(10, 40, 600_000);
-        assert_eq!(
-            e.sentence(),
-            "volume.C.percent_used was 94.2 % (threshold 90.0 %), for 10 minutes"
-        );
+        let e = Evidence::new("volume.C.percent_used", "94.2 %").threshold("90.0 %").over(10, 40, 600_000);
+        assert_eq!(e.sentence(), "volume.C.percent_used was 94.2 % (threshold 90.0 %), for 10 minutes");
         let fresh = Evidence::new("volume.C.percent_used", "94.2 %").threshold("90.0 %");
         assert_eq!(fresh.sentence(), "volume.C.percent_used is 94.2 % (threshold 90.0 %)");
     }

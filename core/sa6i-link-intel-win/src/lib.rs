@@ -27,8 +27,8 @@
 use std::time::{Duration, Instant};
 
 use sa6i_link_intel::{
-    Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessCpu,
-    ProcessSample, SampleStore, Snapshot, Timestamp, VolumeSample, WhyUnknown,
+    Collector, Cost, CpuSample, DiskIoSample, MemorySample, MetricState, ProcessCpu, ProcessSample,
+    SampleStore, Snapshot, Timestamp, VolumeSample, WhyUnknown,
 };
 
 // Named only by the Windows process collector. A build for another platform is a
@@ -65,9 +65,7 @@ pub fn sample_window(samples: u32, interval: Duration, timed: bool) -> (SampleSt
     }
     let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
     let cpu_ms = match (cpu_before, timed.then(report::process_cpu_time).flatten()) {
-        (Some(before), Some(after)) => {
-            after.checked_sub(before).map(|cpu| cpu.as_secs_f64() * 1000.0)
-        }
+        (Some(before), Some(after)) => after.checked_sub(before).map(|cpu| cpu.as_secs_f64() * 1000.0),
         _ => None,
     };
     (store, Cost { elapsed_ms, per_sample_ms, cpu_ms })
@@ -148,18 +146,7 @@ impl Collector for WindowsCollector {
         };
         let processes = platform::read_processes(&mut self.process_cpu, monotonic_ms);
         let uptime = read_uptime();
-        Snapshot {
-            seq,
-            taken_at,
-            monotonic_ms,
-            cpu,
-            memory,
-            volumes,
-            disk_io,
-            gpu,
-            processes,
-            uptime,
-        }
+        Snapshot { seq, taken_at, monotonic_ms, cpu, memory, volumes, disk_io, gpu, processes, uptime }
     }
 }
 
@@ -257,22 +244,18 @@ mod platform {
     use super::*;
     use sa6i_link_intel::VolumeKind;
 
-    use windows::Win32::Foundation::{CloseHandle, FILETIME};
-    use windows::Win32::Storage::FileSystem::{
-        GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDriveStringsW,
+    use windows::Wdk::System::SystemInformation::{
+        NtQuerySystemInformation, SystemProcessorPerformanceInformation,
     };
+    use windows::Win32::Foundation::{CloseHandle, FILETIME};
+    use windows::Win32::Storage::FileSystem::{GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDriveStringsW};
     use windows::Win32::System::ProcessStatus::{
         EnumProcesses, GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX,
     };
-    use windows::Win32::System::SystemInformation::{
-        GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
-    };
+    use windows::Win32::System::SystemInformation::{GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX};
     use windows::Win32::System::Threading::{
-        GetProcessTimes, GetSystemTimes, OpenProcess, PROCESS_NAME_WIN32,
-        PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
-    };
-    use windows::Wdk::System::SystemInformation::{
-        NtQuerySystemInformation, SystemProcessorPerformanceInformation,
+        GetProcessTimes, GetSystemTimes, OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        QueryFullProcessImageNameW,
     };
     use windows::core::HSTRING;
 
@@ -290,11 +273,7 @@ mod platform {
         let mut user = FILETIME::default();
         // SAFETY: three valid writable stack locals; the call only writes them.
         unsafe { GetSystemTimes(Some(&mut idle), Some(&mut kernel), Some(&mut user)) }.ok()?;
-        Some(CpuTimes {
-            idle: ticks(idle),
-            kernel: ticks(kernel),
-            user: ticks(user),
-        })
+        Some(CpuTimes { idle: ticks(idle), kernel: ticks(kernel), user: ticks(user) })
     }
 
     /// Per-processor counters, in the calling thread's processor group.
@@ -351,21 +330,15 @@ mod platform {
         let count = bytes / PER_PROCESSOR;
         let mut cores = Vec::with_capacity(count);
         for processor in buffer[..count * 6].chunks_exact(6) {
-            cores.push(CpuTimes {
-                idle: processor[0],
-                kernel: processor[1],
-                user: processor[2],
-            });
+            cores.push(CpuTimes { idle: processor[0], kernel: processor[1], user: processor[2] });
         }
         Some(cores)
     }
 
     #[allow(unsafe_code)]
     pub(super) fn read_memory() -> MemorySample {
-        let mut status = MEMORYSTATUSEX {
-            dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
-            ..Default::default()
-        };
+        let mut status =
+            MEMORYSTATUSEX { dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32, ..Default::default() };
         // SAFETY: `status` is a valid, correctly-sized MEMORYSTATUSEX.
         if unsafe { GlobalMemoryStatusEx(&mut status) }.is_err() {
             let failed: MetricState<Bytes> = MetricState::Unknown(WhyUnknown::CollectorFailed);
@@ -565,13 +538,7 @@ mod platform {
             let mut exit = FILETIME::default();
             let mut kernel = FILETIME::default();
             let mut user = FILETIME::default();
-            let timed = GetProcessTimes(
-                handle,
-                &mut creation,
-                &mut exit,
-                &mut kernel,
-                &mut user,
-            );
+            let timed = GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user);
             let _ = CloseHandle(handle);
             if named.is_err() && measured.is_err() {
                 return None;
@@ -594,11 +561,7 @@ mod platform {
             let (key, cpu_ms, created) = if timed.is_ok() {
                 let created = ticks(creation);
                 let used = ticks(kernel).saturating_add(ticks(user));
-                (
-                    Some(ProcessKey { pid, created }),
-                    used / TICKS_PER_MS,
-                    MetricState::Value(created),
-                )
+                (Some(ProcessKey { pid, created }), used / TICKS_PER_MS, MetricState::Value(created))
             } else {
                 (None, 0, MetricState::Unknown(WhyUnknown::CollectorFailed))
             };
@@ -706,10 +669,7 @@ mod tests {
     #[test]
     fn a_core_with_no_previous_reading_is_unknown_not_zero() {
         let previous = [CpuTimes { idle: 10, kernel: 20, user: 20 }];
-        let current = [
-            CpuTimes { idle: 20, kernel: 30, user: 30 },
-            CpuTimes { idle: 5, kernel: 5, user: 5 },
-        ];
+        let current = [CpuTimes { idle: 20, kernel: 30, user: 30 }, CpuTimes { idle: 5, kernel: 5, user: 5 }];
         let states = core_states(Some(&previous), &current);
         assert_eq!(states.len(), 2);
         assert!(states[0].is_known());
@@ -718,14 +678,9 @@ mod tests {
 
     #[test]
     fn a_backwards_core_counter_does_not_poison_the_other_cores() {
-        let previous = [
-            CpuTimes { idle: 10, kernel: 20, user: 20 },
-            CpuTimes { idle: 10, kernel: 20, user: 20 },
-        ];
-        let current = [
-            CpuTimes { idle: 20, kernel: 30, user: 30 },
-            CpuTimes { idle: 1, kernel: 2, user: 2 },
-        ];
+        let previous =
+            [CpuTimes { idle: 10, kernel: 20, user: 20 }, CpuTimes { idle: 10, kernel: 20, user: 20 }];
+        let current = [CpuTimes { idle: 20, kernel: 30, user: 30 }, CpuTimes { idle: 1, kernel: 2, user: 2 }];
         let states = core_states(Some(&previous), &current);
         assert_eq!(states[0], MetricState::Value(50.0));
         assert_eq!(states[1], MetricState::Unknown(WhyUnknown::CollectorFailed));

@@ -70,10 +70,7 @@ impl Verdict {
             0.0
         };
         let target_hz = 1000.0 / interval;
-        let cpu_share = cost
-            .cpu_ms
-            .filter(|_| cost.elapsed_ms > 0.0)
-            .map(|cpu| cpu / cost.elapsed_ms);
+        let cpu_share = cost.cpu_ms.filter(|_| cost.elapsed_ms > 0.0).map(|cpu| cpu / cost.elapsed_ms);
         Self {
             samples,
             rate_hz,
@@ -134,11 +131,7 @@ mod tests {
     fn good() -> Cost {
         // 60 samples a second apart, each spending 6 ms collecting, 0.3 % of a
         // core over the minute.
-        Cost {
-            elapsed_ms: 60_000.0,
-            per_sample_ms: vec![6.0; 60],
-            cpu_ms: Some(180.0),
-        }
+        Cost { elapsed_ms: 60_000.0, per_sample_ms: vec![6.0; 60], cpu_ms: Some(180.0) }
     }
 
     #[test]

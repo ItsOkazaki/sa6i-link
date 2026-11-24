@@ -27,8 +27,7 @@ use windows::{
             Com::{COINIT_MULTITHREADED, CoInitializeEx},
             LibraryLoader::{GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW},
             WinRT::{
-                Direct3D11::IDirect3DDxgiInterfaceAccess,
-                Graphics::Capture::IGraphicsCaptureItemInterop,
+                Direct3D11::IDirect3DDxgiInterfaceAccess, Graphics::Capture::IGraphicsCaptureItemInterop,
             },
         },
     },
@@ -39,17 +38,19 @@ use windows::{
 // capture is requested lets the app start and use its screen-capture fallback.
 fn create_winrt_device(dxgi: &IDXGIDevice) -> windows::core::Result<IDirect3DDevice> {
     use std::{ffi::c_void, sync::OnceLock};
-    use windows::core::{HRESULT, IInspectable, s, w};
     use windows::Win32::Foundation::{E_FAIL, E_NOTIMPL};
+    use windows::core::{HRESULT, IInspectable, s, w};
 
     type CreateDevice = unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> HRESULT;
     static FOUND: OnceLock<Option<CreateDevice>> = OnceLock::new();
-    let create = FOUND.get_or_init(|| unsafe {
-        let module = LoadLibraryExW(w!("d3d11.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
-        let function = GetProcAddress(module, s!("CreateDirect3D11DeviceFromDXGIDevice"))?;
-        // SAFETY: signature matches CreateDirect3D11DeviceFromDXGIDevice.
-        Some(std::mem::transmute::<unsafe extern "system" fn() -> isize, CreateDevice>(function))
-    }).ok_or_else(|| windows::core::Error::from(E_NOTIMPL))?;
+    let create = FOUND
+        .get_or_init(|| unsafe {
+            let module = LoadLibraryExW(w!("d3d11.dll"), None, LOAD_LIBRARY_SEARCH_SYSTEM32).ok()?;
+            let function = GetProcAddress(module, s!("CreateDirect3D11DeviceFromDXGIDevice"))?;
+            // SAFETY: signature matches CreateDirect3D11DeviceFromDXGIDevice.
+            Some(std::mem::transmute::<unsafe extern "system" fn() -> isize, CreateDevice>(function))
+        })
+        .ok_or_else(|| windows::core::Error::from(E_NOTIMPL))?;
     let mut inspectable = std::ptr::null_mut();
     // SAFETY: dxgi is live, and the output is a valid pointer to receive a COM interface.
     unsafe {

@@ -24,8 +24,8 @@ use sa6i_link_core::{
     notify_limits,
 };
 use sa6i_link_intel::{
-    Finding, History, Refusal, RuleFile, SampleStore, Thresholds, Timestamp, Verdict,
-    WindowSummary, evaluate_with,
+    Finding, History, Refusal, RuleFile, SampleStore, Thresholds, Timestamp, Verdict, WindowSummary,
+    evaluate_with,
 };
 use sa6i_link_intel_win::{report, sample_window};
 use tokio::sync::broadcast::error::RecvError;
@@ -1116,11 +1116,8 @@ static SCREEN_ASKS: std::sync::OnceLock<tokio::sync::mpsc::UnboundedSender<(Devi
 /// Whether `screen` offers apps in windows.
 static SCREEN_APPS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 /// Active `screen` sessions: (session, pending resize (width, height), stream).
-type ScreenSession = (
-    u32,
-    std::sync::Arc<std::sync::Mutex<Option<(u32, u32)>>>,
-    std::sync::Arc<sa6i_link_core::MirrorStream>,
-);
+type ScreenSession =
+    (u32, std::sync::Arc<std::sync::Mutex<Option<(u32, u32)>>>, std::sync::Arc<sa6i_link_core::MirrorStream>);
 static SCREEN_SESSIONS: std::sync::Mutex<Vec<ScreenSession>> = std::sync::Mutex::new(Vec::new());
 static WEBCAM_ASKS: std::sync::OnceLock<tokio::sync::mpsc::UnboundedSender<(DeviceId, String)>> =
     std::sync::OnceLock::new();
@@ -2695,8 +2692,7 @@ async fn start_node(cli: &Cli) -> Result<Node> {
         let _ = std::fs::create_dir_all(&storage_root);
         sample_storage_tree(&storage_root);
         let trash_dir = data_dir.join("storage-trash");
-        let _ =
-            PHONE_STORAGE.set(sa6i_link_core::FolderStorage::new(storage_root).with_trash_dir(trash_dir));
+        let _ = PHONE_STORAGE.set(sa6i_link_core::FolderStorage::new(storage_root).with_trash_dir(trash_dir));
         config.capabilities.push(sa6i_link_core::STORAGE_READ.into());
         config.capabilities.push(sa6i_link_core::STORAGE_WRITE.into());
         config.capabilities.push(sa6i_link_core::CAMERA_CAPTURE.into());
@@ -2784,8 +2780,7 @@ fn node_power(cli: &Cli) -> PowerLevel {
 /// [`RuleFile::thresholds`] and not the scenario-aware variant: a deployment file
 /// is not required to know which fixtures this build ships.
 fn thresholds_in(path: &Path) -> Result<Thresholds> {
-    let text = std::fs::read_to_string(path)
-        .with_context(|| format!("could not read {}", path.display()))?;
+    let text = std::fs::read_to_string(path).with_context(|| format!("could not read {}", path.display()))?;
     let file = RuleFile::parse(&text).map_err(|refusals| refused(path, &refusals))?;
     file.thresholds().map_err(|refusals| refused(path, &refusals))
 }
@@ -2810,16 +2805,8 @@ fn refused(path: &Path, refusals: &[Refusal]) -> anyhow::Error {
 /// identity, a socket or a data directory, and the promise that nothing leaves
 /// the machine is easier to keep when there is nothing running that could.
 fn run_intel(action: &IntelArg) -> Result<i32> {
-    let IntelArg::Snapshot {
-        samples,
-        interval_ms,
-        json,
-        no_findings,
-        average,
-        budget,
-        history,
-        rules,
-    } = action;
+    let IntelArg::Snapshot { samples, interval_ms, json, no_findings, average, budget, history, rules } =
+        action;
     // Read before the first sample, so a file that cannot be honoured costs a
     // second rather than a minute: asking a machine for half an hour of history
     // and then refusing the numbers it is judged by is the wrong order.
@@ -2840,11 +2827,7 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
     let interval_ms = (*interval_ms).max(1);
     let (store, cost) = sample_window(samples, Duration::from_millis(interval_ms), *budget);
     let snapshot = store.latest().context("no sample was taken")?;
-    let findings = if *no_findings {
-        Vec::new()
-    } else {
-        evaluate_with(snapshot, &store, &limits)
-    };
+    let findings = if *no_findings { Vec::new() } else { evaluate_with(snapshot, &store, &limits) };
 
     if let Some(path) = history {
         record_history(path, &store, &findings)?;
@@ -2875,12 +2858,7 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
     if let Some(path) = rules {
         println!("  judged with the thresholds in {}", path.display());
     }
-    println!(
-        "  sample {} of {} (history covers {} s)",
-        snapshot.seq,
-        samples,
-        store.span_ms() / 1000
-    );
+    println!("  sample {} of {} (history covers {} s)", snapshot.seq, samples, store.span_ms() / 1000);
     println!();
     for line in report::report_lines(snapshot, summary.as_ref()) {
         println!("{line}");
@@ -3933,8 +3911,7 @@ async fn run(cli: &Cli, node: &Node) -> Result<()> {
             }
             let _ = CALL_NODE.set(node.clone());
             let mut offers = cli.offers.clone();
-            offers
-                .extend([sa6i_link_core::CALLS_STATE.to_owned(), sa6i_link_core::CALLS_CONTROL.to_owned()]);
+            offers.extend([sa6i_link_core::CALLS_STATE.to_owned(), sa6i_link_core::CALLS_CONTROL.to_owned()]);
             CALL_CONTROLS.store(!*basic, std::sync::atomic::Ordering::Relaxed);
             if !*basic {
                 offers.push(sa6i_link_core::CALLS_IN_CALL.to_owned());
@@ -5593,8 +5570,8 @@ fn stream_screen(
         }
         let time = started.elapsed().as_micros() as u64;
         if let Some((w, h)) = pending.lock().unwrap().take() {
-            let cfg = sa6i_link_core::MirrorConfig { codec: "h264".into(), width: w, height: h, session }
-                .to_cbor();
+            let cfg =
+                sa6i_link_core::MirrorConfig { codec: "h264".into(), width: w, height: h, session }.to_cbor();
             if mirror.send(PacketKind::Config, time, cfg) == MirrorSend::Closed {
                 break;
             }

@@ -108,30 +108,19 @@ impl RuleFile {
     /// type — is a [`Refusal`] like any other, so a caller handles one kind of
     /// error and the parser's line number survives in the message.
     pub fn parse(text: &str) -> Result<Self, Vec<Refusal>> {
-        let document: Document = toml::from_str(text).map_err(|error| {
-            vec![Refusal::Parse {
-                message: error.to_string(),
-            }]
-        })?;
+        let document: Document =
+            toml::from_str(text).map_err(|error| vec![Refusal::Parse { message: error.to_string() }])?;
 
         let mut refusals = Vec::new();
         let mut seen: Vec<&str> = Vec::new();
         for entry in &document.rule {
             if seen.contains(&entry.id.as_str()) {
-                refusals.push(Refusal::DuplicateRule {
-                    id: entry.id.clone(),
-                });
+                refusals.push(Refusal::DuplicateRule { id: entry.id.clone() });
             } else {
                 seen.push(entry.id.as_str());
             }
         }
-        if refusals.is_empty() {
-            Ok(Self {
-                rules: document.rule,
-            })
-        } else {
-            Err(refusals)
-        }
+        if refusals.is_empty() { Ok(Self { rules: document.rule }) } else { Err(refusals) }
     }
 
     /// The thresholds this file asks for, with the compiled defaults for every
@@ -159,10 +148,7 @@ impl RuleFile {
     /// The rule ids the file names, in file order, so the UI can say which
     /// numbers came from a file rather than from the build.
     pub fn rule_ids(&self) -> Vec<&str> {
-        self.rules
-            .iter()
-            .map(|entry| entry.id.as_str())
-            .collect()
+        self.rules.iter().map(|entry| entry.id.as_str()).collect()
     }
 
     fn check(&self, scenarios: Option<&[&str]>) -> Result<Thresholds, Vec<Refusal>> {
@@ -173,14 +159,8 @@ impl RuleFile {
         let mut claims: Vec<(String, String)> = Vec::new();
 
         for entry in &self.rules {
-            let Some(def) = RULES
-                .iter()
-                .map(|rule| rule.def)
-                .find(|def| def.id == entry.id)
-            else {
-                refusals.push(Refusal::UnknownRule {
-                    id: entry.id.clone(),
-                });
+            let Some(def) = RULES.iter().map(|rule| rule.def).find(|def| def.id == entry.id) else {
+                refusals.push(Refusal::UnknownRule { id: entry.id.clone() });
                 continue;
             };
 
@@ -196,36 +176,24 @@ impl RuleFile {
                 ("pages_per_second", entry.pages_per_second.is_some()),
             ] {
                 if present && !allowed_keys(def.id).contains(&key) {
-                    refusals.push(Refusal::NotThisRulesKey {
-                        id: entry.id.clone(),
-                        key,
-                    });
+                    refusals.push(Refusal::NotThisRulesKey { id: entry.id.clone(), key });
                 }
             }
 
             if let Some(word) = &entry.severity {
                 if !def.severity.label().eq_ignore_ascii_case(word) {
-                    refusals.push(Refusal::DisagreesWithCode {
-                        id: entry.id.clone(),
-                        field: "severity",
-                    });
+                    refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "severity" });
                 }
             }
             if let Some(word) = &entry.confidence {
                 if !def.confidence.label().eq_ignore_ascii_case(word) {
-                    refusals.push(Refusal::DisagreesWithCode {
-                        id: entry.id.clone(),
-                        field: "confidence",
-                    });
+                    refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "confidence" });
                 }
             }
             if let Some(paths) = &entry.requires {
                 for path in paths {
                     if !is_published_path(path) {
-                        refusals.push(Refusal::UnpublishedPath {
-                            id: entry.id.clone(),
-                            path: path.clone(),
-                        });
+                        refusals.push(Refusal::UnpublishedPath { id: entry.id.clone(), path: path.clone() });
                     }
                 }
                 let same = paths.len() == def.requires.len()
@@ -234,19 +202,15 @@ impl RuleFile {
                         .zip(def.requires.iter())
                         .all(|(written, compiled)| written.as_str() == *compiled);
                 if !same {
-                    refusals.push(Refusal::DisagreesWithCode {
-                        id: entry.id.clone(),
-                        field: "requires",
-                    });
+                    refusals.push(Refusal::DisagreesWithCode { id: entry.id.clone(), field: "requires" });
                 }
             }
 
             apply(&entry.id, entry, &mut limits, &mut refusals);
 
-            for (field, name) in [
-                ("firing", entry.firing.as_deref()),
-                ("near_miss", entry.near_miss.as_deref()),
-            ] {
+            for (field, name) in
+                [("firing", entry.firing.as_deref()), ("near_miss", entry.near_miss.as_deref())]
+            {
                 let Some(name) = name else { continue };
                 if let Some(known) = scenarios {
                     if !known.contains(&name) {
@@ -260,25 +224,16 @@ impl RuleFile {
                 // Resolved to an owned value first: the borrow has to end before
                 // the `None` arm can push, which is the one thing a match on
                 // `find` cannot do in place.
-                let claimed = claims
-                    .iter()
-                    .find(|(claimed, _)| claimed.as_str() == name)
-                    .map(|(_, by)| by.clone());
+                let claimed =
+                    claims.iter().find(|(claimed, _)| claimed.as_str() == name).map(|(_, by)| by.clone());
                 match claimed {
-                    Some(by) => refusals.push(Refusal::ScenarioClaimedTwice {
-                        name: name.to_owned(),
-                        by,
-                    }),
+                    Some(by) => refusals.push(Refusal::ScenarioClaimedTwice { name: name.to_owned(), by }),
                     None => claims.push((name.to_owned(), entry.id.clone())),
                 }
             }
         }
 
-        if refusals.is_empty() {
-            Ok(limits)
-        } else {
-            Err(refusals)
-        }
+        if refusals.is_empty() { Ok(limits) } else { Err(refusals) }
     }
 }
 
@@ -320,14 +275,8 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
         }
         "cpu.one_core_pinned" => {
             let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
-            let ceiling = ranged_f32(
-                entry.total_below_percent,
-                id,
-                "total_below_percent",
-                PERCENT,
-                "",
-                refusals,
-            );
+            let ceiling =
+                ranged_f32(entry.total_below_percent, id, "total_below_percent", PERCENT, "", refusals);
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let Some(warn) = warn {
                 limits.core_pinned_percent = warn;
@@ -345,10 +294,8 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             if let (Some(warn), Some(critical)) = (warn, critical) {
                 if warn >= critical {
-                    refusals.push(Refusal::InvertedRange {
-                        id: "disk.low_free_space",
-                        key: "critical_percent",
-                    });
+                    refusals
+                        .push(Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" });
                 }
             }
             if let Some(warn) = warn {
@@ -403,8 +350,7 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
         }
         "gpu.vram_pressure" => {
             let warn = ranged_f32(entry.warn_percent, id, "warn_percent", PERCENT, "", refusals);
-            let window =
-                period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
+            let window = period(entry.sustained.as_deref(), id, "sustained", WINDOW_MINUTES, refusals);
             limits.gpu_vram_warn_percent = warn.unwrap_or(limits.gpu_vram_warn_percent);
             limits.gpu_vram_sustained_ms = window.unwrap_or(limits.gpu_vram_sustained_ms);
         }
@@ -517,11 +463,7 @@ fn period(
 ) -> Option<u64> {
     let text = text?;
     let Some(millis) = parse_duration(text) else {
-        refusals.push(Refusal::BadDuration {
-            id: id.to_owned(),
-            key,
-            value: text.to_owned(),
-        });
+        refusals.push(Refusal::BadDuration { id: id.to_owned(), key, value: text.to_owned() });
         return None;
     };
     if (bounds.0 * 60_000..=bounds.1 * 60_000).contains(&millis) {
@@ -574,27 +516,14 @@ pub enum Refusal {
     /// A duration that is not one: no unit, a unit no rule uses, or a sign in
     /// front of it. `value` is the text exactly as it was written, because the
     /// user has to find it in their own file.
-    BadDuration {
-        id: String,
-        key: &'static str,
-        value: String,
-    },
+    BadDuration { id: String, key: &'static str, value: String },
     /// A number outside the range its rule can mean. `expected` is the range,
     /// rendered with its unit.
-    OutOfRange {
-        id: String,
-        key: &'static str,
-        value: String,
-        expected: String,
-    },
+    OutOfRange { id: String, key: &'static str, value: String, expected: String },
     /// A warning threshold at or above the critical one.
     InvertedRange { id: &'static str, key: &'static str },
     /// A `firing` or `near_miss` naming a scenario that does not exist.
-    ScenarioNotKnown {
-        id: String,
-        field: &'static str,
-        name: String,
-    },
+    ScenarioNotKnown { id: String, field: &'static str, name: String },
     /// A scenario another rule already claims.
     ScenarioClaimedTwice { name: String, by: String },
 }
@@ -621,28 +550,21 @@ impl fmt::Display for Refusal {
                 f,
                 "`{id}` requires `{path}`, which no snapshot publishes, so evidence could not cite it"
             ),
-            Self::BadDuration { id, key, value } => write!(
-                f,
-                "`{id}` {key} = {value} is not a duration; write it as `90s`, `10m` or `2h`"
-            ),
-            Self::OutOfRange {
-                id,
-                key,
-                value,
-                expected,
-            } => write!(f, "`{id}` {key} = {value} is outside {expected}"),
-            Self::InvertedRange { id, key } => write!(
-                f,
-                "`{id}` has `{key}` at or below its warning threshold, so critical never happens"
-            ),
-            Self::ScenarioNotKnown { id, field, name } => write!(
-                f,
-                "`{id}` names `{name}` as its {field}, and no fixture has that name"
-            ),
-            Self::ScenarioClaimedTwice { name, by } => write!(
-                f,
-                "`{name}` is already claimed by `{by}`; a fixture proves one rule"
-            ),
+            Self::BadDuration { id, key, value } => {
+                write!(f, "`{id}` {key} = {value} is not a duration; write it as `90s`, `10m` or `2h`")
+            }
+            Self::OutOfRange { id, key, value, expected } => {
+                write!(f, "`{id}` {key} = {value} is outside {expected}")
+            }
+            Self::InvertedRange { id, key } => {
+                write!(f, "`{id}` has `{key}` at or below its warning threshold, so critical never happens")
+            }
+            Self::ScenarioNotKnown { id, field, name } => {
+                write!(f, "`{id}` names `{name}` as its {field}, and no fixture has that name")
+            }
+            Self::ScenarioClaimedTwice { name, by } => {
+                write!(f, "`{name}` is already claimed by `{by}`; a fixture proves one rule")
+            }
         }
     }
 }
@@ -707,13 +629,10 @@ mod tests {
     fn the_shipped_files_restate_the_compiled_numbers() {
         let names = known_scenarios();
         let known: Vec<&str> = names.iter().map(String::as_str).collect();
-        for text in [
-            CPU, CORE, DISK, FILL, GPU, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM,
-        ] {
+        for text in [CPU, CORE, DISK, FILL, GPU, MEMORY, COMMIT, GROWTH, PAGING, PROCESS, SLOW, SYSTEM] {
             let file = RuleFile::parse(text).expect("the shipped file parses");
-            let limits = file
-                .thresholds_with_scenarios(&known)
-                .unwrap_or_else(|refusals| panic!("{refusals:?}"));
+            let limits =
+                file.thresholds_with_scenarios(&known).unwrap_or_else(|refusals| panic!("{refusals:?}"));
             // This is the proof that the front-end changes no verdict: the rules
             // are pure functions of (snapshot, store, thresholds), the thresholds
             // are equal, so every finding from every fixture is identical to the
@@ -731,10 +650,7 @@ id = "disk.low_free_space"
 warn_percent = 80.0
 sustained = "5m"
 "#;
-        let limits = RuleFile::parse(text)
-            .expect("parses")
-            .thresholds()
-            .expect("is accepted");
+        let limits = RuleFile::parse(text).expect("parses").thresholds().expect("is accepted");
         assert!((limits.disk_warn_percent - 80.0).abs() < f32::EPSILON);
         assert_eq!(limits.disk_sustained_ms, 5 * 60_000);
         // And nothing else moved.
@@ -751,9 +667,7 @@ sustained = "5m"
     #[test]
     fn a_rule_the_code_does_not_have_is_refused() {
         let text = "[[rule]]\nid = \"disk.almost_full\"\nwarn_percent = 90.0\n";
-        assert!(refusals(text).contains(&Refusal::UnknownRule {
-            id: "disk.almost_full".to_owned()
-        }));
+        assert!(refusals(text).contains(&Refusal::UnknownRule { id: "disk.almost_full".to_owned() }));
     }
 
     #[test]
@@ -795,19 +709,20 @@ sustained = "5m"
     #[test]
     fn a_percentage_that_is_a_typo_is_refused() {
         let text = "[[rule]]\nid = \"disk.low_free_space\"\nwarn_percent = 900.0\n";
-        assert!(refusals(text).iter().any(|refusal| matches!(
-            refusal,
-            Refusal::OutOfRange { key: "warn_percent", .. }
-        )));
+        assert!(
+            refusals(text)
+                .iter()
+                .any(|refusal| matches!(refusal, Refusal::OutOfRange { key: "warn_percent", .. }))
+        );
     }
 
     #[test]
     fn a_warning_above_its_critical_is_refused() {
         let text = "[[rule]]\nid = \"disk.low_free_space\"\nwarn_percent = 98.0\ncritical_percent = 95.0\n";
-        assert!(refusals(text).contains(&Refusal::InvertedRange {
-            id: "disk.low_free_space",
-            key: "critical_percent",
-        }));
+        assert!(
+            refusals(text)
+                .contains(&Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" })
+        );
     }
 
     #[test]
@@ -846,10 +761,12 @@ sustained = "5m"
     #[test]
     fn a_severity_the_code_does_not_say_is_refused() {
         let text = "[[rule]]\nid = \"memory.pressure\"\nseverity = \"critical\"\n";
-        assert!(refusals(text).contains(&Refusal::DisagreesWithCode {
-            id: "memory.pressure".to_owned(),
-            field: "severity",
-        }));
+        assert!(
+            refusals(text).contains(&Refusal::DisagreesWithCode {
+                id: "memory.pressure".to_owned(),
+                field: "severity",
+            })
+        );
     }
 
     #[test]
@@ -900,9 +817,7 @@ firing = "disk-full-for-eleven-minutes"
     #[test]
     fn the_same_rule_twice_is_refused() {
         let text = "[[rule]]\nid = \"memory.pressure\"\n\n[[rule]]\nid = \"memory.pressure\"\n";
-        assert!(refusals(text).contains(&Refusal::DuplicateRule {
-            id: "memory.pressure".to_owned(),
-        }));
+        assert!(refusals(text).contains(&Refusal::DuplicateRule { id: "memory.pressure".to_owned() }));
     }
 
     #[test]

@@ -181,12 +181,10 @@ impl MemorySample {
     /// Physical memory in use, as a percentage.
     pub fn percent_used(&self) -> MetricState<f32> {
         match (&self.total, &self.available) {
-            (MetricState::Value(total), MetricState::Value(avail)) => {
-                match avail.percent_used(*total) {
-                    Some(p) => MetricState::Value(p),
-                    None => MetricState::Unknown(WhyUnknown::CollectorFailed),
-                }
-            }
+            (MetricState::Value(total), MetricState::Value(avail)) => match avail.percent_used(*total) {
+                Some(p) => MetricState::Value(p),
+                None => MetricState::Unknown(WhyUnknown::CollectorFailed),
+            },
             (MetricState::Unsupported(w), _) | (_, MetricState::Unsupported(w)) => {
                 MetricState::Unsupported(*w)
             }
@@ -229,12 +227,10 @@ impl VolumeSample {
     /// Percent of the volume in use.
     pub fn percent_used(&self) -> MetricState<f32> {
         match (&self.total, &self.free) {
-            (MetricState::Value(total), MetricState::Value(free)) => {
-                match free.percent_used(*total) {
-                    Some(p) => MetricState::Value(p),
-                    None => MetricState::Unknown(WhyUnknown::CollectorFailed),
-                }
-            }
+            (MetricState::Value(total), MetricState::Value(free)) => match free.percent_used(*total) {
+                Some(p) => MetricState::Value(p),
+                None => MetricState::Unknown(WhyUnknown::CollectorFailed),
+            },
             (MetricState::Unsupported(w), _) | (_, MetricState::Unsupported(w)) => {
                 MetricState::Unsupported(*w)
             }
@@ -318,9 +314,7 @@ pub fn top_processes(mut processes: Vec<ProcessSample>, limit: usize) -> Vec<Pro
             (None, Some(_)) => Ordering::Greater,
             (None, None) => Ordering::Equal,
         };
-        busiest
-            .then_with(|| working_set_bytes(b).cmp(&working_set_bytes(a)))
-            .then_with(|| a.pid.cmp(&b.pid))
+        busiest.then_with(|| working_set_bytes(b).cmp(&working_set_bytes(a))).then_with(|| a.pid.cmp(&b.pid))
     });
     processes.truncate(limit);
     processes
@@ -406,9 +400,7 @@ impl GpuSample {
     /// The adapter with the most dedicated memory — the one a game would pick,
     /// and the one worth showing when there are two.
     pub fn heaviest(&self) -> Option<&GpuAdapter> {
-        self.adapters.iter().max_by_key(|adapter| {
-            adapter.dedicated_limit.value().map_or(0, |limit| limit.0)
-        })
+        self.adapters.iter().max_by_key(|adapter| adapter.dedicated_limit.value().map_or(0, |limit| limit.0))
     }
 }
 
@@ -642,10 +634,7 @@ mod tests {
             seq: 1,
             taken_at: Timestamp(0),
             monotonic_ms: 0,
-            cpu: CpuSample {
-                percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
-                per_core: Vec::new(),
-            },
+            cpu: CpuSample { percent: MetricState::Unknown(WhyUnknown::NotSampledYet), per_core: Vec::new() },
             memory: MemorySample {
                 total: MetricState::Unknown(WhyUnknown::CollectorFailed),
                 available: MetricState::Unknown(WhyUnknown::CollectorFailed),
@@ -667,10 +656,7 @@ mod tests {
         let metrics = snapshot.metrics();
         assert!(metrics.contains(&("process.401.cpu_percent".to_owned(), 3.5)));
         assert!(metrics.contains(&("process.400.working_set_bytes".to_owned(), 64.0 * 1024.0 * 1024.0)));
-        assert!(
-            metrics.iter().all(|(path, _)| path != "process.400.cpu_percent"),
-            "{metrics:?}"
-        );
+        assert!(metrics.iter().all(|(path, _)| path != "process.400.cpu_percent"), "{metrics:?}");
     }
 
     fn process(pid: u32, megabytes: u64) -> ProcessSample {
@@ -768,12 +754,8 @@ mod tests {
 
     #[test]
     fn the_heaviest_adapter_is_the_one_with_the_most_memory() {
-        let sample = GpuSample {
-            adapters: vec![
-                adapter("integrated", 512, 0),
-                adapter("discrete", 2_000, 8_000),
-            ],
-        };
+        let sample =
+            GpuSample { adapters: vec![adapter("integrated", 512, 0), adapter("discrete", 2_000, 8_000)] };
         assert_eq!(sample.heaviest().map(|a| a.instance.as_str()), Some("discrete"));
         assert!(GpuSample { adapters: Vec::new() }.heaviest().is_none());
     }
@@ -876,10 +858,7 @@ mod tests {
             commit_used: MetricState::Unknown(WhyUnknown::CollectorFailed),
             pages_input_per_second: MetricState::Unknown(WhyUnknown::NotCollectedYet),
         };
-        assert_eq!(
-            memory.percent_used(),
-            MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion)
-        );
+        assert_eq!(memory.percent_used(), MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion));
         memory.total = MetricState::Value(Bytes(1000));
         memory.available = MetricState::Value(Bytes(250));
         assert_eq!(memory.percent_used(), MetricState::Value(75.0));
@@ -922,10 +901,7 @@ mod tests {
         let mut unknown = snapshot.clone();
         unknown.memory.commit_used = MetricState::Unknown(WhyUnknown::CollectorFailed);
         assert!(unknown.metrics().iter().all(|(p, _)| p != "memory.commit_used_bytes"));
-        assert_eq!(
-            snapshot.volume("C:").map(VolumeSample::percent_used),
-            Some(MetricState::Value(90.0))
-        );
+        assert_eq!(snapshot.volume("C:").map(VolumeSample::percent_used), Some(MetricState::Value(90.0)));
         assert_eq!(snapshot.volume("D:"), None);
     }
 
@@ -943,10 +919,7 @@ mod tests {
             seq: 1,
             taken_at: Timestamp(0),
             monotonic_ms: 0,
-            cpu: CpuSample {
-                percent: MetricState::Unknown(WhyUnknown::NotSampledYet),
-                per_core: Vec::new(),
-            },
+            cpu: CpuSample { percent: MetricState::Unknown(WhyUnknown::NotSampledYet), per_core: Vec::new() },
             memory: MemorySample {
                 total: MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion),
                 available: MetricState::Value(Bytes(1)),

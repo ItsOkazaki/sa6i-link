@@ -11,9 +11,7 @@
 //! threshold — and the TOML front-end in `docs/plan/M2-RULES.md` is exactly that
 //! test. [`Thresholds::default()`] is what M1 shipped, to the digit.
 
-use crate::findings::{
-    Confidence, Evidence, Finding, Severity, render_bytes, render_percent,
-};
+use crate::findings::{Confidence, Evidence, Finding, Severity, render_bytes, render_percent};
 use crate::model::{MemorySample, MetricState, ProcessSample, Snapshot};
 use crate::store::SampleStore;
 
@@ -263,11 +261,7 @@ pub const CPU_SUSTAINED_HIGH: RuleDef = RuleDef {
     requires: &["cpu.percent"],
 };
 
-fn cpu_sustained_high(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn cpu_sustained_high(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.cpu_warn_percent;
     let MetricState::Value(percent) = snapshot.cpu.percent else {
         return None;
@@ -275,22 +269,19 @@ fn cpu_sustained_high(
     if percent < warn {
         return None;
     }
-    let window = store.held_for(limits.cpu_sustained_ms, |sample| {
-        sample.cpu.percent.value().is_some_and(|p| *p >= warn)
-    })?;
-    let mut evidence = vec![
-        Evidence::new("cpu.percent", render_percent(percent))
-            .threshold(render_percent(warn))
-            .over(window.from_seq, window.to_seq, window.held_for_ms),
-    ];
+    let window = store
+        .held_for(limits.cpu_sustained_ms, |sample| sample.cpu.percent.value().is_some_and(|p| *p >= warn))?;
+    let mut evidence =
+        vec![Evidence::new("cpu.percent", render_percent(percent)).threshold(render_percent(warn)).over(
+            window.from_seq,
+            window.to_seq,
+            window.held_for_ms,
+        )];
     // When the cores were measured, say where the work is. Eight cores at 90 %
     // and one at 91 % are the same total and different machines, and the second
     // one is `cpu.one_core_pinned`'s finding rather than this one.
     if let Some((index, busiest)) = busiest_core(&snapshot.cpu.per_core) {
-        evidence.push(Evidence::new(
-            format!("cpu.core.{index}.percent"),
-            render_percent(busiest),
-        ));
+        evidence.push(Evidence::new(format!("cpu.core.{index}.percent"), render_percent(busiest)));
     }
     Some(Finding {
         id: format!("{}/system", CPU_SUSTAINED_HIGH.id),
@@ -336,11 +327,7 @@ pub const CPU_ONE_CORE_PINNED: RuleDef = RuleDef {
     requires: &["cpu.core.*.percent", "cpu.percent"],
 };
 
-fn cpu_one_core_pinned(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn cpu_one_core_pinned(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let pinned = limits.core_pinned_percent;
     let ceiling = limits.core_pinned_total_below_percent;
     let MetricState::Value(total) = snapshot.cpu.percent else {
@@ -356,11 +343,7 @@ fn cpu_one_core_pinned(
         return None;
     }
     let window = store.held_for(limits.core_pinned_ms, |sample| {
-        let some_core = sample
-            .cpu
-            .per_core
-            .iter()
-            .any(|core| core.value().is_some_and(|p| *p >= pinned));
+        let some_core = sample.cpu.per_core.iter().any(|core| core.value().is_some_and(|p| *p >= pinned));
         some_core && sample.cpu.percent.value().is_some_and(|p| *p < ceiling)
     })?;
     Some(Finding {
@@ -410,11 +393,7 @@ pub const DISK_LOW_FREE_SPACE: RuleDef = RuleDef {
     requires: &["volume.*.percent_used"],
 };
 
-fn disk_low_free_space(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn disk_low_free_space(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.disk_warn_percent;
     // The worst volume that has been full for the whole window. One volume at a
     // time: three findings that say the same thing is noise, and the user acts
@@ -432,10 +411,7 @@ fn disk_low_free_space(
         }
         let letter = volume.letter().to_owned();
         let Some(window) = store.held_for(limits.disk_sustained_ms, move |sample| {
-            sample
-                .volume(&letter)
-                .and_then(|v| v.percent_used().value().copied())
-                .is_some_and(|p| p >= warn)
+            sample.volume(&letter).and_then(|v| v.percent_used().value().copied()).is_some_and(|p| p >= warn)
         }) else {
             continue;
         };
@@ -514,11 +490,7 @@ pub const DISK_FILLING_FAST: RuleDef = RuleDef {
     requires: &["volume.*.free_bytes"],
 };
 
-fn disk_filling_fast(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn disk_filling_fast(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let window_ms = limits.disk_fill_window_ms;
     // A window the history does not span cannot be answered, and the start of
     // history is not the start of the window.
@@ -540,9 +512,8 @@ fn disk_filling_fast(
         };
         // A volume that was not mounted when the window opened has no "before",
         // and a missing before is not a zero drop.
-        let Some(before) = first
-            .volume(volume.letter())
-            .and_then(|earlier| earlier.free.value().map(|free| free.0))
+        let Some(before) =
+            first.volume(volume.letter()).and_then(|earlier| earlier.free.value().map(|free| free.0))
         else {
             continue;
         };
@@ -582,11 +553,7 @@ fn disk_filling_fast(
         evidence: vec![
             Evidence::new(format!("volume.{key}.free_bytes"), render_bytes(now))
                 .threshold(format!("{} lost", render_bytes(lost)))
-                .over(
-                    first.seq,
-                    snapshot.seq,
-                    snapshot.monotonic_ms.saturating_sub(first.monotonic_ms),
-                ),
+                .over(first.seq, snapshot.seq, snapshot.monotonic_ms.saturating_sub(first.monotonic_ms)),
             Evidence::new(format!("volume.{key}.free_bytes"), render_bytes(before))
                 .threshold(format!("{minutes} minutes ago")),
         ],
@@ -614,17 +581,10 @@ pub const GPU_VRAM_PRESSURE: RuleDef = RuleDef {
     id: "gpu.vram_pressure",
     severity: Severity::Warning,
     confidence: Confidence::Likely,
-    requires: &[
-        "gpu.adapter.*.dedicated_used_bytes",
-        "gpu.adapter.*.dedicated_limit_bytes",
-    ],
+    requires: &["gpu.adapter.*.dedicated_used_bytes", "gpu.adapter.*.dedicated_limit_bytes"],
 };
 
-fn gpu_vram_pressure(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn gpu_vram_pressure(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.gpu_vram_warn_percent;
     let MetricState::Value(gpu) = &snapshot.gpu else {
         return None;
@@ -653,8 +613,7 @@ fn gpu_vram_pressure(
     let window = store.held_for(limits.gpu_vram_sustained_ms, move |sample| {
         sample.gpu.value().is_some_and(|gpu| {
             gpu.adapters.iter().any(|adapter| {
-                adapter.instance == instance
-                    && adapter.percent_used().is_some_and(|percent| percent >= warn)
+                adapter.instance == instance && adapter.percent_used().is_some_and(|percent| percent >= warn)
             })
         })
     })?;
@@ -684,19 +643,13 @@ fn gpu_vram_pressure(
             window.held_for_ms / 60_000
         ),
         evidence: vec![
-            Evidence::new(
-                format!("gpu.adapter.{index}.dedicated_used_bytes"),
-                render_bytes(used),
-            )
-            .threshold(render_bytes(line))
-            .over(window.from_seq, window.to_seq, window.held_for_ms),
-            Evidence::new(
-                format!("gpu.adapter.{index}.dedicated_limit_bytes"),
-                render_bytes(limit),
-            )
-            // The instance name, because "GPU 1" is an ordinal this program made
-            // up and the counter instance is what Windows actually said.
-            .threshold(adapter.instance.clone()),
+            Evidence::new(format!("gpu.adapter.{index}.dedicated_used_bytes"), render_bytes(used))
+                .threshold(render_bytes(line))
+                .over(window.from_seq, window.to_seq, window.held_for_ms),
+            Evidence::new(format!("gpu.adapter.{index}.dedicated_limit_bytes"), render_bytes(limit))
+                // The instance name, because "GPU 1" is an ordinal this program made
+                // up and the counter instance is what Windows actually said.
+                .threshold(adapter.instance.clone()),
         ],
         actions: Vec::new(),
         first_seen: snapshot.taken_at,
@@ -713,11 +666,7 @@ pub const MEMORY_PRESSURE: RuleDef = RuleDef {
     requires: &["memory.percent_used"],
 };
 
-fn memory_pressure(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn memory_pressure(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.memory_warn_percent;
     let MetricState::Value(percent) = snapshot.memory.percent_used() else {
         return None;
@@ -726,12 +675,7 @@ fn memory_pressure(
         return None;
     }
     let window = store.held_for(limits.memory_sustained_ms, |sample| {
-        sample
-            .memory
-            .percent_used()
-            .value()
-            .copied()
-            .is_some_and(|p| p >= warn)
+        sample.memory.percent_used().value().copied().is_some_and(|p| p >= warn)
     })?;
     let available = match snapshot.memory.available {
         MetricState::Value(bytes) => render_bytes(bytes.0),
@@ -802,11 +746,7 @@ fn commit_percent(memory: &MemorySample) -> Option<f32> {
     Some((used as f64 / limit as f64 * 100.0) as f32)
 }
 
-fn memory_commit_pressure(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn memory_commit_pressure(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.memory_commit_warn_percent;
     let percent = commit_percent(&snapshot.memory)?;
     if percent < warn {
@@ -863,11 +803,7 @@ pub const PROCESS_RUNAWAY_CPU: RuleDef = RuleDef {
     requires: &["process.*.cpu_percent"],
 };
 
-fn process_runaway_cpu(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn process_runaway_cpu(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let warn = limits.process_cpu_percent;
     // One process at a time: a finding per busy process on a machine doing heavy
     // work would be a wall of text that says "something is compiling".
@@ -889,10 +825,7 @@ fn process_runaway_cpu(
             sample.processes.iter().any(|candidate| {
                 candidate.pid == pid
                     && candidate.created.value().copied() == Some(created)
-                    && candidate
-                        .cpu_percent
-                        .value()
-                        .is_some_and(|percent| *percent >= warn)
+                    && candidate.cpu_percent.value().is_some_and(|percent| *percent >= warn)
             })
         }) else {
             continue;
@@ -904,11 +837,7 @@ fn process_runaway_cpu(
 
     let (process, percent, window) = worst?;
     let pid = process.pid;
-    let name = if process.name.is_empty() {
-        format!("pid {pid}")
-    } else {
-        process.name.clone()
-    };
+    let name = if process.name.is_empty() { format!("pid {pid}") } else { process.name.clone() };
     let working_set = match process.working_set.value() {
         Some(bytes) => render_bytes(bytes.0),
         None => "an unknown amount of memory".to_owned(),
@@ -953,11 +882,7 @@ pub const PROCESS_MEMORY_GROWTH: RuleDef = RuleDef {
     requires: &["process.*.working_set_bytes"],
 };
 
-fn process_memory_growth(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn process_memory_growth(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let window_ms = limits.process_growth_window_ms;
     // A window the history does not span cannot be answered; treating the start of
     // history as the start of the window is how a spike becomes a trend.
@@ -1000,11 +925,7 @@ fn process_memory_growth(
 
     let (process, before, after, grown) = worst?;
     let pid = process.pid;
-    let name = if process.name.is_empty() {
-        format!("pid {pid}")
-    } else {
-        process.name.clone()
-    };
+    let name = if process.name.is_empty() { format!("pid {pid}") } else { process.name.clone() };
     let minutes = snapshot.monotonic_ms.saturating_sub(first.monotonic_ms) / 60_000;
     Some(Finding {
         id: format!("{}/{pid}", PROCESS_MEMORY_GROWTH.id),
@@ -1024,11 +945,7 @@ fn process_memory_growth(
         evidence: vec![
             Evidence::new(format!("process.{pid}.working_set_bytes"), render_bytes(after))
                 .threshold(render_bytes(before))
-                .over(
-                    first.seq,
-                    snapshot.seq,
-                    snapshot.monotonic_ms.saturating_sub(first.monotonic_ms),
-                ),
+                .over(first.seq, snapshot.seq, snapshot.monotonic_ms.saturating_sub(first.monotonic_ms)),
         ],
         actions: Vec::new(),
         first_seen: snapshot.taken_at,
@@ -1051,11 +968,7 @@ pub const DISK_SLOW_TRANSFERS: RuleDef = RuleDef {
     requires: &["disk.seconds_per_transfer"],
 };
 
-fn disk_slow_transfers(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn disk_slow_transfers(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let slow = limits.disk_slow_transfer_seconds;
     let MetricState::Value(seconds) = snapshot.disk_io.avg_seconds_per_transfer else {
         return None;
@@ -1066,11 +979,7 @@ fn disk_slow_transfers(
         return None;
     }
     let window = store.held_for(limits.disk_slow_sustained_ms, |sample| {
-        sample
-            .disk_io
-            .avg_seconds_per_transfer
-            .value()
-            .is_some_and(|seconds| *seconds >= slow)
+        sample.disk_io.avg_seconds_per_transfer.value().is_some_and(|seconds| *seconds >= slow)
     })?;
     let millis = seconds * 1000.0;
     Some(Finding {
@@ -1115,11 +1024,7 @@ pub const MEMORY_PAGING: RuleDef = RuleDef {
     requires: &["memory.pages_input_per_second"],
 };
 
-fn memory_paging(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn memory_paging(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let busy = limits.memory_pages_per_second;
     let MetricState::Value(pages) = snapshot.memory.pages_input_per_second else {
         return None;
@@ -1129,11 +1034,7 @@ fn memory_paging(
         return None;
     }
     let window = store.held_for(limits.memory_paging_sustained_ms, |sample| {
-        sample
-            .memory
-            .pages_input_per_second
-            .value()
-            .is_some_and(|pages| *pages >= busy)
+        sample.memory.pages_input_per_second.value().is_some_and(|pages| *pages >= busy)
     })?;
     Some(Finding {
         id: format!("{}/system", MEMORY_PAGING.id),
@@ -1170,11 +1071,7 @@ pub const SYSTEM_LONG_UPTIME: RuleDef = RuleDef {
     requires: &["system.uptime_seconds"],
 };
 
-fn system_long_uptime(
-    snapshot: &Snapshot,
-    _store: &SampleStore,
-    limits: &Thresholds,
-) -> Option<Finding> {
+fn system_long_uptime(snapshot: &Snapshot, _store: &SampleStore, limits: &Thresholds) -> Option<Finding> {
     let MetricState::Value(seconds) = snapshot.uptime else {
         return None;
     };
@@ -1197,11 +1094,7 @@ fn system_long_uptime(
             "This PC has been running for {days} days. Pending updates, leaked memory and driver \
              state accumulate; a restart clears them. Nothing is broken, this is just worth doing."
         ),
-        evidence: vec![Evidence::new(
-            "system.uptime_seconds",
-            format!("{days} days"),
-        )
-        .threshold(threshold)],
+        evidence: vec![Evidence::new("system.uptime_seconds", format!("{days} days")).threshold(threshold)],
         actions: Vec::new(),
         first_seen: snapshot.taken_at,
         last_seen: snapshot.taken_at,
@@ -1222,11 +1115,7 @@ pub fn evaluate(snapshot: &Snapshot, store: &SampleStore) -> Vec<Finding> {
 /// This is the whole reason [`Thresholds`] exists: the golden fixtures can be run
 /// at M1's numbers *and* at a second set, so the front-end that will eventually
 /// supply those numbers can be believed rather than trusted.
-pub fn evaluate_with(
-    snapshot: &Snapshot,
-    store: &SampleStore,
-    limits: &Thresholds,
-) -> Vec<Finding> {
+pub fn evaluate_with(snapshot: &Snapshot, store: &SampleStore, limits: &Thresholds) -> Vec<Finding> {
     let mut findings: Vec<Finding> = RULES
         .iter()
         .filter_map(|rule| (rule.evaluate)(snapshot, store, limits))
@@ -1248,8 +1137,8 @@ pub fn evaluate_with(
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, DiskIoSample, GpuAdapter, GpuSample, MemorySample, ProcessSample,
-        VolumeKind, VolumeSample, WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, GpuAdapter, GpuSample, MemorySample, ProcessSample, VolumeKind,
+        VolumeSample, WhyUnknown,
     };
 
     const MIB: u64 = 1024 * 1024;
@@ -1405,10 +1294,7 @@ mod tests {
             snap.processes = vec![busy_process(4242, "render.exe", created, 96.0)];
             snap
         });
-        assert!(
-            findings_of(&store).is_empty(),
-            "two five-minute processes are not one ten-minute one"
-        );
+        assert!(findings_of(&store).is_empty(), "two five-minute processes are not one ten-minute one");
     }
 
     #[test]
@@ -1453,10 +1339,7 @@ mod tests {
             }
             snap
         });
-        assert!(
-            findings_of(&store).is_empty(),
-            "ten minutes of history is not half an hour of growth"
-        );
+        assert!(findings_of(&store).is_empty(), "ten minutes of history is not half an hour of growth");
     }
 
     #[test]
@@ -1613,11 +1496,7 @@ mod tests {
         assert_eq!(fill.subject, "C:");
         assert_eq!(fill.severity, Severity::Notice);
         assert_eq!(fill.evidence[0].metric, "volume.C.free_bytes");
-        assert!(
-            fill.evidence[0].threshold.as_deref() == Some("10.0 GB lost"),
-            "{:?}",
-            fill.evidence[0]
-        );
+        assert!(fill.evidence[0].threshold.as_deref() == Some("10.0 GB lost"), "{:?}", fill.evidence[0]);
         // Half an hour of evidence, not one sample of it.
         assert_eq!(fill.evidence[0].held_for_ms, 30 * 60 * 1000);
         assert!(fill.evidence[0].from_seq < fill.evidence[0].to_seq, "{:?}", fill.evidence[0]);
@@ -1773,11 +1652,7 @@ mod tests {
         assert_eq!(disk.severity, Severity::Warning);
         assert!(disk.explain.contains("95.0 %"), "{}", disk.explain);
         assert_eq!(disk.evidence.len(), 2);
-        assert!(
-            disk.evidence[0].sentence().contains("10 minutes"),
-            "{:?}",
-            disk.evidence[0]
-        );
+        assert!(disk.evidence[0].sentence().contains("10 minutes"), "{:?}", disk.evidence[0]);
     }
 
     #[test]
@@ -1787,10 +1662,7 @@ mod tests {
             with_disk_used(&mut snap, 98.5);
             snap
         });
-        let disk = findings_of(&store)
-            .into_iter()
-            .find(|f| f.rule == DISK_LOW_FREE_SPACE.id)
-            .unwrap();
+        let disk = findings_of(&store).into_iter().find(|f| f.rule == DISK_LOW_FREE_SPACE.id).unwrap();
         assert_eq!(disk.severity, Severity::Critical);
     }
 
@@ -1828,10 +1700,8 @@ mod tests {
             });
             snap
         });
-        let disk: Vec<Finding> = findings_of(&store)
-            .into_iter()
-            .filter(|f| f.rule == DISK_LOW_FREE_SPACE.id)
-            .collect();
+        let disk: Vec<Finding> =
+            findings_of(&store).into_iter().filter(|f| f.rule == DISK_LOW_FREE_SPACE.id).collect();
         assert_eq!(disk.len(), 1, "one finding per rule, not one per volume");
         assert_eq!(disk[0].subject, "D:");
     }
@@ -1857,10 +1727,7 @@ mod tests {
         let mut snap = healthy(1, 0);
         snap.uptime = MetricState::Value(20 * 86_400);
         store.push(snap.clone());
-        let uptime = evaluate(&snap, &store)
-            .into_iter()
-            .find(|f| f.rule == SYSTEM_LONG_UPTIME.id)
-            .unwrap();
+        let uptime = evaluate(&snap, &store).into_iter().find(|f| f.rule == SYSTEM_LONG_UPTIME.id).unwrap();
         assert_eq!(uptime.severity, Severity::Info);
         assert!(uptime.title.contains("20 days"), "{}", uptime.title);
     }
@@ -1912,10 +1779,7 @@ mod tests {
                 .any(|f| f.rule == DISK_LOW_FREE_SPACE.id)
         );
         let strict = Thresholds { disk_warn_percent: 95.0, ..Thresholds::default() };
-        assert!(
-            evaluate_with(&snapshot, &store, &strict).is_empty(),
-            "a 95 % line is above a 91 % volume"
-        );
+        assert!(evaluate_with(&snapshot, &store, &strict).is_empty(), "a 95 % line is above a 91 % volume");
 
         // A machine up for three and a half days, with the "restart?" line moved
         // to three days: the finding has to cite the number it used, not the one

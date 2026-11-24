@@ -664,8 +664,7 @@ mod tests {
         let mut partly = snapshot(1);
         partly.cpu.per_core =
             vec![MetricState::Value(20.0), MetricState::Unknown(WhyUnknown::CollectorFailed)];
-        let json =
-            serde_json::to_value(monitor_view(&partly, &[partly.clone()], 0)).expect("serializes");
+        let json = serde_json::to_value(monitor_view(&partly, &[partly.clone()], 0)).expect("serializes");
         // A core that was not measured arrives as null, not as zero: the bar is
         // drawn empty either way, but only one of them is a lie.
         assert_eq!(json["cores"][0]["percent"], 20.0);

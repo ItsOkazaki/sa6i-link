@@ -178,9 +178,7 @@ mod tests {
         assert!(is_installed(Path::new("/usr/bin/sa6i-link")));
         assert!(is_installed(Path::new("/usr/local/bin/sa6i-link")));
         assert!(is_installed(Path::new("/opt/sa6i-link/sa6i-link")));
-        assert!(is_installed_location(Path::new(
-            "/home/user/.local/share/sa6i-link-app/sa6i-link"
-        )));
+        assert!(is_installed_location(Path::new("/home/user/.local/share/sa6i-link-app/sa6i-link")));
         assert!(is_installed_location(Path::new("/home/user/.local/bin/sa6i-link")));
         assert!(!is_installed(Path::new("/home/user/repo/target/debug/sa6i-link")));
         assert!(!is_installed(Path::new("/home/user/repo/target/release/sa6i-link")));
@@ -203,9 +201,6 @@ mod tests {
     #[test]
     fn command_escapes_desktop_entry_special_characters() {
         let exe = Path::new("/opt/my \"quoted\" $dir`1`\\bin%20/sa6i-link");
-        assert_eq!(
-            command(exe),
-            r#""/opt/my \"quoted\" \$dir\`1\`\\bin%%20/sa6i-link" --minimized"#
-        );
+        assert_eq!(command(exe), r#""/opt/my \"quoted\" \$dir\`1\`\\bin%%20/sa6i-link" --minimized"#);
     }
 }

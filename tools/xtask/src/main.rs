@@ -357,9 +357,8 @@ fn render_kotlin(tokens: &Value) -> Result<String> {
     out.push(format!("    const val COMB_FRAME_MS = {}L", number("frameMs")? as i64));
     out.push(String::new());
     for (field, variant) in [("Midnight", "midnight"), ("Daylight", "daylight")] {
-        let palette = signal_variants
-            .get(variant)
-            .with_context(|| format!("missing signal variants.{variant}"))?;
+        let palette =
+            signal_variants.get(variant).with_context(|| format!("missing signal variants.{variant}"))?;
         out.push(format!("    val signal{field} = {}", kotlin_palette(palette, 4)?));
         out.push(String::new());
     }

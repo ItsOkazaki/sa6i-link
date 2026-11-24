@@ -23,10 +23,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use sa6i_link_protocol::{
-    DeviceId,
-    messages::{DeviceInfo, DeviceKind, files},
-};
 use ring::{
     rand::{SecureRandom, SystemRandom},
     signature::{ECDSA_P256_SHA256_ASN1_SIGNING, EcdsaKeyPair, KeyPair},
@@ -37,6 +33,10 @@ use rustls::{
     crypto::{CryptoProvider, verify_tls12_signature, verify_tls13_signature},
 };
 use rustls_pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, ServerName, UnixTime};
+use sa6i_link_protocol::{
+    DeviceId,
+    messages::{DeviceInfo, DeviceKind, files},
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use socket2::{Domain, Protocol, Socket, Type};

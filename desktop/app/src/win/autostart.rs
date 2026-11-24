@@ -91,9 +91,7 @@ mod tests {
 
     #[test]
     fn builds_are_not_installed_copies() {
-        assert!(!is_installed(Path::new(
-            r"C:\Users\me\src\sa6i-link\target\release\sa6i-link.exe"
-        )));
+        assert!(!is_installed(Path::new(r"C:\Users\me\src\sa6i-link\target\release\sa6i-link.exe")));
         if let Ok(dir) = std::env::var("ProgramFiles") {
             assert!(is_installed(&Path::new(&dir).join("Sa6iLink").join("sa6i-link.exe")));
         }

@@ -252,7 +252,9 @@ impl History {
         let samples = self.conn.execute("DELETE FROM sample WHERE taken_at < ?1", params![raw_cutoff])?;
         let findings =
             self.conn.execute("DELETE FROM finding WHERE last_seen < ?1", params![finding_cutoff])?;
-        if let Some(last) = self.last_recorded_at && last < raw_cutoff {
+        if let Some(last) = self.last_recorded_at
+            && last < raw_cutoff
+        {
             self.last_recorded_at = None;
         }
         Ok(samples + findings)
@@ -275,8 +277,7 @@ impl History {
 mod tests {
     use super::*;
     use crate::model::{
-        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample,
-        WhyUnknown,
+        Bytes, CpuSample, DiskIoSample, MemorySample, MetricState, VolumeKind, VolumeSample, WhyUnknown,
     };
 
     fn snapshot(seq: u64, taken_at: i64) -> Snapshot {

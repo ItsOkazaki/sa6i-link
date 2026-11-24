@@ -413,9 +413,7 @@ fn feed_update(found: &feed::Feed, current: &str) -> Option<Update> {
 /// a file name under %TEMP%: a plain name only, never a path.
 fn is_installer_name(name: &str, suffix: &str) -> bool {
     name.ends_with(suffix)
-        && (name.starts_with("Sa6iLink-")
-            || name.starts_with("sa6i-link_")
-            || name.starts_with("sa6i-link-"))
+        && (name.starts_with("Sa6iLink-") || name.starts_with("sa6i-link_") || name.starts_with("sa6i-link-"))
         && feed::is_plain_name(name)
 }
 
@@ -1390,8 +1388,13 @@ mod tests {
     #[test]
     fn experimental_build_disables_update_entry_points() {
         let update = Update {
-            version: "99.0.0".into(), name: None, notes_url: String::new(),
-            installer_url: String::new(), installer_name: String::new(), sums_url: None, sha256: None,
+            version: "99.0.0".into(),
+            name: None,
+            notes_url: String::new(),
+            installer_url: String::new(),
+            installer_name: String::new(),
+            sums_url: None,
+            sha256: None,
         };
         assert!(!can_update());
         assert!(available().is_none());
@@ -1413,8 +1416,8 @@ mod tests {
             assets: vec![
                 Asset {
                     name: "Sa6iLink-9.0.0-x64-setup.exe".into(),
-                    browser_download_url: "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup"
-                        .into(),
+                    browser_download_url:
+                        "https://github.com/ItsOkazaki/sa6i-link/releases/download/v9/setup".into(),
                 },
                 Asset {
                     name: "Sa6iLink-9.0.0-arm64-setup.exe".into(),
@@ -1447,11 +1450,8 @@ mod tests {
 
     #[test]
     fn the_relauncher_waits_for_the_version_then_opens_the_app() {
-        let script = relauncher_script(
-            r"C:\Program Files\Sa6iLink\sa6i-link.exe",
-            "0.2.0",
-            "--minimized --updated",
-        );
+        let script =
+            relauncher_script(r"C:\Program Files\Sa6iLink\sa6i-link.exe", "0.2.0", "--minimized --updated");
         assert!(script.contains("$installed -eq '0.2.0'"));
         assert!(script.contains("Sa6iLink-*-setup"));
         assert!(script.contains(

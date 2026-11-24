@@ -22,9 +22,8 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use sa6i_link_intel::{
-    Bytes, CpuSample, DiskIoSample, Finding, GpuAdapter, GpuSample, MemorySample, MetricState,
-    ProcessSample, RULES, SampleStore, Severity, Snapshot, Timestamp, VolumeKind, VolumeSample,
-    WhyUnknown, evaluate,
+    Bytes, CpuSample, DiskIoSample, Finding, GpuAdapter, GpuSample, MemorySample, MetricState, ProcessSample,
+    RULES, SampleStore, Severity, Snapshot, Timestamp, VolumeKind, VolumeSample, WhyUnknown, evaluate,
 };
 
 /// A fixed wall-clock base so the fixtures are deterministic: 2023-11-14T22:13:20Z.
@@ -224,11 +223,7 @@ fn snapshot(index: u64, segment: &Segment) -> Snapshot {
             // A segment that describes its cores gives one reading each; one that
             // does not leaves the list empty, which is what a machine whose
             // per-core counters failed looks like.
-            per_core: segment
-                .cores
-                .iter()
-                .map(|percent| MetricState::Value(*percent))
-                .collect(),
+            per_core: segment.cores.iter().map(|percent| MetricState::Value(*percent)).collect(),
         },
         memory: memory(segment),
         volumes: segment.volumes.iter().map(volume).collect(),
@@ -304,11 +299,7 @@ fn memory(segment: &Segment) -> MemorySample {
 fn process(spec: &ProcessSpec) -> ProcessSample {
     ProcessSample {
         pid: spec.pid,
-        name: if spec.name.is_empty() {
-            format!("proc{}.exe", spec.pid)
-        } else {
-            spec.name.clone()
-        },
+        name: if spec.name.is_empty() { format!("proc{}.exe", spec.pid) } else { spec.name.clone() },
         working_set: MetricState::Value(Bytes(spec.working_set_mb * MIB)),
         cpu_percent: MetricState::Value(spec.cpu_percent),
         created: MetricState::Value(spec.created),
@@ -343,18 +334,11 @@ fn triple(rule: &str, severity: &str, subject: &str) -> (String, String, String)
 }
 
 fn actual(findings: &[Finding]) -> BTreeSet<(String, String, String)> {
-    findings
-        .iter()
-        .map(|finding| triple(&finding.rule, finding.severity.label(), &finding.subject))
-        .collect()
+    findings.iter().map(|finding| triple(&finding.rule, finding.severity.label(), &finding.subject)).collect()
 }
 
 fn expected(scenario: &Scenario) -> BTreeSet<(String, String, String)> {
-    scenario
-        .expect
-        .iter()
-        .map(|want| triple(&want.rule, &want.severity, &want.subject))
-        .collect()
+    scenario.expect.iter().map(|want| triple(&want.rule, &want.severity, &want.subject)).collect()
 }
 
 #[test]
@@ -367,13 +351,7 @@ fn every_scenario_produces_exactly_the_findings_it_promises() {
         }
         let latest = store.latest().expect("a scenario has samples").clone();
         let findings = evaluate(&latest, &store);
-        assert_eq!(
-            actual(&findings),
-            expected(scenario),
-            "{} — {}",
-            scenario.name,
-            scenario.about
-        );
+        assert_eq!(actual(&findings), expected(scenario), "{} — {}", scenario.name, scenario.about);
         for finding in &findings {
             assert!(
                 !finding.evidence.is_empty(),
@@ -398,12 +376,9 @@ fn every_scenario_produces_exactly_the_findings_it_promises() {
 fn every_rule_has_a_firing_case_and_a_near_miss() {
     let scenarios = load_scenarios();
     for rule in RULES {
-        let fires = scenarios
-            .iter()
-            .any(|scenario| scenario.expect.iter().any(|want| want.rule == rule.def.id));
-        let quiet = scenarios
-            .iter()
-            .any(|scenario| scenario.quiets.iter().any(|id| id == rule.def.id));
+        let fires =
+            scenarios.iter().any(|scenario| scenario.expect.iter().any(|want| want.rule == rule.def.id));
+        let quiet = scenarios.iter().any(|scenario| scenario.quiets.iter().any(|id| id == rule.def.id));
         assert!(fires, "no scenario proves that {} fires", rule.def.id);
         assert!(quiet, "no scenario proves that {} can stay quiet", rule.def.id);
     }
@@ -477,15 +452,10 @@ fn names(value: &serde_json::Value) -> Vec<String> {
 fn a_severity_word_is_never_invented_by_a_scenario() {
     // The fixture spells severities the way the UI does; a typo in a fixture
     // would otherwise silently make an expectation unreachable.
-    let labels: BTreeSet<&str> = [
-        Severity::Info,
-        Severity::Notice,
-        Severity::Warning,
-        Severity::Critical,
-    ]
-    .into_iter()
-    .map(Severity::label)
-    .collect();
+    let labels: BTreeSet<&str> = [Severity::Info, Severity::Notice, Severity::Warning, Severity::Critical]
+        .into_iter()
+        .map(Severity::label)
+        .collect();
     for scenario in load_scenarios() {
         for want in &scenario.expect {
             assert!(

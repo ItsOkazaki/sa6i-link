@@ -129,11 +129,7 @@ impl Platform for DesktopPlatform {
     ) -> Result<(), MediaError> {
         win::media_sessions::command(player, action, position)
     }
-    fn mirror_requested(
-        &self,
-        peer: &sa6i_link_core::DeviceId,
-        options: &MirrorStart,
-    ) -> Result<(), String> {
+    fn mirror_requested(&self, peer: &sa6i_link_core::DeviceId, options: &MirrorStart) -> Result<(), String> {
         if options.session != sa6i_link_core::MIRROR_SCREEN {
             return Err("unsupported mirror session on PC".into());
         }
@@ -475,8 +471,14 @@ fn run_setup_window(mode: setup::Mode) -> ExitCode {
 // elevated helper. Requiring a data path avoids silently defaulting to the
 // user's normal data directory, but does not make that path or the OS isolated.
 fn validate_clean_experiment_options(options: &Options) -> Result<(), &'static str> {
-    if options.setup.is_some() || options.remove || options.uninstall || options.update_service || options.updated
-        || options.register_vcam || options.unregister_vcam || options.widget_provider
+    if options.setup.is_some()
+        || options.remove
+        || options.uninstall
+        || options.update_service
+        || options.updated
+        || options.register_vcam
+        || options.unregister_vcam
+        || options.widget_provider
     {
         return Err("setup, removal, update and system helper modes are disabled in this experimental build");
     }
@@ -781,8 +783,16 @@ mod tests {
         assert!(validate_clean_experiment_options(&opts).is_err());
         opts.data_dir = Some(std::env::current_dir().expect("absolute working directory"));
         assert!(validate_clean_experiment_options(&opts).is_ok());
-        for flag in ["--setup", "--remove", "--uninstall", "--update-service", "--updated",
-                     "--register-vcam", "--unregister-vcam", "--widget-provider"] {
+        for flag in [
+            "--setup",
+            "--remove",
+            "--uninstall",
+            "--update-service",
+            "--updated",
+            "--register-vcam",
+            "--unregister-vcam",
+            "--widget-provider",
+        ] {
             let mut parsed = parse_options_from([flag].into_iter().map(OsString::from));
             parsed.data_dir = opts.data_dir.clone();
             assert!(validate_clean_experiment_options(&parsed).is_err(), "{flag}");
@@ -822,9 +832,7 @@ mod tests {
     #[test]
     fn parse_options_recognizes_task_flag() {
         let find_opts = parse_options_from(
-            ["--data-dir", r"C:\Temp\sa6i-link-test", "--task", "find-phone"]
-                .into_iter()
-                .map(OsString::from),
+            ["--data-dir", r"C:\Temp\sa6i-link-test", "--task", "find-phone"].into_iter().map(OsString::from),
         );
         assert_eq!(find_opts.data_dir, Some(PathBuf::from(r"C:\Temp\sa6i-link-test")));
         assert_eq!(find_opts.task.as_deref(), Some("find-phone"));

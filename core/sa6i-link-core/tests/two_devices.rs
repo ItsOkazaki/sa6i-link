@@ -290,11 +290,7 @@ impl Platform for RecordingPlatform {
         self.calls.lock().unwrap().push((id.to_owned(), command));
         Ok(())
     }
-    fn call_log(
-        &self,
-        before: Option<i64>,
-        limit: u32,
-    ) -> Result<Vec<sa6i_link_core::CallLogEntry>, String> {
+    fn call_log(&self, before: Option<i64>, limit: u32) -> Result<Vec<sa6i_link_core::CallLogEntry>, String> {
         let entry = |date: i64| sa6i_link_core::CallLogEntry {
             id: format!("log:{date}"),
             number: format!("+1555010{date}"),
@@ -2031,8 +2027,7 @@ async fn the_phone_screen_streams_to_the_pc() {
 
     // The user agreed: the phone streams.
     let stream = Arc::new(with_timeout("open", phone.node.mirror_open(pc_id)).await.unwrap());
-    let config =
-        sa6i_link_core::MirrorConfig { codec: "h264".into(), width: 1080, height: 2400, session: 0 };
+    let config = sa6i_link_core::MirrorConfig { codec: "h264".into(), width: 1080, height: 2400, session: 0 };
     let sender = stream.clone();
     let sent = tokio::task::spawn_blocking(move || {
         [
@@ -2251,8 +2246,7 @@ async fn phone_apps_open_in_windows_of_their_own() {
 async fn the_pc_reads_and_sends_texts_through_the_phone() {
     let mut pc = device_with("Desktop", DeviceKind::Desktop, &[sa6i_link_core::SMS_SHOW]).await;
     let mut phone =
-        device_with("Pixel", DeviceKind::Phone, &[sa6i_link_core::SMS_READ, sa6i_link_core::SMS_SEND])
-            .await;
+        device_with("Pixel", DeviceKind::Phone, &[sa6i_link_core::SMS_READ, sa6i_link_core::SMS_SEND]).await;
     pair_qr(&mut pc, &mut phone).await;
     let (pc_id, phone_id) = (pc.node.device_id(), phone.node.device_id());
 
@@ -2586,11 +2580,7 @@ async fn call_log_and_dial_work_and_respect_permissions_and_toggles() {
         .node
         .update_power(
             PowerLevel::NotApplicable,
-            vec![
-                "media.control".into(),
-                sa6i_link_core::CALLS_LOG.into(),
-                sa6i_link_core::CALLS_DIAL.into(),
-            ],
+            vec!["media.control".into(), sa6i_link_core::CALLS_LOG.into(), sa6i_link_core::CALLS_DIAL.into()],
         )
         .await;
     wait_for(&mut pc, "call.dial unlocked", |e| match e {
@@ -4377,8 +4367,7 @@ async fn mms_image_attachments_send_over_sms_service() {
 
     let mut pc = device_with("Desktop", DeviceKind::Desktop, &[sa6i_link_core::SMS_SHOW]).await;
     let mut phone =
-        device_with("Pixel", DeviceKind::Phone, &[sa6i_link_core::SMS_READ, sa6i_link_core::SMS_SEND])
-            .await;
+        device_with("Pixel", DeviceKind::Phone, &[sa6i_link_core::SMS_READ, sa6i_link_core::SMS_SEND]).await;
     pair_qr(&mut pc, &mut phone).await;
     let phone_id = phone.node.device_id();
 

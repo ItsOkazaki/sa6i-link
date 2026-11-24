@@ -820,10 +820,7 @@ mod imp {
         let body = if no_all_files_access {
             tr!("Storage", "On the phone, allow All files access for Sa6i Link.")
         } else {
-            tr!(
-                "Storage",
-                "On the phone, turn on Browse this phone's storage in File Explorer in Sa6i Link."
-            )
+            tr!("Storage", "On the phone, turn on Browse this phone's storage in File Explorer in Sa6i Link.")
         };
         crate::win::toast::show(crate::win::toast::Toast {
             device: crate::transfers::TOAST_GROUP.into(),

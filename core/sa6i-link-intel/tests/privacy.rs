@@ -202,11 +202,8 @@ fn neither_intel_crate_can_open_a_socket() {
         for expected in ["serde", "tracing"] {
             assert!(closure.contains(expected), "{root}: {expected} is missing from the closure");
         }
-        let offenders: Vec<&str> = NETWORK_CAPABLE
-            .iter()
-            .copied()
-            .filter(|name| closure.contains(*name))
-            .collect();
+        let offenders: Vec<&str> =
+            NETWORK_CAPABLE.iter().copied().filter(|name| closure.contains(*name)).collect();
         assert!(
             offenders.is_empty(),
             "{root} must not be linked to anything that can open a socket, found: {offenders:?}"
@@ -219,11 +216,8 @@ fn the_core_crate_is_below_the_shell_and_the_link_stack() {
     let path = lock_path();
     let lock = std::fs::read_to_string(&path).expect("the workspace lock");
     let closure = closure_of(&dependency_graph(&lock), "sa6i-link-intel");
-    let offenders: Vec<&str> = NOT_BELOW_THE_SHELL
-        .iter()
-        .copied()
-        .filter(|name| closure.contains(*name))
-        .collect();
+    let offenders: Vec<&str> =
+        NOT_BELOW_THE_SHELL.iter().copied().filter(|name| closure.contains(*name)).collect();
     assert!(
         offenders.is_empty(),
         "sa6i-link-intel is the bottom of the stack, but these are below it too: {offenders:?}"

@@ -34,17 +34,14 @@
 
 #[cfg(windows)]
 mod imp {
-    use sa6i_link_intel::{
-        Bytes, DiskIoSample, GpuAdapter, GpuSample, MetricState, WhyUnknown,
-    };
+    use sa6i_link_intel::{Bytes, DiskIoSample, GpuAdapter, GpuSample, MetricState, WhyUnknown};
 
-    use windows::core::{HSTRING, PCWSTR};
     use windows::Win32::System::Performance::{
         PDH_CSTATUS_NO_OBJECT, PDH_FMT_COUNTERVALUE, PDH_FMT_COUNTERVALUE_ITEM_W, PDH_FMT_DOUBLE,
-        PDH_HCOUNTER, PDH_HQUERY, PDH_INVALID_PATH, PDH_MORE_DATA, PdhAddEnglishCounterW,
-        PdhCloseQuery, PdhCollectQueryData, PdhGetFormattedCounterArrayW,
-        PdhGetFormattedCounterValue, PdhOpenQueryW,
+        PDH_HCOUNTER, PDH_HQUERY, PDH_INVALID_PATH, PDH_MORE_DATA, PdhAddEnglishCounterW, PdhCloseQuery,
+        PdhCollectQueryData, PdhGetFormattedCounterArrayW, PdhGetFormattedCounterValue, PdhOpenQueryW,
     };
+    use windows::core::{HSTRING, PCWSTR};
 
     /// Summed over physical disks, which is what Task Manager's Performance tab
     /// shows and what "the disk is busy" means to a person.
@@ -300,9 +297,8 @@ mod imp {
         let mut count = 0u32;
         // SAFETY: a null item buffer asks only for the size, which PDH reports
         // with PDH_MORE_DATA.
-        let sized = unsafe {
-            PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &mut bytes, &mut count, None)
-        };
+        let sized =
+            unsafe { PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &mut bytes, &mut count, None) };
         if sized != PDH_MORE_DATA && sized != 0 {
             return None;
         }
@@ -317,13 +313,7 @@ mod imp {
         // SAFETY: `buffer` is a live allocation of `filled` bytes, aligned for
         // the item struct, and is exactly what the call is told it has.
         let read = unsafe {
-            PdhGetFormattedCounterArrayW(
-                counter,
-                PDH_FMT_DOUBLE,
-                &mut filled,
-                &mut items,
-                Some(items_ptr),
-            )
+            PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &mut filled, &mut items, Some(items_ptr))
         };
         if read != 0 {
             return None;
@@ -376,8 +366,7 @@ mod imp {
         let mut value = PDH_FMT_COUNTERVALUE::default();
         // SAFETY: `value` is a valid writable PDH_FMT_COUNTERVALUE, and the
         // union is read as the variant the requested format filled in.
-        let status =
-            unsafe { PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, None, &mut value) };
+        let status = unsafe { PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, None, &mut value) };
         if status != 0 || value.CStatus != 0 {
             return MetricState::Unknown(WhyUnknown::CollectorFailed);
         }
@@ -418,7 +407,6 @@ mod imp {
         }
     }
 }
-
 
 #[cfg(not(windows))]
 mod imp {

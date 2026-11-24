@@ -17,9 +17,7 @@ use std::{
 };
 
 use sa6i_link_core::{DeviceId, Error, NodeEvent, WebcamConfig, WebcamSink, WebcamStart};
-use sa6i_link_vcam::{
-    DEFAULT_MAPPING_NAME, LOCAL_MAPPING_NAME, SharedFrameMapping, render_placeholder_bgrx,
-};
+use sa6i_link_vcam::{DEFAULT_MAPPING_NAME, LOCAL_MAPPING_NAME, SharedFrameMapping, render_placeholder_bgrx};
 
 use crate::{
     bridge::{app::describe, native::ffi},
