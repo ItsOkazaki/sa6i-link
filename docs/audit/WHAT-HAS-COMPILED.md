@@ -63,6 +63,42 @@ a 4 ms run costing 1 ms of CPU — a quarter of a core — was asked to pass.
   been asked a question by a rule on hardware.
 - **`SA6I Clean`.** Still never executed anywhere.
 
+## The application, at last
+
+The window compiled. `ci.yml`'s own two commands — `cargo clippy --locked -p sa6i-link
+-p sa6i-vcam -p s1-qt-rust --all-targets -- -D warnings` and
+`cargo build --locked --release -p sa6i-link -p sa6i-vcam` — ran on `windows-latest`
+with Qt 6.12 and the same `aqtinstall` pin, and both exited 0:
+
+| | |
+| --- | --- |
+| Workflow | `.github/workflows/desktop-report.yml` |
+| Run | 33 minutes on `windows-latest`, `EXIT:clippy:0 EXIT:release:0` |
+| Where to read it | issue [#24](https://github.com/ItsOkazaki/sa6i-link/issues/24) |
+
+Three errors stood between the first attempt and this, all in
+`desktop/app/src/bridge/intel.rs`:
+
+1. `error[E0277]`: `IntelHost: cxx_qt::Initialize` was not satisfied. Every other bridge
+   in the app has an outer `impl cxx_qt::Initialize for qobject::X` next to the empty
+   impl inside the module; `intel.rs` had only the inner one.
+2. `error[E0046]`: that trait's `initialize` has no default, so the impl needs a body —
+   empty is fine, absent is not.
+3. `error[E0596]`: `let this = self.as_mut().rust_mut()` followed by `&mut this.running`
+   — a `Pin` is reachable mutably only through a mutable binding.
+
+That is what a compiler is for, and it took the compiler three passes to say it.
+
+**What this still does not prove.** The app has been *built*, never *run*. `ci.yml`
+also opens the window (`scripts/ui-check.ps1`), packages it with NSIS, installs and
+uninstalls it, and runs the QML tests — none of those have executed on this branch, and
+a release binary that links is not a window that opens. Nothing has run on Windows 7.
+The macOS, Linux and ARM64 app jobs have not been retried since these three fixes, so
+their status is genuinely unknown rather than assumed.
+
+`desktop-report.yml` exists only to make those failures readable and should be deleted
+once `ci.yml`'s own jobs pass.
+
 ## Lints and formatting, which were turned on and then satisfied
 
 `ci.yml` gates on `cargo fmt --all --check` and `cargo clippy -- -D warnings`, so this
