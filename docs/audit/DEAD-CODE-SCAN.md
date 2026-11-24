@@ -77,11 +77,14 @@ tool cannot supply.
 
 Two more things the scan reports that are deliberate:
 
-- **`sa6i/baseline/windows-arabic-v8/source/`** — duplicate `.ts` catalogues and
-  four `.py` patch scripts, 20,000+ lines, "no other file mentions" them, and no
-  document links to the folder. It is the archived source of a shipped test build.
-  Keep it, and say so in a README there, because right now the only thing that
-  distinguishes an archive from a mistake is somebody remembering.
+- **`sa6i/baseline/windows-arabic-v8/source/`** — 33 files, two 10,306-line Arabic
+  catalogues and 14 patch scripts, none of them named anywhere the scan read. It is
+  the archived source of the shipped v8 Windows test build, and it documents itself:
+  `READ-ME-FIRST.txt` beside it gives the provenance, the EXE's SHA-256, what each
+  file is, and that it is a private binary patch of 0.1.5 rather than a source build.
+  Keep it. The first version of this page said the folder was undocumented, which was
+  an assumption about a directory I had not opened; the file that contradicts it is
+  the first one in the listing.
 - **47 duplicate groups, 11,054 lines and 3.3 MB.** The largest is
   `desktop/app/i18n/sa6i-link_ar.ts` against its baseline copy — deliberate. The
   interesting one is `sample_m4a` in `core/sa6i-link-cli/src/main.rs:4677` against
