@@ -35,6 +35,10 @@ concurrency:
 env:
   CARGO_TERM_COLOR: never
   CARGO_INCREMENTAL: "0"
+  # Outside the checkout on purpose: the formatting step commits with `git add -A`,
+  # and on the first run that committed this report into the repository.
+  REPORT: ${{ runner.temp }}/report.txt
+  BODY: ${{ runner.temp }}/body.md
 
 jobs:
   check:
@@ -80,7 +84,7 @@ jobs:
               -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-cli \
               -p sa6i-link-adb -p sa6i-link-intel -p sa6i-link-intel-win 2>&1
             echo "EXIT:test:$?"
-          } > report.txt
+          } > "$REPORT"
           # The step itself always succeeds: publishing is the next step's job, and the
           # exit codes are recorded above where nothing can swallow them.
           exit 0
@@ -111,12 +115,12 @@ jobs:
           {
             echo
             echo "## cargo clippy --locked --all-targets -- -D warnings"
-            cargo clippy --locked --all-targets --keep-going -- -D warnings \
+            cargo clippy --locked --all-targets --keep-going \
               -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi \
               -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel \
-              -p sa6i-link-intel-win -p xtask 2>&1
+              -p sa6i-link-intel-win -p xtask -- -D warnings 2>&1
             echo "EXIT:clippy:$?"
-          } >> report.txt
+          } >> "$REPORT"
           exit 0
 
       - name: Publish the errors into one rolling issue
@@ -129,25 +133,25 @@ jobs:
             echo
             echo "Commit [\`${GITHUB_SHA:0:7}\`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) ·"
             echo "[\`cargo check\`](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) ·"
-            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' report.txt | tr '\n' ' ')\`"
+            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' "$REPORT" | tr '\n' ' ')\`"
             echo
             echo "#### What the compiler refused"
             echo '```text'
-            grep -E -A 5 '^(error(\[E[0-9]+\])?|warning: unused)' report.txt | head -260 || true
+            grep -E -A 5 '^(error(\[E[0-9]+\])?|warning: unused)' "$REPORT" | head -260 || true
             echo '```'
             echo
             echo "#### What the tests said"
             echo '```text'
-            grep -E -B 3 -A 14 '^(---- |failures:)' report.txt | head -320 || true
-            grep -E '^test result:' report.txt | head -40 || true
+            grep -E -B 3 -A 14 '^(---- |failures:)' "$REPORT" | head -320 || true
+            grep -E '^test result:' "$REPORT" | head -40 || true
             echo '```'
             echo
             echo "#### The last thirty lines"
             echo '```text'
-            tail -30 report.txt
+            tail -30 "$REPORT"
             echo '```'
-          } > body.md
-          head -c 55000 body.md > body-cut.md
+          } > "$BODY"
+          head -c 55000 "$BODY" > "$BODY.cut"
           # Filter in jq rather than in the query: parentheses and two in:title
           # qualifiers are not something to bet an update on.
           n=$(gh issue list --search 'in:title "Rust check"' --limit 50 \
@@ -155,17 +159,17 @@ jobs:
                 --jq '.[] | select(.title | contains("(${{ matrix.os }})")) | .number' \
                 | head -1 || true)
           if [ -n "$n" ]; then
-            gh issue edit "$n" --body-file body-cut.md
+            gh issue edit "$n" --body-file "$BODY.cut"
             echo "updated issue #$n"
           else
-            gh issue create --title "Rust check (${{ matrix.os }})" --body-file body-cut.md
+            gh issue create --title "Rust check (${{ matrix.os }})" --body-file "$BODY.cut"
           fi
 
       - name: Fail when the compiler did not agree
         run: |
-          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' report.txt | cut -d: -f3 | sort -u | tr '\n' ' ')
+          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' "$REPORT" | cut -d: -f3 | sort -u | tr '\n' ' ')
           echo "exit codes: $codes"
-          if grep -q 'EXIT:[a-z]*:[1-9]' report.txt; then
+          if grep -q 'EXIT:[a-z]*:[1-9]' "$REPORT"; then
             echo "something did not compile or did not pass; issue carries the text"
             exit 1
           fi
