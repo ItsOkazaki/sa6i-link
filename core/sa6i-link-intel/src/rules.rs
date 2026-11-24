@@ -459,6 +459,7 @@ fn disk_low_free_space(
         _ => "an unknown size".to_owned(),
     };
     let letter = volume.letter().to_owned();
+    let key = volume.key().to_owned();
     Some(Finding {
         id: format!("{}/{}", DISK_LOW_FREE_SPACE.id, letter),
         rule: DISK_LOW_FREE_SPACE.id.to_owned(),
@@ -473,11 +474,11 @@ fn disk_low_free_space(
             window.held_for_ms / 60_000
         ),
         evidence: vec![
-            Evidence::new(format!("volume.{letter}.percent_used"), render_percent(percent))
+            Evidence::new(format!("volume.{key}.percent_used"), render_percent(percent))
                 .threshold(render_percent(warn))
                 .over(window.from_seq, window.to_seq, window.held_for_ms),
             Evidence::new(
-                format!("volume.{letter}.free_bytes"),
+                format!("volume.{key}.free_bytes"),
                 match volume.free {
                     MetricState::Value(free) => render_bytes(free.0),
                     _ => "unavailable".to_owned(),
@@ -556,6 +557,7 @@ fn disk_filling_fast(
 
     let (volume, lost, before, now) = worst?;
     let letter = volume.letter().to_owned();
+    let key = volume.key().to_owned();
     let minutes = snapshot.monotonic_ms.saturating_sub(first.monotonic_ms) / 60_000;
     let total = match volume.total {
         MetricState::Value(total) => render_bytes(total.0),
@@ -578,14 +580,14 @@ fn disk_filling_fast(
             render_bytes(lost)
         ),
         evidence: vec![
-            Evidence::new(format!("volume.{letter}.free_bytes"), render_bytes(now))
+            Evidence::new(format!("volume.{key}.free_bytes"), render_bytes(now))
                 .threshold(format!("{} lost", render_bytes(lost)))
                 .over(
                     first.seq,
                     snapshot.seq,
                     snapshot.monotonic_ms.saturating_sub(first.monotonic_ms),
                 ),
-            Evidence::new(format!("volume.{letter}.free_bytes"), render_bytes(before))
+            Evidence::new(format!("volume.{key}.free_bytes"), render_bytes(before))
                 .threshold(format!("{minutes} minutes ago")),
         ],
         actions: vec!["clean.open_native_scan".to_owned()],

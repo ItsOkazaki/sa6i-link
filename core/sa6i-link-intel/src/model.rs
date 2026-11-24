@@ -247,6 +247,14 @@ impl VolumeSample {
     pub fn letter(&self) -> &str {
         self.mount.trim_end_matches(['\\', '/'])
     }
+
+    /// The same volume as a metric path spells it: `C`, not `C:`.
+    ///
+    /// The colon is right on screen - a drive is called `C:` - and wrong inside a
+    /// dotted path, where it is a second separator between `C` and `free_bytes`.
+    pub fn key(&self) -> &str {
+        self.letter().trim_end_matches(':')
+    }
 }
 
 /// One process, as much of it as a standard user can see.
@@ -472,13 +480,13 @@ impl Snapshot {
         }
         for volume in &self.volumes {
             if let MetricState::Value(p) = volume.percent_used() {
-                out.push((format!("volume.{}.percent_used", volume.letter()), f64::from(p)));
+                out.push((format!("volume.{}.percent_used", volume.key()), f64::from(p)));
             }
             if let MetricState::Value(free) = volume.free {
-                out.push((format!("volume.{}.free_bytes", volume.letter()), free.0 as f64));
+                out.push((format!("volume.{}.free_bytes", volume.key()), free.0 as f64));
             }
             if let MetricState::Value(total) = volume.total {
-                out.push((format!("volume.{}.total_bytes", volume.letter()), total.0 as f64));
+                out.push((format!("volume.{}.total_bytes", volume.key()), total.0 as f64));
             }
         }
         if let MetricState::Value(read) = self.disk_io.read_bytes_per_second {

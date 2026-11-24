@@ -838,7 +838,7 @@ mod tests {
         let positives = [
             ("https://sa6i-link.app/docs?tab=1#top", "https://sa6i-link.app/docs?tab=1#top"),
             ("  http://example.com/path/to/page  ", "http://example.com/path/to/page"),
-            ("HTTPS://github.com/thtbee/sa6i-link", "https://github.com/ItsOkazaki/sa6i-link"),
+            ("HTTPS://github.com/ItsOkazaki/sa6i-link", "https://github.com/ItsOkazaki/sa6i-link"),
             (
                 "www.wikipedia.org/wiki/Rust_(programming_language)",
                 "https://www.wikipedia.org/wiki/Rust_(programming_language)",

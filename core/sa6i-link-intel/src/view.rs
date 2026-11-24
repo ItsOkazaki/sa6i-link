@@ -680,9 +680,9 @@ mod tests {
 
     #[test]
     fn volumes_are_listed_with_their_share_and_kind() {
-        let mut unknown = snapshot(1);
-        unknown.volumes[0].free = MetricState::Unsupported(WhyUnknown::NotOnThisWindowsVersion);
-        let view = monitor_view(&unknown, &[unknown.clone()], 0);
+        // The unreadable case is `an_unreadable_tile_says_why_and_never_says_zero`;
+        // here the volume is measured, and the row has to say so.
+        let view = monitor_view(&snapshot(1), &[snapshot(1)], 0);
         let row = &view.volumes[0];
         assert_eq!((row.mount.as_str(), row.kind), ("C:", "fixed"));
         assert_eq!(row.used_percent, Some(90.0));

@@ -189,7 +189,7 @@ impl History {
             let json = serde_json::to_string(finding)?;
             tx.execute(
                 "INSERT INTO finding (id, rule, severity, subject, title, first_seen, last_seen, json)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                  ON CONFLICT(id) DO UPDATE SET
                      last_seen = excluded.last_seen,
                      json = excluded.json",

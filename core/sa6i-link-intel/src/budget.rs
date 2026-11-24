@@ -170,7 +170,8 @@ mod tests {
         let verdict = Verdict::judge(61, 1000, &cost);
         assert!(!verdict.sample_ok);
         assert!(!verdict.passed());
-        assert!(verdict.render()[3].contains("OVER"));
+        // Index 2 is the collection line; index 3 is the cpu one, which is fine.
+        assert!(verdict.render()[2].contains("OVER"), "{:?}", verdict.render());
     }
 
     #[test]
@@ -203,7 +204,9 @@ mod tests {
 
     #[test]
     fn one_sample_has_no_rate_to_hold() {
-        let cost = Cost { elapsed_ms: 4.0, per_sample_ms: vec![4.0], cpu_ms: Some(1.0) };
+        // 1 ms of CPU over a 4 ms run is 25 % of a core, and that is not a cheap
+        // run - the fixture was measuring a different failure than it asserted.
+        let cost = Cost { elapsed_ms: 4.0, per_sample_ms: vec![4.0], cpu_ms: Some(0.01) };
         let verdict = Verdict::judge(1, 1000, &cost);
         assert_eq!(verdict.rate_hz, 0.0);
         assert!(verdict.rate_ok);
