@@ -34,6 +34,10 @@ on:
 
 permissions:
   contents: read
+  # Only so an on-demand run can write its findings into one rolling issue: the
+  # artifact is the evidence, but an artifact cannot be read from a phone, and a
+  # sandbox with a narrow network cannot read it at all.
+  issues: write
 
 jobs:
   scan:
@@ -106,6 +110,36 @@ jobs:
             shrink-scan.json
             vulture.txt
             machete.txt
+
+      - name: Put the findings in one rolling issue
+        # Manual runs only: the weekly schedule should not mail anyone.
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### shrink-anything"
+            echo '```text'
+            tail -40 shrink-scan.txt || true
+            echo '```'
+            echo "### vulture - unused Python at 60 % confidence"
+            echo '```text'
+            cat vulture.txt || true
+            echo '```'
+            echo "### cargo-machete - unused Rust dependencies"
+            echo '```text'
+            cat machete.txt || true
+            echo '```'
+            echo ""
+            echo "_Scanners only: nothing was deleted. See docs/audit/DEAD-CODE-SCAN.md._"
+          } > body.md
+          n=$(gh issue list --search 'in:title "Dead code scan"' --json number --jq '.[0].number' || true)
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body-file body.md
+            echo "updated issue #$n"
+          else
+            gh issue create --title "Dead code scan" --body-file body.md
+          fi
 
       - name: Post a summary
         # The artifacts are the evidence; this is the part people actually read.
