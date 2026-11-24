@@ -89,6 +89,21 @@ jobs:
           # exit codes are recorded above where nothing can swallow them.
           exit 0
 
+      - name: The generated files xtask owns
+        run: |
+          set +e
+          {
+            echo
+            echo "## cargo xtask tokens --check"
+            cargo xtask tokens --check 2>&1
+            echo "EXIT:tokens:$?"
+            echo
+            echo "## cargo xtask strings --check"
+            cargo xtask strings --check 2>&1
+            echo "EXIT:strings:$?"
+          } >> "$RUNNER_TEMP/report.txt"
+          exit 0
+
       - name: Format the source, and commit it when that changed something
         # On a push only: a pull request from a fork cannot be pushed to, and the
         # commit is the point. Idempotent - a formatted tree commits nothing.
@@ -101,7 +116,10 @@ jobs:
           fi
           git config user.name "rust-check"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          # Only what rustfmt owns. `git add -A` committed an unrelated Cargo.lock
+          # rewrite that the xtask step had made on the runner, and the next run
+          # committed it into the branch.
+          git add -u -- '*.rs'
           git commit -m "style: cargo fmt --all
 
           Nothing has ever formatted this source, and rustfmt is the only thing here

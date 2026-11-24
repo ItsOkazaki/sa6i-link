@@ -135,11 +135,15 @@ jobs:
             echo "_Scanners only: nothing was deleted. See docs/audit/DEAD-CODE-SCAN.md._"
           } > body.md
           n=$(gh issue list --search 'in:title "Dead code scan"' --json number --jq '.[0].number' || true)
+          # Reporting is not scanning: the three scanners above all ran and passed,
+          # and this step failing took the whole job down with it on main's first push.
+          # Whatever gh says, the scan's verdict is already in the artifact.
           if [ -n "$n" ]; then
-            gh issue edit "$n" --body-file body.md
-            echo "updated issue #$n"
+            gh issue edit "$n" --body-file body.md && echo "updated issue #$n" \
+              || echo "could not update issue #$n; the artifact has the output"
           else
-            gh issue create --title "Dead code scan" --body-file body.md
+            gh issue create --title "Dead code scan" --body-file body.md \
+              || echo "could not file the report; the artifact has the output"
           fi
 
       - name: Post a summary

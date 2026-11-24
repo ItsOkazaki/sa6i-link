@@ -65,6 +65,18 @@ pub mod qobject {
     impl cxx_qt::Initialize for IntelHost {}
 }
 
+/// The generated QObject's own `Initialize`. Every other bridge in this app has one
+/// of these next to the empty impl inside the module, and this file did not - which is
+/// why `IntelHost: cxx_qt::Initialize` was unsatisfied and the app did not compile.
+///
+/// It does nothing: the sampler is started by the page that shows it, not by the
+/// object being constructed, so there is nothing to warm up here. The body cannot be
+/// omitted - `Initialize` declares `initialize` without a default - which is what the
+/// compiler said on the run after the empty impl.
+impl cxx_qt::Initialize for qobject::IntelHost {
+    fn initialize(self: Pin<&mut Self>) {}
+}
+
 #[derive(Debug)]
 pub struct IntelHostRust {
     frame: QString,
@@ -113,7 +125,7 @@ impl qobject::IntelHost {
     fn stop(mut self: Pin<&mut Self>) {
         let stopped = Arc::new(AtomicBool::new(false));
         let previous = {
-            let this = self.as_mut().rust_mut();
+            let mut this = self.as_mut().rust_mut();
             std::mem::replace(&mut this.running, stopped)
         };
         previous.store(false, Ordering::Release);
