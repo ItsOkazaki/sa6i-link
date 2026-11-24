@@ -16,6 +16,12 @@
 name: Dead code scan
 
 on:
+  # Also on a change to this file, which is how a workflow introduced on a branch
+  # gets its first run: `workflow_dispatch` is only offered once GitHub has
+  # registered the workflow, and registration follows a push.
+  push:
+    paths:
+      - ".github/workflows/shrink-scan.yml"
   workflow_dispatch:
   schedule:
     # Mondays, 06:17 UTC: a week of commits, before anyone plans the next one.
