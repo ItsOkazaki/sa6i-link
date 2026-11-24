@@ -261,7 +261,9 @@ rewrites the same line.
 2. **The loader and the validator**, with fixtures only — no new thresholds, the
    three M1 rules expressed as TOML and proven to produce byte-identical findings
    from the same recipes. That is the test that the front-end did not change a
-   verdict. — *done, see above; the runtime wiring is still owed*
+   verdict. — *done, and wired: `sa6i-link intel snapshot --rules <path>` judges
+   with a deployment file, refuses one this build cannot honour with every reason
+   on stderr, and exits 2 before the first sample rather than after the last*
 3. **The rules that need a `metrics()` line** — `memory.commit_pressure` is
    *done*: the rule, its two thresholds, its TOML file and three fixtures
    (firing, window-not-held, adjacent-at-89.5 %).

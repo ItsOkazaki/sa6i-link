@@ -4,7 +4,13 @@
 //! It runs its own node with its own identity (separate from the desktop
 //! app), so it can pair with phones, PCs or another CLI instance.
 
-use std::{io::Write, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    io::Write,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -18,7 +24,8 @@ use sa6i_link_core::{
     notify_limits,
 };
 use sa6i_link_intel::{
-    Finding, History, SampleStore, Timestamp, Verdict, WindowSummary, evaluate,
+    Finding, History, Refusal, RuleFile, SampleStore, Thresholds, Timestamp, Verdict,
+    WindowSummary, evaluate_with,
 };
 use sa6i_link_intel_win::{report, sample_window};
 use tokio::sync::broadcast::error::RecvError;
@@ -569,6 +576,13 @@ enum IntelArg {
         /// Write the samples to this history file.
         #[arg(long, value_name = "PATH")]
         history: Option<PathBuf>,
+        /// Judge with the thresholds in this file instead of the compiled ones.
+        ///
+        /// A file may name a rule's own keys only, and a file this build cannot
+        /// honour is refused whole - with the reason, on stderr - rather than
+        /// half-applied. Exits 2 when a file is refused.
+        #[arg(long, value_name = "PATH")]
+        rules: Option<PathBuf>,
     },
 }
 
@@ -2749,6 +2763,34 @@ fn node_power(cli: &Cli) -> PowerLevel {
     }
 }
 
+/// The thresholds to judge with: the compiled defaults, or a deployment file.
+///
+/// `RuleFile::parse` is handed the text rather than the path, which is what lets
+/// the refusal tests run without a filesystem. The `firing` and `near_miss` names
+/// in a file belong to the fixture harness, not to the binary, so this checks
+/// [`RuleFile::thresholds`] and not the scenario-aware variant: a deployment file
+/// is not required to know which fixtures this build ships.
+fn thresholds_in(path: &Path) -> Result<Thresholds> {
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("could not read {}", path.display()))?;
+    let file = RuleFile::parse(&text).map_err(|refusals| refused(path, &refusals))?;
+    file.thresholds().map_err(|refusals| refused(path, &refusals))
+}
+
+/// A refusal, as one error with a line per reason.
+///
+/// PDH taught this project that a broken number is worse than a missing one; a
+/// half-applied threshold file would be the same failure one level up. So every
+/// refusal is listed, not just the first, and the exit code is 2.
+fn refused(path: &Path, refusals: &[Refusal]) -> anyhow::Error {
+    let mut message = format!("{} was refused", path.display());
+    for refusal in refusals {
+        message.push_str("\n  - ");
+        message.push_str(&refusal.to_string());
+    }
+    anyhow::anyhow!(message)
+}
+
 /// `sa6i intel`: measure this machine.
 ///
 /// Deliberately finished before the node starts: measuring a PC must not need an
@@ -2763,12 +2805,33 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
         average,
         budget,
         history,
+        rules,
     } = action;
+    // Read before the first sample, so a file that cannot be honoured costs a
+    // second rather than a minute: asking a machine for half an hour of history
+    // and then refusing the numbers it is judged by is the wrong order.
+    let limits = match rules {
+        Some(path) => match thresholds_in(path) {
+            Ok(limits) => limits,
+            Err(error) => {
+                // A file this build cannot honour stops the run before it starts,
+                // on stderr, with exit code 2: distinct from 1 (a broken build)
+                // and from 3 (a missed sampling budget).
+                eprintln!("{error}");
+                return Ok(2);
+            }
+        },
+        None => Thresholds::default(),
+    };
     let samples = (*samples).max(1);
     let interval_ms = (*interval_ms).max(1);
     let (store, cost) = sample_window(samples, Duration::from_millis(interval_ms), *budget);
     let snapshot = store.latest().context("no sample was taken")?;
-    let findings = if *no_findings { Vec::new() } else { evaluate(snapshot, &store) };
+    let findings = if *no_findings {
+        Vec::new()
+    } else {
+        evaluate_with(snapshot, &store, &limits)
+    };
 
     if let Some(path) = history {
         record_history(path, &store, &findings)?;
@@ -2796,6 +2859,9 @@ fn run_intel(action: &IntelArg) -> Result<i32> {
     }
 
     println!("Sa6i — this machine, measured");
+    if let Some(path) = rules {
+        println!("  judged with the thresholds in {}", path.display());
+    }
     println!(
         "  sample {} of {} (history covers {} s)",
         snapshot.seq,

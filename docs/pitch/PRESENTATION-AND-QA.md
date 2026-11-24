@@ -250,7 +250,7 @@ Do the boring thing first; it makes the interesting thing credible.
 | 1 (30 s) | `sa6i-link intel snapshot --json` in a terminal (or `cargo run -p sa6i-link-intel-win --bin sa6i-intel-snapshot -- --json`). Scroll one screen. | "This is the same payload the window renders — one JSON object, every number with the reason it exists." |
 | 2 (40 s) | Open the Monitor page. Point at one tile and one *missing* tile; read its reason aloud. | "Notice it doesn't say zero. It says *not measured yet* — that's the whole design in one tile." |
 | 3 (60 s) | Show a finding with its evidence: metric path, observed value, threshold, held-for. | "I didn't write this sentence. The rule did, from these three numbers." |
-| 4 (40 s) | Show the rules file `core/sa6i-link-intel/rules/disk.toml` next to the finding's threshold. | "This is where 90 % comes from. Change it, and the finding cites the new number, not the old one." |
+| 4 (40 s) | Show the rules file `core/sa6i-link-intel/rules/disk.toml` next to the finding's threshold. | "This is where 90 % comes from. Run the same measurement with `--rules` pointing at a file that says 60, and the finding cites 60 — the file is real, not a mock." |
 | 5 (60 s) | Phone → PC: send a file, or mirror the screen. | Fall back to a screenshot: a recording that plays is better than a demo that apologises. |
 | 6 (50 s) | Clean, inside the same window. Do **not** press a destructive button. Show the guard explanation. | "I'm not going to run a cleanup in front of you. That's not caution for the demo — it's the state of the project." |
 

@@ -88,10 +88,35 @@ value naming the rule and the key, and the tests that prove them are the module 
 the bottom of `rules_file.rs` — one test per variant, each with the file that must
 be refused.
 
-What does not exist yet is a way to hand such a file to the app: there is no
-`--rules` flag and no runtime wiring, so the loader is a library with tests and not
-a feature. That is the next slice, and it is recorded as owed in
-[`M2-RULES.md`](M2-RULES.md).
+The way to hand such a file to the app is `--rules`, and it is one flag:
+
+```powershell
+cargo run --locked -p sa6i-link-cli -- intel snapshot --rules demo.toml --samples 30
+```
+
+A refused file stops the run before the first sample, prints every reason on
+stderr, and exits 2 — distinct from 1, which is a broken build, and from 3, which
+is a missed sampling budget. That ordering is deliberate: asking a machine for half
+an hour of history and only then refusing the numbers it is judged by is the wrong
+way round.
+
+The flag also makes an honest demo possible without waiting half an hour — and
+this is the one place the pitch has to be careful. A demo file like this
+
+```toml
+[[rule]]
+id = "cpu.sustained_high"
+severity = "warning"
+confidence = "likely"
+requires = ["cpu.percent"]
+warn_percent = 60.0
+sustained = "30s"
+```
+
+makes the CPU rule fire in thirty seconds instead of ten minutes. Showing it is
+fine as long as the sentence that goes with it is true: *the numbers are a file,
+and this file is a demo*. The machine did not become busier because the threshold
+moved, and saying it did is the failure mode this whole design exists to avoid.
 
 ## Provoking each rule, honestly
 
