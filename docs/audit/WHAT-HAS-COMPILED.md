@@ -112,6 +112,23 @@ Everything else that build touches came through in the same run:
 | `Android app` | fail at `Unit tests and debug build` |
 | `Licenses and dependencies` | fail at cargo-deny, past the headers |
 
+### Then the app's own tests passed
+
+`Windows app (x64) checks` stopped at `Tests` with 268 passing and **4 failing**, and all
+four were one question in four places: is `Sa6i Link` the same thing as `sa6i-link` as
+`Sa6iLink`? The window says the first, the binary is the second, the install folder is
+the third. One module answers it now (`desktop/app/src/naming.rs`), and the four call
+sites ask it: the notification filter, the installer's folder, the autostart check and
+the photo-path check. `same_component` deliberately does *not* squash everything —
+`my-photos` and `myphotos` are two folders, and a comparison that says otherwise would
+hide a bug rather than fix one.
+
+| | |
+| --- | --- |
+| Run | `windows-latest`, `EXIT:clippy:0 EXIT:test:0 EXIT:release:0` |
+| Tests | **274 passed, 0 failed, 8 ignored** (5 of them need D3D11 and a GPU) |
+| Where to read it | [issue #24](https://github.com/ItsOkazaki/sa6i-link/issues/24) |
+
 **What this still does not prove.** The window opened *on a CI runner* — Windows Server
 2022, no GPU, no phone, no user. Nothing has run on Windows 7. The installer has never
 completed an install-and-uninstall cycle. The app's own tests fail on Windows and macOS,
