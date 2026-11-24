@@ -26,6 +26,19 @@ page does not repeat it.
 The first three are the milestone. The fourth is the second opinion, and it is the
 only one that can run on the machine M2 was written on.
 
+A fifth command is not a test but a proof of currency, in the same shape as
+`cargo xtask tokens --check`:
+
+```powershell
+python3 scripts/fixtures-report.py --check
+```
+
+[`M2-FIXTURES.md`](M2-FIXTURES.md) is generated from the rule files and the
+fixtures, and that command fails if the page and the directories have drifted
+apart. It is the same guard the deck has, for the same reason: a document that
+describes generated things goes stale silently, and a stale page in a milestone
+report is a claim nobody re-read.
+
 ## What passing looks like
 
 ```text

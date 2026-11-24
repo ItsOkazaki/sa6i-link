@@ -613,9 +613,10 @@ next to Task Manager's Performance tab, on one machine, closes it.
 
 **D2. Then why should a judge believe any of it?**
 Because the design is checkable without trusting me: 34 fixtures with expected
-finding sets, evidence that carries `from_seq`/`to_seq` so a finding can be
-re-derived, and a repository that says which of the six exit criteria are closed. If
-you only believe the verified column, the product still stands.
+finding sets — all of them listed in `docs/plan/M2-FIXTURES.md` — evidence that
+carries `from_seq`/`to_seq` so a finding can be re-derived, and a repository that
+says which of the six exit criteria are closed. If you only believe the verified
+column, the product still stands.
 
 **D3. How do you know the rules don't fire on healthy machines?**
 Every rule ships a near-miss fixture, and the scenario test asserts the *exact* set
