@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Read-only diagnostic for the Sa6i Link Clean UI Preview on Windows 7+.
 # No files are changed and nothing is uploaded.
 param([string]$AppDir)

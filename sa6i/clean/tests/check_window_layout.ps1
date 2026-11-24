@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Read-only Win32 geometry report. Never prints window titles or paths.
 # Reads only the running application executables to identify their versions.
 param([string]$ProcessName = 'sa6i-link',

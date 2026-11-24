@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Point Sa6i Link's built-in Sa6i Clean tab at the debranded cleaner.
 #
 # Sa6i Link never launches a cleaner it has not identified: before starting

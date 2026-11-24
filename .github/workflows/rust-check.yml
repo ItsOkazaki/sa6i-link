@@ -23,7 +23,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Write, so the formatting step can commit rustfmt's own answer back to the
+  # branch it ran on. Nothing else here pushes.
+  contents: write
   issues: write
 
 concurrency:
@@ -81,6 +83,40 @@ jobs:
           } > report.txt
           # The step itself always succeeds: publishing is the next step's job, and the
           # exit codes are recorded above where nothing can swallow them.
+          exit 0
+
+      - name: Format the source, and commit it when that changed something
+        # On a push only: a pull request from a fork cannot be pushed to, and the
+        # commit is the point. Idempotent - a formatted tree commits nothing.
+        if: github.event_name == 'push'
+        run: |
+          cargo fmt --all
+          if git diff --quiet; then
+            echo "already formatted"
+            exit 0
+          fi
+          git config user.name "rust-check"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: cargo fmt --all
+
+          Nothing has ever formatted this source, and rustfmt is the only thing here
+          that gets to decide what formatted means. This commit is rustfmt's output and
+          nothing else."
+          git push
+
+      - name: Lint the way ci.yml lints
+        run: |
+          set +e
+          {
+            echo
+            echo "## cargo clippy --locked --all-targets -- -D warnings"
+            cargo clippy --locked --all-targets --keep-going -- -D warnings \
+              -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi \
+              -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel \
+              -p sa6i-link-intel-win -p xtask 2>&1
+            echo "EXIT:clippy:$?"
+          } >> report.txt
           exit 0
 
       - name: Publish the errors into one rolling issue

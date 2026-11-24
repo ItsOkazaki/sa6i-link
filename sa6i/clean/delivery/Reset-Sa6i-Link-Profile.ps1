@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Start Sa6i Link with a fresh profile, without touching the old one.
 #
 # The application keeps a device key in its profile folder, encrypted by Windows

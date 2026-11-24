@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Make a desktop shortcut that starts Sa6i Link without a console window.
 #
 # The application does not run from a double-click: it needs a data directory

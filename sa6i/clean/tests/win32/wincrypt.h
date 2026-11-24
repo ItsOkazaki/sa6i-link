@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test-only WinCrypt declarations; no actual cryptography.
 #ifndef FAKE_WINCRYPT_H
 #define FAKE_WINCRYPT_H

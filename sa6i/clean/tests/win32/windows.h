@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test-only minimal Win32 shim. Not used in Windows builds.
 #ifndef FAKE_WINDOWS_H
 #define FAKE_WINDOWS_H

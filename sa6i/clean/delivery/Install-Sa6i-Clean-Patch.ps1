@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Install the debranded Sa6i Clean bundle into an installed cleaner folder.
 #
 # Electron checks that resources\app.asar matches a hash stored inside
