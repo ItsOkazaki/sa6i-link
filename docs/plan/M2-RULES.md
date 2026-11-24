@@ -6,6 +6,10 @@ now and expensive to discover halfway through: which rules the current collector
 can actually answer, which need one more counter, and which would need a new kind
 of reading with a privacy cost attached.
 
+> All twelve rows of the catalogue below are now shipped, and none of them has been
+> compiled. The operator's side — four commands, what each proves, what will bite,
+> and how to provoke each rule on purpose — is [`M2-VERIFY.md`](M2-VERIFY.md).
+
 **The gate still holds, with one exception.** No new rule is built until M1's
 six exit criteria are closed on a real PC (`docs/plan/M1-VERIFY.md`). A rule is a
 sentence about a machine; writing twelve of them against numbers nobody has

@@ -25,5 +25,6 @@ show the evidence that produced it. It is written, simulated against fixtures, a
   30-second and 5-minute pitches, the demo script, and 55 questions with answers.
 - [The slides](docs/pitch/deck.html) — one self-contained page; open it in a browser
   and press `→`. Built from `deck.src.html` by `python3 scripts/build-deck.py`.
-- [How the core is built](docs/architecture/INTELLIGENCE-CORE.md) and
-  [the rule plan](docs/plan/M2-RULES.md).
+- [How the core is built](docs/architecture/INTELLIGENCE-CORE.md),
+  [the rule plan](docs/plan/M2-RULES.md), and
+  [how to verify it on a machine that can decide](docs/plan/M2-VERIFY.md).
