@@ -265,11 +265,11 @@ mod platform {
         EnumProcesses, GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX,
     };
     use windows::Win32::System::SystemInformation::{
-        GetSystemTimes, GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
+        GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX,
     };
     use windows::Win32::System::Threading::{
-        GetProcessTimes, OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
-        QueryFullProcessImageNameW,
+        GetProcessTimes, GetSystemTimes, OpenProcess, PROCESS_NAME_WIN32,
+        PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
     use windows::Wdk::System::SystemInformation::{
         NtQuerySystemInformation, SystemProcessorPerformanceInformation,
@@ -368,15 +368,17 @@ mod platform {
         };
         // SAFETY: `status` is a valid, correctly-sized MEMORYSTATUSEX.
         if unsafe { GlobalMemoryStatusEx(&mut status) }.is_err() {
-            let failed = MetricState::Unknown(WhyUnknown::CollectorFailed);
+            let failed: MetricState<Bytes> = MetricState::Unknown(WhyUnknown::CollectorFailed);
             return MemorySample {
                 total: failed,
                 available: failed,
                 commit_limit: failed,
                 commit_used: failed,
                 // Paging comes from its own counter, which has not been read yet;
-                // the failure above is about physical memory specifically.
-                pages_input_per_second: failed,
+                // the failure above is about physical memory specifically. It is a
+                // rate, so it cannot share the `Bytes` value above: `failed` is a
+                // `MetricState<Bytes>`, and one binding cannot be two types.
+                pages_input_per_second: MetricState::Unknown(WhyUnknown::CollectorFailed),
             };
         }
         // `ullTotalPageFile` is the commit limit, `ullAvailPageFile` what is
@@ -411,17 +413,15 @@ mod platform {
     #[allow(unsafe_code)]
     pub(super) fn read_volumes() -> Vec<VolumeSample> {
         // Length in UTF-16 units, including the final double NUL.
-        // SAFETY: a size query with a null buffer writes nothing.
-        let required = unsafe { GetLogicalDriveStringsW(0, None) };
+        // SAFETY: a size query with no buffer writes nothing.
+        let required = unsafe { GetLogicalDriveStringsW(None) };
         if required == 0 {
             return Vec::new();
         }
         let mut buffer = vec![0u16; required as usize + 1];
         // SAFETY: the buffer is at least `required` units, which is what the
         // call was told it has.
-        let written = unsafe {
-            GetLogicalDriveStringsW(buffer.len() as u32, Some(buffer.as_mut_ptr()))
-        };
+        let written = unsafe { GetLogicalDriveStringsW(Some(buffer.as_mut_slice())) };
         if written == 0 {
             return Vec::new();
         }
