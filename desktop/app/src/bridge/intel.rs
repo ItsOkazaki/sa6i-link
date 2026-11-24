@@ -70,8 +70,12 @@ pub mod qobject {
 /// why `IntelHost: cxx_qt::Initialize` was unsatisfied and the app did not compile.
 ///
 /// It does nothing: the sampler is started by the page that shows it, not by the
-/// object being constructed, so there is nothing to warm up here.
-impl cxx_qt::Initialize for qobject::IntelHost {}
+/// object being constructed, so there is nothing to warm up here. The body cannot be
+/// omitted - `Initialize` declares `initialize` without a default - which is what the
+/// compiler said on the run after the empty impl.
+impl cxx_qt::Initialize for qobject::IntelHost {
+    fn initialize(self: Pin<&mut Self>) {}
+}
 
 #[derive(Debug)]
 pub struct IntelHostRust {
