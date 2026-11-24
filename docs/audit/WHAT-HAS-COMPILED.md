@@ -89,15 +89,35 @@ Three errors stood between the first attempt and this, all in
 
 That is what a compiler is for, and it took the compiler three passes to say it.
 
-**What this still does not prove.** The app has been *built*, never *run*. `ci.yml`
-also opens the window (`scripts/ui-check.ps1`), packages it with NSIS, installs and
-uninstalls it, and runs the QML tests — none of those have executed on this branch, and
-a release binary that links is not a window that opens. Nothing has run on Windows 7.
-The macOS, Linux and ARM64 app jobs have not been retried since these three fixes, so
-their status is genuinely unknown rather than assumed.
+## Then the window opened
 
-`desktop-report.yml` exists only to make those failures readable and should be deleted
-once `ci.yml`'s own jobs pass.
+The three fixes above were merged, and `main`'s own `ci.yml` run then did what no run in
+this repository's history had done: it **launched the application**. `Windows app (x64)`
+passes Qt, `Release build`, `Install NSIS`, `Installer`, and `Open the main window, with
+no QML warnings` — the step that starts the binary, waits for the window, and fails on
+any QML warning. It stopped one step later, at `Install, run and uninstall it`.
+
+Everything else that build touches came through in the same run:
+
+| Job | Result |
+| --- | --- |
+| `Windows app (x64)` | through `ui-check`; fails at `Install, run and uninstall it` |
+| `Windows app (ARM64 cross build)` | success |
+| `macOS app (release build)` | success |
+| `Linux app (x64, release build)` | success |
+| `Windows app (x64) checks`, `macOS app` | fail at `Tests` |
+| `Linux app (x64)` | fail at `Clippy` |
+| `Core (macos-latest)`, `Core (windows-latest)` | success |
+| `Core (ubuntu-latest)` | fail at `Generated files are up to date` |
+| `Android app` | fail at `Unit tests and debug build` |
+| `Licenses and dependencies` | fail at cargo-deny, past the headers |
+
+**What this still does not prove.** The window opened *on a CI runner* — Windows Server
+2022, no GPU, no phone, no user. Nothing has run on Windows 7. The installer has never
+completed an install-and-uninstall cycle. The app's own tests fail on Windows and macOS,
+Clippy fails on Linux, and the Android app has never built. `desktop-report.yml` exists
+only to make those failures readable and should be deleted once `ci.yml`'s own jobs
+pass.
 
 ## Lints and formatting, which were turned on and then satisfied
 
