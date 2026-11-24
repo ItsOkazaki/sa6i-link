@@ -112,8 +112,9 @@ jobs:
             machete.txt
 
       - name: Put the findings in one rolling issue
-        # Manual runs only: the weekly schedule should not mail anyone.
-        if: github.event_name == 'workflow_dispatch'
+        # A manual run or a change to this file; the weekly schedule should not
+        # mail anyone, and a scanner that mails people is a scanner people mute.
+        if: github.event_name != 'schedule'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
