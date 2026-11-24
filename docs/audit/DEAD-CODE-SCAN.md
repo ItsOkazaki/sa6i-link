@@ -92,12 +92,60 @@ Two more things the scan reports that are deliberate:
   crates, which is the shape of test-helper code that was copied once and then
   diverged.
 
+## Cross-checked with two other tools
+
+One name-counting tool is a witness, not a verdict. Two more were run, chosen
+because they decide differently.
+
+**vulture 2.16** — Python, scope analysis rather than name counting, installed from
+PyPI and run here:
+
+```sh
+vulture . --min-confidence 60 --exclude "node_modules,third_party,.git,target"
+```
+
+Fifteen items, and the interesting part is the overlap.
+`sa6i/clean/debrand_cleaner.py:154` holds an unused function `bundles` —
+shrink-anything reached the same line by asking "does any *text* mention this name",
+vulture by asking "is it reachable in its own scope". Two methods, one answer, and
+the same line: that is worth more than either tool alone.
+
+It also found dead code in the two scripts written in this session, which is the
+least comfortable and most useful result of the day:
+
+| file | what | what happened |
+| --- | --- | --- |
+| `scripts/check-fixtures.py` | `MEMORY_TOTAL` and `COMMIT_LIMIT` declared, never read | removed. The simulator speaks in percentages, the way the fixtures do; the totals never entered an answer |
+| `scripts/fixtures-report.py` | a `by_name` helper nothing called | removed |
+
+Both files are clean at 60 % confidence now, and both still pass: `check-fixtures.py`
+reported the same 34 fixtures and 25 thresholds afterwards, and
+`fixtures-report.py --check` said the generated page was still current — which is
+what proves the helper was dead rather than merely unused.
+
+The other twelve items are mostly test scaffolding, and 60 % confidence means "looks
+dead", not "is dead": `handle_starttag` in `sa6i/tests/test_landing_page.py:16` is an
+`HTMLParser` override called by the parser, and the `*Harness` and `*Policy` classes
+in `sa6i/clean/test_*.py` are mixins reached by inheritance. The four real ones are in
+`sa6i/clean/delivery/transplant_icon.py`: three tuple targets unpacked and never used
+at line 126, one at line 67. They are left for whoever next touches that script,
+because it runs against the Electron bundle and this sandbox has no bundle to run it
+against — a fix nobody can execute is a guess with a diff.
+
+**cargo-machete** — Rust, reads the manifests and greps the crates' sources: the
+answer to "is `sa6i-vcam` really unused", which shrink-anything raised and could not
+settle. Its prebuilt release is served from `release-assets.githubusercontent.com`,
+which this sandbox cannot reach, so it runs in CI instead, in the same workflow. The
+first run will say whether the dependency finding was real; this page will be updated
+with what it says rather than with what is expected.
+
 ## What this does not license
 
 - **No cut.** The tool's own rule is that a cut stays only if your check exits 0 and
   at least as many tests run as before. There is no check here that can run, so
   there is no cut that could be justified. `.github/workflows/shrink-scan.yml` runs
-  the same scan weekly and says so in its summary.
+  this scan plus the two below, weekly, and says in its summary that nothing was
+  deleted.
 - **No "the repository is 11 % smaller" claim.** The 32,693 lines in the "can go"
   bucket include the three translation catalogues and the archived baseline. After
   triage the honest number is far smaller and not yet known.

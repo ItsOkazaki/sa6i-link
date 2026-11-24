@@ -1,8 +1,23 @@
 # Two third-party tools, put to the test
 
-One was adopted and one was not. The reasons are here rather than in a commit
-message, because the next person will have the same idea and should not have to
-rediscover the same four obstacles.
+One was adopted and one was not, and the question worth answering first is the plain
+one: were they helpful?
+
+**shrink-anything, yes.** It ran on this repository and produced three findings that
+survive checking — a 1,201-line UniFFI object with no caller in the tree, a function
+reachable only from an FFI method that is itself unreachable, and a watcher kept for a
+feature its own comment says was switched off. It also produced two findings that did
+not survive, which is why every row in [`DEAD-CODE-SCAN.md`](DEAD-CODE-SCAN.md) was
+checked by hand before being repeated. It runs weekly now.
+
+**WinAppRunner, no.** Not for want of trying: it answers "can a judge try this app in
+a browser tab" with a hard no, because it runs 32-bit Windows programs through
+32-bit Wine and every binary this repository ships is 64-bit. Two more tools were
+chosen afterwards to cover what shrink-anything cannot see — vulture for Python
+scopes, cargo-machete for Rust manifests — and both are in the same weekly workflow.
+
+The reasons are here rather than in a commit message, because the next person will
+have the same idea and should not have to rediscover the same obstacles.
 
 ## shrink-anything — adopted, scan only
 

@@ -99,9 +99,9 @@ SEVERITY = {
 }
 
 MIB = 1024 * 1024
-MEMORY_TOTAL = 16 * 1024 * MIB
+# Only the volume size is needed: the simulations below speak in percentages, the
+# way the fixtures do, and the memory and commit totals never enter an answer.
 VOLUME_TOTAL = 500 * 1024 * MIB
-COMMIT_LIMIT = 24 * 1024 * MIB
 
 
 def free_of(percent):

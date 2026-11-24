@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Dead code, dependencies and unused assets, scanned but never cut.
+# Dead code, unused dependencies and unused assets: found, never cut.
 #
 # `shrink-anything` deletes what nothing calls and keeps each cut only if your own
 # tests still pass. This repository cannot satisfy that condition yet: the intel
 # crates have never been compiled, so no cut could be proved by anything. The
-# workflow therefore runs `scan`, which changes nothing, and stops there. The day
-# `cargo test` passes on a runner, `cut -- cargo test` becomes a decision someone
-# can take deliberately - not a scheduled event.
+# workflow therefore runs read-only scanners and stops there. The day `cargo test`
+# passes on a runner, `cut -- cargo test` becomes a decision someone can take
+# deliberately - not a scheduled event.
 #
-# Why CI rather than a laptop: the binary needs glibc 2.39 or newer, and the
-# sandbox this code is written in has 2.36, so the first honest run of this tool
-# is either here or on the machine that has the toolchain. See
+# Three scanners, because they disagree in useful ways: shrink-anything counts
+# names across 19 languages, vulture understands Python scopes, and cargo-machete
+# reads manifests. Each writes its own file; nothing here fails the build, because
+# a red build for a candidate list is how a list stops being read.
+#
+# Why CI rather than a laptop: shrink-anything's binary needs glibc 2.39 and the
+# sandbox this code is written in has 2.36, and cargo-machete's prebuilt release
+# is served from a host that sandbox cannot reach. See
 # docs/audit/DEAD-CODE-SCAN.md.
 name: Dead code scan
 
@@ -32,9 +37,9 @@ permissions:
 
 jobs:
   scan:
-    name: shrink-anything scan
+    name: dead code and dependencies
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -42,40 +47,68 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Scan, which changes nothing
         run: |
           set -o pipefail
           npx --yes @el4cteo/shrink-anything@0.1.0 scan --all --app 2>&1 | tee shrink-scan.txt
           npx --yes @el4cteo/shrink-anything@0.1.0 scan --all --app --json > shrink-scan.json || true
-          echo "---"
-          grep -c . shrink-scan.txt || true
 
-      - name: Say what the scan is allowed to mean
+      - name: Unused Python, by vulture
+        run: |
+          python3 -m pip install --quiet vulture
+          vulture . --min-confidence 60 \
+            --exclude "node_modules,third_party,.git,target" | tee vulture.txt || true
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+
+      - name: Unused Rust dependencies, by cargo-machete
+        run: |
+          # No build: machete reads manifests and greps the crates' sources.
+          cargo machete --with-metadata . 2>&1 | tee machete.txt || true
+
+      - name: Say what the scans are allowed to mean
         if: always()
         run: |
-          echo "Nothing was deleted: this job runs 'scan', not 'cut'."
+          echo "Nothing was deleted: these jobs run scanners, not 'cut'."
           echo "A cut may only follow a check that passes, and this repository has no"
           echo "compiled test suite yet; see docs/audit/DEAD-CODE-SCAN.md."
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: shrink-scan
+          name: dead-code-scan
           path: |
             shrink-scan.txt
             shrink-scan.json
+            vulture.txt
+            machete.txt
 
       - name: Post a summary
-        # The artifact is the evidence; this is the part people actually read.
+        # The artifacts are the evidence; this is the part people actually read.
         if: always()
         run: |
           {
-            echo "### shrink-anything scan"
+            echo "### Dead code and dependency scan"
             echo ""
-            echo "Nothing was deleted. \`scan\` does not change files; \`cut\` would need"
-            echo "a check that passes, and this repository cannot run one yet."
+            echo "Nothing was deleted. These are scanners; \`cut\` would need a check"
+            echo "that passes, and this repository cannot run one yet."
             echo ""
+            echo "#### shrink-anything"
             echo '```text'
-            head -60 shrink-scan.txt || true
+            tail -5 shrink-scan.txt || true
+            echo '```'
+            echo "#### vulture (unused Python, 60% confidence)"
+            echo '```text'
+            cat vulture.txt || true
+            echo '```'
+            echo "#### cargo-machete (unused Rust dependencies)"
+            echo '```text'
+            cat machete.txt || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -77,13 +77,6 @@ def fixtures():
     return found
 
 
-def by_name(found, name):
-    for path, fixture in found.items():
-        if fixture["name"] == name:
-            return path, fixture
-    return None, None
-
-
 def render():
     rule_table = rules()
     all_fixtures = fixtures()
