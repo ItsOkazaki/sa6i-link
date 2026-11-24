@@ -35,10 +35,6 @@ concurrency:
 env:
   CARGO_TERM_COLOR: never
   CARGO_INCREMENTAL: "0"
-  # Outside the checkout on purpose: the formatting step commits with `git add -A`,
-  # and on the first run that committed this report into the repository.
-  REPORT: ${{ runner.temp }}/report.txt
-  BODY: ${{ runner.temp }}/body.md
 
 jobs:
   check:
@@ -51,6 +47,14 @@ jobs:
         # behind `#[cfg(windows)]`, which a Linux build never looks at. Neither
         # builds the app, which needs Qt.
         os: [ubuntu-latest, windows-latest]
+    # Job level, not workflow level: the `runner` context does not exist up there, and
+    # a workflow that names it at the top fails to parse - which GitHub reports as a
+    # run with zero jobs and no message this sandbox can read.
+    env:
+      # Outside the checkout on purpose: the formatting step commits with
+      # `git add -A`, and the first run committed this report into the repository.
+      REPORT: ${{ runner.temp }}/report.txt
+      BODY: ${{ runner.temp }}/body.md
     defaults:
       run:
         shell: bash
