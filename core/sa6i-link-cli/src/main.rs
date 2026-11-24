@@ -586,10 +586,23 @@ enum IntelArg {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum Power {
     Basic,
     Assist,
     Elevated,
+}
+
+impl std::fmt::Display for Power {
+    /// The words `--power` accepts. clap renders a `ValueEnum` in kebab-case, and
+    /// a default shown in `--help` as `Basic` is not a value anyone could type.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Basic => "basic",
+            Self::Assist => "assist",
+            Self::Elevated => "elevated",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

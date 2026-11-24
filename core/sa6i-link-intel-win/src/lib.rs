@@ -737,7 +737,7 @@ mod tests {
         // machine in `model::top_processes`, where the numbers can be chosen.
         let mut collector = WindowsCollector::new();
         let snapshot = collector.next_snapshot();
-        assert!(snapshot.processes.len() <= TOP_PROCESSES);
+        assert!(snapshot.processes.len() <= sa6i_link_intel::TOP_PROCESSES);
         for process in &snapshot.processes {
             // The idle process has no real name or size, so it is never listed.
             assert_ne!(process.pid, 0);
