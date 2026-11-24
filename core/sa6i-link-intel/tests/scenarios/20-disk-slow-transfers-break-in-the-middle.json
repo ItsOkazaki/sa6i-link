@@ -1,0 +1,25 @@
+{
+  "name": "disk-slow-transfers-break-in-the-middle",
+  "about": "Six minutes of 180 ms transfers, one minute of idle disk, five more minutes of 180 ms. The window is not held for its whole length, so this is a burst - and a rule that averaged instead of requiring the whole window would call it a sustained fault.",
+  "segments": [
+    {
+      "minutes": 6,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "disk_seconds_per_transfer": 0.18
+    },
+    {
+      "minutes": 1,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "disk_seconds_per_transfer": 0.001
+    },
+    {
+      "minutes": 5,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "disk_seconds_per_transfer": 0.18
+    }
+  ],
+  "quiets": ["disk.slow_transfers"]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "disk-filling-fast-for-forty-minutes",
+  "about": "C: goes from 60 % to 62 % full in twenty minutes on a half-terabyte volume: ten gigabytes written, and none of it freed. The half-hour window is spanned, so the rate is a measurement rather than a guess.",
+  "segments": [
+    {
+      "minutes": 20,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 60 }]
+    },
+    {
+      "minutes": 20,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "volumes": [{ "letter": "C:", "percent_used": 62 }]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "disk.filling_fast",
+      "severity": "Notice",
+      "subject": "C:"
+    }
+  ],
+  "quiets": ["disk.low_free_space"]
+}

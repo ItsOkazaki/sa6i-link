@@ -1,0 +1,28 @@
+# The numbers the pinned-core rule decides with.
+#
+# This is the finding Task Manager's overview cannot show. On eight cores a
+# single-threaded program at 100 % is 12 % of the machine, so the graph looks
+# asleep while the program takes exactly as long as one thread takes. Two numbers
+# make the claim: a core this busy, and a machine otherwise this calm. A core at
+# 95 % on its own is any busy machine.
+#
+# The rule asks whether *a* core is pinned, not whether the same core has been for
+# the whole window. Windows moves a busy thread between processors constantly, and
+# demanding one index would make the rule silent exactly when the machine is
+# single-thread bound. Where the process list can be read, `process.runaway_cpu`
+# names the program; this rule is what is left when it cannot.
+
+[[rule]]
+id = "cpu.one_core_pinned"
+severity = "notice"
+confidence = "likely"
+requires = ["cpu.core.*.percent", "cpu.percent"]
+
+# 95 % of one core, with the whole machine under 50 %, for ten minutes.
+warn_percent = 95.0
+total_below_percent = 50.0
+sustained = "10m"
+
+firing = "one-core-pinned-for-eleven-minutes"
+# 94 % for twelve minutes: held well past the window and still not the claim.
+near_miss = "one-core-just-under-the-line"

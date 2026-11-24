@@ -1,0 +1,17 @@
+# The numbers the memory rule decides with. See `disk.toml` for why this file
+# restates the compiled constants instead of replacing them.
+
+[[rule]]
+id = "memory.pressure"
+severity = "notice"
+confidence = "likely"
+requires = ["memory.percent_used"]
+
+warn_percent = 90.0
+# Two minutes, not ten: memory pressure is reversible and a machine that is tight
+# for two minutes is already slow, while a volume that is full for two minutes is
+# just a download in progress.
+sustained = "2m"
+
+firing = "memory-tight-for-three-minutes"
+near_miss = "memory-dipped-inside-the-window"

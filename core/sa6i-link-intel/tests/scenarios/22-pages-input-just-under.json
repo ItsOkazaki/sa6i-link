@@ -1,0 +1,13 @@
+{
+  "name": "pages-input-just-under",
+  "about": "95 hard faults a second for twelve minutes: adjacent to the line, held well past the window, and never over it. A machine doing real work, not one that has run out of memory.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "pages_input_per_second": 95
+    }
+  ],
+  "quiets": ["memory.paging"]
+}

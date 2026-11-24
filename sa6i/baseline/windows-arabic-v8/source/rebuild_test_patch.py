@@ -1,5 +1,5 @@
 import hashlib,struct,zlib,base64,sys,re,os
-p=sys.argv[1] if len(sys.argv)>1 else 'nectarlink-desktop.exe'
+p=sys.argv[1] if len(sys.argv)>1 else 'sa6i-link.exe'
 d=bytearray(open(p,'rb').read())
 assert hashlib.sha256(d).hexdigest()=='670e24bf1c4938bd3199351f84e4391f4649eef07517105502a56faa3979a365'
 # Windows 7 v3 loader patches
@@ -29,8 +29,8 @@ old='''            color: Theme.graphite ? Theme.surfaceContent : Theme.primary
 assert s.count(old)==1
 b64=base64.b64encode(open(os.path.join(os.path.dirname(__file__),'logo.png'),'rb').read()).decode()
 s=s.replace(old,'color: "black"\nImage { anchors.fill: parent; anchors.margins: 2; fillMode: Image.PreserveAspectFit; source: "data:image/png;base64,'+b64+'" }')
-assert s.count('title: "NectarLink"')==1
-s=s.replace('title: "NectarLink"','title: "Sa6i Link"')
+assert s.count('title: "Sa6i Link"')==1
+s=s.replace('title: "Sa6i Link"','title: "Sa6i Link"')
 s='\n'.join(line.lstrip() for line in s.split('\n') if not line.lstrip().startswith('//'))
 c=zlib.compress(s.encode(),9);assert len(c)<=stored-4,(len(c),stored)
 struct.pack_into('>I',d,pos-8,len(c)+4);struct.pack_into('>I',d,pos-4,len(s.encode()))
@@ -45,7 +45,7 @@ for pos in [0x1d4bc48,0x1d50a65,0x1d52670,0x1d5d24e,0x1d5dde3,0x1d66977,0x1d6b5f
     def rebrand(m):
         a=m.group(1)
         if 'Virtual Camera' in a or 'virtual camera' in a or 'in Windows Settings' in a: return m.group(0)
-        return 'qsTr("'+a.replace('NectarLink','Sa6i Link')+'")'
+        return 'qsTr("'+a.replace('Sa6i Link','Sa6i Link')+'")'
     text=re.sub(r'qsTr\("([^"\\]*(?:\\.[^"\\]*)*)"\)',rebrand,text)
     compressed=zlib.compress(text.encode(),9)
     if len(compressed)>n-4:
@@ -59,7 +59,7 @@ for pos in [0x1d4bc48,0x1d50a65,0x1d52670,0x1d5d24e,0x1d5dde3,0x1d66977,0x1d6b5f
 pos=0x1d73447
 n=struct.unpack_from('>I',d,pos-4)[0]
 s=d[pos:pos+n].decode()
-assert 'Welcome to NectarLink' in s
+assert 'Welcome to Sa6i Link' in s
 old='''            color: Theme.graphite ? Theme.surfaceContent : Theme.primary
             Icon {
                 anchors.centerIn: parent
@@ -71,7 +71,7 @@ old='''            color: Theme.graphite ? Theme.surfaceContent : Theme.primary
 assert s.count(old)==1
 b64=base64.b64encode(open(os.path.join(os.path.dirname(__file__),'logo-welcome.png'),'rb').read()).decode()
 s=s.replace(old,'color: "black"\nImage { anchors.fill: parent; anchors.margins: 2; fillMode: Image.PreserveAspectFit; source: "data:image/png;base64,'+b64+'" }')
-s=s.replace('Welcome to NectarLink','Welcome to Sa6i Link').replace("NectarLink couldn't start", "Sa6i Link couldn't start")
+s=s.replace('Welcome to Sa6i Link','Welcome to Sa6i Link').replace("Sa6i Link couldn't start", "Sa6i Link couldn't start")
 s='\n'.join(line.lstrip() for line in s.split('\n') if not line.lstrip().startswith('//'))
 b=s.encode(); assert len(b)<=n, (len(b),n)
 d[pos:pos+n]=b+b' '*(n-len(b))

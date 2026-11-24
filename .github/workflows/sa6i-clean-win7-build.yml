@@ -1,0 +1,214 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Build against a third-party Qt Windows 7 backport. No release is published.
+name: Sa6i Clean Windows 7 build investigation
+
+on:
+  # Called by the synthetic smoke workflow on relevant changes, so the smoke
+  # always tests a desktop built from the same commit. Also runnable by hand.
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  SA6I_CLEAN_EXPERIMENT: "1"
+  # Separate full-cleaner experiment: never used by an ordinary release.
+  SA6I_CLEAN_FULL_FIXTURE: "1"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Download pinned Qt 6.8.3 Windows 7 backport
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'qt-win7.7z'
+          $url = 'https://github.com/xanasoft/qt-builds/releases/download/v6.8.3-ssl-lgpl/qt-everywhere-6.8.3-Windows_7-MSVC2022-x86_64.7z'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $expected = 'f1efe461b28d7758e1e68ba189d0a45c8168ac181be1ffe7013d0bbfb6ff145d'
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne $expected) {
+            throw 'Third-party Qt archive checksum mismatch'
+          }
+          $qtDir = Join-Path $env:RUNNER_TEMP 'qt-win7'
+          & 7z x $archive "-o$qtDir" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Qt archive extraction failed' }
+          $qmake = @(Get-ChildItem $qtDir -Recurse -File -Filter qmake.exe)
+          if ($qmake.Count -ne 1) { throw "Expected one qmake.exe; found $($qmake.Count)" }
+          $bin = $qmake[0].DirectoryName
+          $qtRoot = Split-Path -Parent $bin
+          if (-not (Test-Path (Join-Path $bin 'windeployqt.exe'))) { throw 'No windeployqt in Qt kit' }
+          # Make the unpacked kit independent of the original build directory.
+          Set-Content -Path (Join-Path $bin 'qt.conf') -Value "[Paths]`nPrefix=.." -Encoding ASCII
+          "QMAKE=$($qmake[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "QT_ROOT_DIR=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $qmake[0].FullName -query
+          if ($LASTEXITCODE -ne 0) { throw 'qmake query failed' }
+      - name: Build and stage separately
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'build.log'
+          ./scripts/package.ps1 -QtRoot $env:QT_ROOT_DIR -StageOnly *>&1 | Tee-Object -FilePath $log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Reject unsupported static media imports
+        shell: pwsh
+        run: |
+          python -m pip install pefile==2024.8.26
+          if ($LASTEXITCODE -ne 0) { throw 'Could not install PE inspection tool' }
+          @'
+          import pefile
+          pe = pefile.PE('target/package/Sa6iLink/sa6i-link.exe')
+          imports = {item.name for module in pe.DIRECTORY_ENTRY_IMPORT for item in module.imports}
+          incompatible = {b'MFTEnum2', b'CreateDirect3D11DeviceFromDXGIDevice'}
+          found = incompatible & imports
+          if found:
+              raise SystemExit(f'Unsupported static Windows 7 imports: {found}')
+          if b'MFTEnumEx' not in imports:
+              raise SystemExit('Expected the older MFTEnumEx fallback import')
+          print('No known unsupported media imports; MFTEnumEx fallback is present')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Windows 7 import check failed' }
+      - name: Verify full-fixture linkage
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          data = Path('target/package/Sa6iLink/sa6i-link.exe').read_bytes()
+          checks = (
+              'Sa6i Clean Integration.exe'.encode('utf-16le'),
+              bytes.fromhex('e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f'),
+              bytes.fromhex('b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f'),
+          )
+          if not all(check in data for check in checks):
+              raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Full fixture linkage verification failed' }
+      - name: Check startup and approved quit on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path 'target/package/Sa6iLink/sa6i-link.exe').Path
+          $data = Join-Path $env:RUNNER_TEMP 'sa6i-check-data'
+          $cleaner = Join-Path $env:RUNNER_TEMP 'no-cleaner-launched'
+          New-Item -ItemType Directory -Path $data | Out-Null
+          $stderr = Join-Path $env:RUNNER_TEMP 'sa6i-check-stderr.txt'
+          $env:SA6I_NO_ADB = '1'
+          $env:QT_QUICK_BACKEND = 'software'
+          $env:SA6I_CLEAN_WIN7_COMPAT = '1'
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class WindowStyleCheck {
+              [DllImport("user32.dll", EntryPoint="GetWindowLongW")]
+              public static extern int GetWindowLong(IntPtr hwnd, int index);
+          }
+          '@
+          $app = Start-Process $exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"", "`"--sa6i-clean-test-dir=$cleaner`"" -RedirectStandardError $stderr -PassThru
+          $null = $app.Handle
+          $deadline = [DateTime]::UtcNow.AddSeconds(55)
+          $window = [IntPtr]::Zero
+          while ([DateTime]::UtcNow -lt $deadline) {
+            $app.Refresh()
+            if ($app.HasExited) { break }
+            if ($app.MainWindowHandle -ne [IntPtr]::Zero) { $window = $app.MainWindowHandle; break }
+            Start-Sleep -Milliseconds 100
+          }
+          if ($window -eq [IntPtr]::Zero) { throw 'No main window to check' }
+          $exStyle = [WindowStyleCheck]::GetWindowLong($window, -20)
+          if (($exStyle -band 0x00200000) -ne 0) { throw 'Win7 mode must not use WS_EX_NOREDIRECTIONBITMAP' }
+          Write-Host 'Win7 mode: main window has no WS_EX_NOREDIRECTIONBITMAP'
+          if (-not $app.WaitForExit(60000)) {
+            $app.Refresh()
+            Write-Host "::error::App did not quit. Responding=$($app.Responding); title=$($app.MainWindowTitle)"
+            Get-Content $stderr -Tail 20 -ErrorAction SilentlyContinue | ForEach-Object { if ($_) { Write-Host "::error::$_" } }
+            $app.Kill()
+            throw 'Startup/quit check timed out'
+          }
+          $log = Get-Content $stderr -Raw
+          if ($log) { Write-Host $log }
+          if ($app.ExitCode -ne 0) { throw "Startup/quit check failed: $($app.ExitCode)" }
+          if ($log -notmatch 'no QML warnings') { throw 'Expected successful UI check marker missing' }
+      - name: Mark artifact limitations
+        shell: pwsh
+        run: |
+          @'
+          SA6I CLEAN WIN7 INTEGRATION INVESTIGATION — NOT A RELEASE
+
+          This is an experimental source build using a third-party Qt 6.8.3
+          Windows 7 backport, not the official Qt kit. It is not equivalent to
+          the published Sa6i Link executable and has not been run on Windows 7.
+          The artifact does not include the cleaner runtime. This build is
+          configured for the exact full cleaner fixture, whose cleanup and
+          management features can permanently delete files or change the OS.
+          Do not install over an existing copy or use it for real cleanup.
+          Third-party Qt licensing and runtime compatibility need review
+          before distribution.
+          '@ | Set-Content -Encoding UTF8 target/package/Sa6iLink/INTEGRATION-BUILD-ONLY.txt
+          @'
+          @echo off
+          setlocal
+          set "SA6I_CLEAN_WIN7_COMPAT=1"
+          if not exist "%~dp0Start Integrated Test.cmd" (
+            echo This build requires the matching newly prepared cleaner fixture and launcher.
+            pause
+            exit /b 1
+          )
+          call "%~dp0Start Integrated Test.cmd"
+          '@ | Set-Content -Encoding ASCII 'target/package/Sa6iLink/Start Win7 Compatibility Test.cmd'
+      # Artifact storage is not reachable from the development workspace, so a
+      # one-commit branch carries the desktop build instead. It is force-pushed
+      # and must never be used for a release.
+      - name: Publish the desktop build to the throwaway bridge branch
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="target/package/Sa6iLink/sa6i-link.exe"
+          test -f "$src"
+          mkdir -p "$RUNNER_TEMP/bridge/ci-desktop"
+          cp "$src" "$RUNNER_TEMP/bridge/ci-desktop/sa6i-link.exe"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/bridge/ci-desktop/SOURCE-COMMIT.txt"
+          sha256sum "$src" > "$RUNNER_TEMP/bridge/ci-desktop/SHA256SUMS.txt"
+          cd "$RUNNER_TEMP/bridge"
+          git init -q .
+          git config user.name "Sa6i build bridge"
+          git config user.email "sa6i-bridge@users.noreply.github.com"
+          git add ci-desktop
+          git commit -q -m "Desktop build for ${GITHUB_SHA:0:12}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-desktop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sa6i-clean-win7-integration-investigation
+          path: target/package/Sa6iLink/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish the build log when the build fails
+        if: failure()
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'build.log'
+          $check = Join-Path $env:RUNNER_TEMP 'sa6i-check-stderr.txt'
+          if (-not (Test-Path $log) -and -not (Test-Path $check)) { exit 0 }
+          $dir = Join-Path $env:RUNNER_TEMP 'log-bridge'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          git -C $dir init --quiet
+          git -C $dir checkout --quiet -B ci-desktop
+          if (Test-Path $log) { Copy-Item $log (Join-Path $dir 'build.log') -Force }
+          if (Test-Path $check) { Copy-Item $check (Join-Path $dir 'check-stderr.txt') -Force }
+          Set-Content -Path (Join-Path $dir 'SOURCE-COMMIT.txt') -Value $env:GITHUB_SHA -Encoding ASCII
+          git -C $dir config user.name 'Sa6i CI'
+          git -C $dir config user.email 'ci@users.noreply.github.com'
+          git -C $dir add -A
+          git -C $dir commit --quiet -m "Build log for $env:GITHUB_SHA"
+          git -C $dir push --force "https://x-access-token:$env:GITHUB_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" ci-desktop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

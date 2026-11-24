@@ -1,0 +1,35 @@
+[package]
+name = "sa6i-link-intel-win"
+description = "Windows collectors for the Sa6i intelligence core"
+license = "MPL-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+sa6i-link-intel.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    # Performance counters: disk throughput, and later GPU memory.
+    "Win32_System_Performance",
+    # Process enumeration and per-process memory: the heaviest processes.
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    # NtQuerySystemInformation, for per-processor counters: the Win32 surface
+    # has no per-core equivalent of GetSystemTimes.
+    "Wdk_System_SystemInformation",
+] }
+
+[[bin]]
+name = "sa6i-intel-snapshot"
+path = "src/bin/sa6i-intel-snapshot.rs"
+
+[lints]
+workspace = true

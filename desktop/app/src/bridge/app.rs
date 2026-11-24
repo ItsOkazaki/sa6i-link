@@ -15,7 +15,7 @@ use cxx_qt::{CxxQtThread, CxxQtType, Threading};
 use cxx_qt_lib::{
     QHash, QHashPair_QString_QVariant, QList, QMap, QMapPair_QString_QVariant, QString, QVariant,
 };
-use nectarlink_core::{DeviceId, Error, FeatureState, LinkState, PhoneToggleValue, features::Upgrade};
+use sa6i_link_core::{DeviceId, Error, FeatureState, LinkState, PhoneToggleValue, features::Upgrade};
 
 use crate::{
     core_host,
@@ -556,7 +556,7 @@ pub fn install_update_in_background() {
                     object.as_mut().set_update_progress(-1.0);
                     object
                         .as_mut()
-                        .set_update_status(QString::from("Installing. NectarLink reopens by itself."));
+                        .set_update_status(QString::from("Installing. Sa6i Link reopens by itself."));
                 }
                 Err(message) => {
                     object.as_mut().set_update_busy(false);
@@ -677,7 +677,7 @@ pub(crate) fn show_offline_queued_toast(device: DeviceId, item_id: Option<String
                         i.peer == device
                             && matches!(
                                 i.status,
-                                nectarlink_core::QueueStatus::Waiting | nectarlink_core::QueueStatus::Sending
+                                sa6i_link_core::QueueStatus::Waiting | sa6i_link_core::QueueStatus::Sending
                             )
                     })
                     .map(|i| i.id.clone())
@@ -757,7 +757,7 @@ impl cxx_qt::Initialize for qobject::AppController {
         self.as_mut().set_data_retention_summary(QString::default());
         self.as_mut().set_localsend_peers_json(QString::from("[]"));
         self.as_mut().set_shelf_items(QString::default());
-        if let Ok(qr) = crate::qr::encode("https://github.com/thtbee/nectarlink/releases/latest") {
+        if let Ok(qr) = crate::qr::encode("https://github.com/ItsOkazaki/sa6i-link/releases/latest") {
             let svg = format!(
                 "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {size} {size}\" shape-rendering=\"crispEdges\"><rect width=\"{size}\" height=\"{size}\" fill=\"white\"/><path d=\"{path}\" fill=\"black\"/></svg>",
                 size = qr.size,
@@ -841,16 +841,16 @@ impl cxx_qt::Initialize for qobject::AppController {
         );
 
         let labels = tray::MenuLabels {
-            open: tr!("App", "Open NectarLink"),
+            open: tr!("App", "Open Sa6i Link"),
             command_palette: tr!("App", "Command palette"),
             shelf: tr!("App", "Toggle Shelf"),
             take_photo: tr!("App", "Take photo with phone"),
             scan_document: tr!("App", "Scan document with phone"),
             find_phone: tr!("App", "Find my phone"),
             open_link: tr!("App", "Open copied link on phone"),
-            quit: tr!("App", "Quit NectarLink"),
+            quit: tr!("App", "Quit Sa6i Link"),
         };
-        match tray::Tray::create("NectarLink", labels, move |event| on_tray_event(&qt, event)) {
+        match tray::Tray::create("Sa6i Link", labels, move |event| on_tray_event(&qt, event)) {
             Ok(tray) => self.rust_mut().tray = Some(tray),
             Err(e) => tracing::warn!(error = %e, "no tray icon"),
         }
@@ -969,6 +969,7 @@ fn dispatch_jump_task(qt: &CxxQtThread<qobject::AppController>, action: String) 
                 "graphite" => Theme::Graphite,
                 "glass" => Theme::Glass,
                 "hive" => Theme::Hive,
+                "signal" => Theme::Signal,
                 _ => Theme::Bloom,
             };
             st.color_mode =
@@ -995,7 +996,7 @@ fn dispatch_jump_task(qt: &CxxQtThread<qobject::AppController>, action: String) 
 
 /// Formats the tray tooltip summary for a single connected phone: battery level,
 /// charging status, and optional Wi-Fi / cellular signal bars.
-pub(crate) fn format_tray_device_summary(name: &str, b: &nectarlink_core::Battery) -> String {
+pub(crate) fn format_tray_device_summary(name: &str, b: &sa6i_link_core::Battery) -> String {
     let charging = if b.charging { ", charging" } else { "" };
     let mut parts = vec![format!("{name} · {}%{charging}", b.level)];
     if let Some(w) = b.wifi_bars {
@@ -1215,7 +1216,7 @@ impl qobject::AppController {
                 .filter(|i| {
                     matches!(
                         i.status,
-                        nectarlink_core::QueueStatus::Waiting | nectarlink_core::QueueStatus::Sending
+                        sa6i_link_core::QueueStatus::Waiting | sa6i_link_core::QueueStatus::Sending
                     )
                 })
                 .count();
@@ -1290,13 +1291,13 @@ impl qobject::AppController {
         self.as_mut().set_phone_toggles_revision(toggles_version as i32);
 
         let mut tooltip = match (devices, online) {
-            (0, _) => tr!("App", "NectarLink · no devices paired"),
-            (_, 0) => tr!("App", "NectarLink · not connected"),
+            (0, _) => tr!("App", "Sa6i Link · no devices paired"),
+            (_, 0) => tr!("App", "Sa6i Link · not connected"),
             (_, 1) => battery.map_or_else(
-                || tr!("App", "NectarLink · 1 device connected"),
-                |b| tr!("App", "NectarLink · %1", b),
+                || tr!("App", "Sa6i Link · 1 device connected"),
+                |b| tr!("App", "Sa6i Link · %1", b),
             ),
-            (_, n) => tr!("App", "NectarLink · %1 devices connected", n),
+            (_, n) => tr!("App", "Sa6i Link · %1 devices connected", n),
         };
         if waiting_count > 0 {
             tooltip.push_str(&format!(" · {waiting_count} waiting"));
@@ -1919,7 +1920,7 @@ impl qobject::AppController {
             let json = compute_shelf_items_json(idx);
             self.as_mut().set_shelf_items(QString::from(&json));
             self.as_mut().set_shelf_open(true);
-            win::tray::apply_no_activate_style_by_title("NectarLink Shelf");
+            win::tray::apply_no_activate_style_by_title("Sa6i Link Shelf");
         }
     }
 
@@ -1941,8 +1942,8 @@ impl qobject::AppController {
     }
 
     pub fn style_shelf_window(&self) {
-        win::tray::apply_no_activate_style_by_title("NectarLink Shelf");
-        win::tray::apply_no_activate_style_by_title("Nectar Island");
+        win::tray::apply_no_activate_style_by_title("Sa6i Link Shelf");
+        win::tray::apply_no_activate_style_by_title("Sa6i Island");
     }
 
     pub fn start_shelf_drag(&self, kind: &QString, id_or_path: &QString, text: &QString) -> bool {
@@ -2225,7 +2226,7 @@ fn find_guide_file_on_disk(file_stem: &str) -> Option<String> {
 fn load_guide_doc_content(raw_key: &str) -> (String, String) {
     let key = raw_key.trim().trim_end_matches(".md").to_ascii_lowercase();
     let top_level_title = match key.as_str() {
-        "overview" => Some(tr!("Guide", "NectarLink overview")),
+        "overview" => Some(tr!("Guide", "Sa6i Link overview")),
         "setup" => Some(tr!("Guide", "Install and first-time setup")),
         "features" => Some(tr!("Guide", "Features reference")),
         "permissions" => Some(tr!("Guide", "Android permissions and why each is optional")),
@@ -2242,10 +2243,10 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
 
     let (title, body) = match key.as_str() {
         "overview" => (
-            tr!("Guide", "NectarLink overview"),
+            tr!("Guide", "Sa6i Link overview"),
             tr!(
                 "Guide",
-                "NectarLink links your Android phone and your PC directly on your local network or over a USB cable.\n\n\
+                "Sa6i Link links your Android phone and your PC directly on your local network or over a USB cable.\n\n\
              How it works\n\
              - Devices discover each other over local Wi-Fi (mDNS) or USB (ADB reverse tunnel) and connect over QUIC (TLS 1.3).\n\
              - Every connection is mutually authenticated using Ed25519 device keys generated on each device.\n\
@@ -2260,10 +2261,10 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!("Guide", "Install and first-time setup"),
             tr!(
                 "Guide",
-                "1. Install NectarLink on your PC (Windows 11 or Linux) and your Android phone (Android 8.0 or newer).\n\
+                "1. Install Sa6i Link on your PC (Windows 11 or Linux) and your Android phone (Android 8.0 or newer).\n\
              2. Connect both devices to the same Wi-Fi network, or plug your phone into your PC with a USB cable.\n\
              3. Open the Pair step in the setup walkthrough, or click + (Pair a new device) at the bottom of the left rail.\n\
-             4. Scan the QR code from the NectarLink Android app, or select your phone from the nearby devices list and confirm that the 6-digit code matches on both screens.\n\
+             4. Scan the QR code from the Sa6i Link Android app, or select your phone from the nearby devices list and confirm that the 6-digit code matches on both screens.\n\
              5. Choose which features to share for that phone and grant only the Android permissions you want to use."
             ),
         ),
@@ -2271,7 +2272,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!("Guide", "Android permissions and why each is optional"),
             tr!(
                 "Guide",
-                "NectarLink never asks for every permission up front. Each feature works independently:\n\n\
+                "Sa6i Link never asks for every permission up front. Each feature works independently:\n\n\
              - Notification Access: Required only if you want phone notifications, inline replies, and notification-backed chat threads on your PC.\n\
              - SMS and Contacts: Required only if you want to read and send SMS/MMS messages or look up contact names on your PC.\n\
              - Phone and Call Log: Required only if you want incoming call alerts, call history, or dialing from your PC.\n\
@@ -2283,14 +2284,14 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!("Guide", "Elevated and Assist modes"),
             tr!(
                 "Guide",
-                "Most NectarLink features work in Standard mode with regular Android permissions. Two optional modes unlock deeper system integration:\n\n\
+                "Most Sa6i Link features work in Standard mode with regular Android permissions. Two optional modes unlock deeper system integration:\n\n\
              Elevated mode (Wireless debugging or root)\n\
              - Captures the phone screen without showing the Android cast confirmation prompt every time.\n\
              - Streams individual phone apps in separate desktop windows (virtual displays).\n\
              - Controls additional system quick toggles.\n\n\
              Assist mode (Android Accessibility Service)\n\
              - Injects mouse clicks, scrolling, and touch gestures when you control your phone from your PC.\n\
-             - NectarLink never reads screen text or logs keystrokes through the Accessibility service."
+             - Sa6i Link never reads screen text or logs keystrokes through the Accessibility service."
             ),
         ),
         "troubleshooting" => (
@@ -2299,9 +2300,9 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
                 "Guide",
                 "If your phone and PC do not see each other:\n\n\
              1. Open Connection Doctor from Settings › Connection & About or the Command Palette.\n\
-             2. Check that your Wi-Fi network profile in Windows is set to Private rather than Public, or click Fix in Connection Doctor to allow NectarLink through Windows Firewall.\n\
+             2. Check that your Wi-Fi network profile in Windows is set to Private rather than Public, or click Fix in Connection Doctor to allow Sa6i Link through Windows Firewall.\n\
              3. Verify that both devices are on the same subnet and that guest Wi-Fi client isolation is turned off on your router.\n\
-             4. You can also connect over a USB cable with USB debugging enabled; NectarLink automatically sets up a local tunnel."
+             4. You can also connect over a USB cable with USB debugging enabled; Sa6i Link automatically sets up a local tunnel."
             ),
         ),
         "privacy" => (
@@ -2327,7 +2328,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
              - Settings › Notifications for per-app rules (Show, Silent, or Hidden) and Do Not Disturb sync.\n\
              - Settings › General › Copy one-time codes.\n\n\
              What it needs\n\
-             - Notification Access permission enabled for NectarLink on your Android phone.\n\
+             - Notification Access permission enabled for Sa6i Link on your Android phone.\n\
              - The per-device Notifications toggle enabled on your PC."
             ),
         ),
@@ -2353,7 +2354,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
              Shows incoming and active phone calls on your PC with Answer, Decline, and Reject with SMS actions, plus browsable call history, contacts, and a dialpad.\n\n\
              Where to find it\n\
              - Left navigation rail › Calls.\n\
-             - Incoming call banner on Home and Nectar Island.\n\n\
+             - Incoming call banner on Home and Sa6i Island.\n\n\
              What it needs\n\
              - Phone, Call Log, and Contacts permissions on your Android phone.\n\
              - Call audio stays on your phone (or a headset paired to your phone); Elevated mode on Android 12+ unlocks mute, speakerphone, hold, and keypad controls."
@@ -2370,7 +2371,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
              - Settings › General › Sync clipboard to phone.\n\n\
              What it needs\n\
              - Automatic PC-to-phone clipboard send works whenever your phone is connected.\n\
-             - Background phone-to-PC clipboard sync on Android 10+ uses notifications, the NectarLink quick tile, or Elevated mode."
+             - Background phone-to-PC clipboard sync on Android 10+ uses notifications, the Sa6i Link quick tile, or Elevated mode."
             ),
         ),
         "transfers" => (
@@ -2378,7 +2379,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!(
                 "Guide",
                 "What it does\n\
-             Sends files, folders, links, and text between your phone and PC at local network speed. If your phone is offline when you send, NectarLink places the item in the Waiting to send queue and delivers it automatically as soon as your phone reconnects.\n\n\
+             Sends files, folders, links, and text between your phone and PC at local network speed. If your phone is offline when you send, Sa6i Link places the item in the Waiting to send queue and delivers it automatically as soon as your phone reconnects.\n\n\
              Where to find it\n\
              - Home › Send files button, drag-and-drop anywhere on the window, Waiting to send card, and Transfers list.\n\
              - Windows File Explorer › right-click › Send to.\n\n\
@@ -2421,7 +2422,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
                 "What it does\n\
              Streams your PC's screen to your phone so you can view your desktop from across the room and use your phone as a trackpad or laser pointer.\n\n\
              Where to find it\n\
-             - Started from the NectarLink app on your phone.\n\
+             - Started from the Sa6i Link app on your phone.\n\
              - Settings › Devices › Share PC screen to phone.\n\n\
              What it needs\n\
              - The per-device Share PC screen to phone switch on your PC, or one-time approval when your phone requests to view your screen."
@@ -2432,7 +2433,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!(
                 "Guide",
                 "What it does\n\
-             Streams your phone camera into the NectarLink Virtual Camera on Windows so Zoom, Teams, Meet, Discord, and OBS can use your phone's rear or front camera at up to 4K.\n\n\
+             Streams your phone camera into the Sa6i Link Virtual Camera on Windows so Zoom, Teams, Meet, Discord, and OBS can use your phone's rear or front camera at up to 4K.\n\n\
              Where to find it\n\
              - Home › Phone as webcam.\n\
              - Settings › Camera & Audio › Start webcam.\n\n\
@@ -2515,7 +2516,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
              - Home › Type on phone.\n\
              - Command Palette › Type on phone with PC keyboard.\n\n\
              What it needs\n\
-             - Assist mode (Accessibility service), the NectarLink input method, or Elevated mode on your phone."
+             - Assist mode (Accessibility service), the Sa6i Link input method, or Elevated mode on your phone."
             ),
         ),
         "phone-controls" => (
@@ -2545,16 +2546,16 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
              - Paired phone; Photos permission on your phone for the latest photo and screenshot tiles."
             ),
         ),
-        "nectar-island" => (
-            tr!("Guide", "Nectar Island"),
+        "sa6i-island" => (
+            tr!("Guide", "Sa6i Island"),
             tr!(
                 "Guide",
                 "What it does\n\
              Displays a compact pill at the top center of your primary monitor for incoming calls, live file transfer progress, media playback, and optional notification previews.\n\n\
              Where to find it\n\
-             - Settings › General › Nectar Island.\n\n\
+             - Settings › General › Sa6i Island.\n\n\
              What it needs\n\
-             - Turn on Nectar Island in Settings › General and pick which events should appear."
+             - Turn on Sa6i Island in Settings › General and pick which events should appear."
             ),
         ),
         "timeline" => (
@@ -2577,7 +2578,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
                 "What it does\n\
              Opens a keyboard-first search bar over actions, contacts, message threads, mirrorable apps, phone quick toggles, clipboard history, and navigation pages.\n\n\
              Where to find it\n\
-             - Global hotkey Ctrl+Alt+Space (or Ctrl+K inside the NectarLink window).\n\
+             - Global hotkey Ctrl+Alt+Space (or Ctrl+K inside the Sa6i Link window).\n\
              - Commands in the top bar.\n\n\
              What it needs\n\
              - Works at any time with zero background memory cost when closed."
@@ -2651,7 +2652,7 @@ fn load_guide_doc_content(raw_key: &str) -> (String, String) {
             tr!(
                 "Guide",
                 "What it does\n\
-             Exposes an opt-in localhost HTTP/JSON and Server-Sent Events API on 127.0.0.1 (default port 53320) protected by a bearer token so scripts, CLI tools, and Stream Deck plugins can trigger NectarLink actions.\n\n\
+             Exposes an opt-in localhost HTTP/JSON and Server-Sent Events API on 127.0.0.1 (default port 53320) protected by a bearer token so scripts, CLI tools, and Stream Deck plugins can trigger Sa6i Link actions.\n\n\
              Where to find it\n\
              - Settings › Connection & About › Local automation API.\n\n\
              What it needs\n\
@@ -2714,7 +2715,7 @@ fn unix_ms(ts: i64) -> i64 {
 }
 
 fn compute_shelf_items_json(current_device_idx: i32) -> String {
-    use nectarlink_core::{ClipboardItemKind, Direction, TimelineKind, TimelineQuery, TransferState};
+    use sa6i_link_core::{ClipboardItemKind, Direction, TimelineKind, TimelineQuery, TransferState};
 
     let (device_opt, device_name, online) = resolve_shelf_device(current_device_idx);
     let node = core_host::node();
@@ -2805,7 +2806,7 @@ fn compute_shelf_items_json(current_device_idx: i32) -> String {
         }
     }
 
-    // 3. Scan Downloads\Nectarlink for mirror screenshots ("Screenshot ...") and saved photos.
+    // 3. Scan Downloads\Sa6iLink for mirror screenshots ("Screenshot ...") and saved photos.
     let dl_dir = core_host::downloads_dir();
     let mut dl_files: Vec<(i64, u64, std::path::PathBuf, String)> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(&dl_dir) {
@@ -3088,7 +3089,7 @@ fn watch_home(device: Option<DeviceId>) {
     }
 }
 
-pub(crate) fn update_home_sms(device: DeviceId, threads: &[nectarlink_core::SmsThread]) {
+pub(crate) fn update_home_sms(device: DeviceId, threads: &[sa6i_link_core::SmsThread]) {
     let changed = home_store(|s| {
         let entry = s.devices.entry(device).or_default();
         let unread_messages: u32 = threads.iter().map(|t| t.unread).sum();
@@ -3106,7 +3107,7 @@ pub(crate) fn update_home_sms(device: DeviceId, threads: &[nectarlink_core::SmsT
     }
 }
 
-pub(crate) fn update_home_calls(device: DeviceId, entries: &[nectarlink_core::CallLogEntry]) {
+pub(crate) fn update_home_calls(device: DeviceId, entries: &[sa6i_link_core::CallLogEntry]) {
     let changed = home_store(|s| {
         let entry = s.devices.entry(device).or_default();
         let missed_calls = entries.iter().filter(|e| e.direction == "missed").count() as u32;
@@ -3127,8 +3128,8 @@ pub(crate) fn update_home_calls(device: DeviceId, entries: &[nectarlink_core::Ca
     }
 }
 
-pub(crate) fn on_home_event(event: &nectarlink_core::NodeEvent) {
-    use nectarlink_core::NodeEvent;
+pub(crate) fn on_home_event(event: &sa6i_link_core::NodeEvent) {
+    use sa6i_link_core::NodeEvent;
     let watched = home_store(|s| s.watched);
     let shelf_active = is_shelf_open();
     match event {
@@ -3387,9 +3388,9 @@ mod tests {
     fn phone_colors_come_from_the_connected_phone_when_an_old_pairing_shares_its_name() {
         let phone = |n: u8, accent: u32, online: bool| crate::state::DeviceView {
             id: DeviceId([n; 32]),
-            info: nectarlink_core::DeviceInfo {
+            info: sa6i_link_core::DeviceInfo {
                 name: "Galaxy".into(),
-                kind: nectarlink_core::DeviceKind::Phone,
+                kind: sa6i_link_core::DeviceKind::Phone,
                 os: "android".into(),
                 os_ver: "16".into(),
                 model: None,
@@ -3399,12 +3400,12 @@ mod tests {
             },
             paired_at: i64::from(n),
             link: if online {
-                LinkState::Online { path: nectarlink_core::ConnectionPath::Lan, rtt_ms: 4 }
+                LinkState::Online { path: sa6i_link_core::ConnectionPath::Lan, rtt_ms: 4 }
             } else {
                 LinkState::Offline { last_seen: None }
             },
             battery: None,
-            power: nectarlink_core::PowerLevel::Basic,
+            power: sa6i_link_core::PowerLevel::Basic,
             reconnect: true,
         };
         // The stale pairing is listed first and has its own (old) color.
@@ -3419,7 +3420,7 @@ mod tests {
 
     #[test]
     fn tray_summary_includes_battery_and_signal_strength() {
-        let b = nectarlink_core::Battery {
+        let b = sa6i_link_core::Battery {
             level: 85,
             charging: true,
             plugged: Some("usb".into()),
@@ -3430,7 +3431,7 @@ mod tests {
         };
         assert_eq!(format_tray_device_summary("Pixel 9", &b), "Pixel 9 · 85%, charging · Wi-Fi 3/4 · 5G 4/4");
 
-        let basic = nectarlink_core::Battery {
+        let basic = sa6i_link_core::Battery {
             level: 40,
             charging: false,
             plugged: None,

@@ -2,7 +2,7 @@
 //! Phone notifications as Windows toasts, with the app's icon, its actions
 //! and an inline reply field.
 //!
-//! NectarLink isn't a packaged app, so it registers an AppUserModelID under
+//! Sa6i Link isn't a packaged app, so it registers an AppUserModelID under
 //! HKCU (display name and icon) and gives the process that ID. Toasts are
 //! driven from one thread with COM initialized; clicks, replies and
 //! dismissals come back through per-toast handlers while the app runs.
@@ -36,7 +36,7 @@ use windows::{
 };
 
 /// The app's AppUserModelID: toasts are grouped and attributed by it.
-pub const AUMID: &str = "Nectarlink.Desktop";
+pub const AUMID: &str = "Sa6iLink.Desktop";
 
 /// What the user did with a toast.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,6 +121,9 @@ pub fn enabled() -> bool {
 
 /// Gives the process the app's ID. Call before any window is created.
 pub fn set_process_id() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     // SAFETY: the ID is a valid null-terminated string for the call.
     if let Err(e) = unsafe { SetCurrentProcessExplicitAppUserModelID(&HSTRING::from(AUMID)) } {
         tracing::warn!(error = %e, "can't set the app's ID");
@@ -131,6 +134,11 @@ pub fn set_process_id() {
 /// icon (written to `icon` as a PNG if missing); `on_event` gets what the
 /// user does with toasts.
 pub fn start(icon: PathBuf, on_event: impl Fn(ToastEvent) + Send + Sync + 'static) {
+    // Registration and toast history use a shared Windows app ID. Suppress
+    // both in the experiment even when the test data directory is separate.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let (commands, queue) = mpsc::channel();
     let handler: Handler = Box::new(on_event);
     let spawned = std::thread::Builder::new().name("toasts".into()).spawn(move || run(&icon, queue, handler));
@@ -172,6 +180,9 @@ fn registration_key() -> HSTRING {
 
 /// Removes the registration (when uninstalling), and the app's toasts.
 pub fn unregister() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     if let Ok(history) = ToastNotificationManager::History() {
         let _ = history.ClearWithId(&HSTRING::from(AUMID));
     }
@@ -217,7 +228,7 @@ fn register(icon: &Path) -> windows::core::Result<()> {
         }
         .ok()
     };
-    let result = set("DisplayName", "NectarLink").and_then(|()| set("IconUri", &icon.to_string_lossy()));
+    let result = set("DisplayName", "Sa6i Link").and_then(|()| set("IconUri", &icon.to_string_lossy()));
     // SAFETY: the key was opened above.
     unsafe {
         let _ = RegCloseKey(key);

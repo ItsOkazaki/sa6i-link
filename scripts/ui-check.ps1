@@ -5,9 +5,9 @@
   QML warning or error.
 
 .DESCRIPTION
-  Runs nectarlink-desktop.exe --ui-check with a new data folder under
+  Runs sa6i-link.exe --ui-check with a new data folder under
   target\ui-check, so the user's own data is never touched, and without
-  USB (NECTARLINK_NO_ADB=1). The app shows the main window, quits after a
+  USB (SA6I_NO_ADB=1). The app shows the main window, quits after a
   few seconds and exits with an error if QML reported a problem, such as a
   component that didn't load. The QML tests can't catch that for the app's
   windows, which need the Rust singletons and NativeWindow.
@@ -30,7 +30,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-if (-not $Exe) { $Exe = Join-Path $repo 'target\package\Nectarlink\nectarlink-desktop.exe' }
+if (-not $Exe) { $Exe = Join-Path $repo 'target\package\Sa6iLink\sa6i-link.exe' }
 if (-not (Test-Path $Exe)) { throw "$Exe not found; run scripts\package.ps1 -StageOnly first, or pass -Exe" }
 
 foreach ($pass in @('walkthrough', 'home')) {
@@ -43,7 +43,7 @@ foreach ($pass in @('walkthrough', 'home')) {
     }
     $stderr = Join-Path $data 'stderr.txt'
 
-    $env:NECTARLINK_NO_ADB = '1'
+    $env:SA6I_NO_ADB = '1'
     $app = Start-Process $Exe -ArgumentList '--ui-check', '--data-dir', "`"$data`"" `
         -RedirectStandardError $stderr -PassThru -NoNewWindow
     # Without the handle, ExitCode stays empty after the process exits.

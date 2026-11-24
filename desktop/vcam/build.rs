@@ -23,13 +23,13 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "The NectarLink contributors"
-      VALUE "FileDescription", "NectarLink virtual camera"
+      VALUE "CompanyName", "The Sa6i Link contributors"
+      VALUE "FileDescription", "Sa6i Link virtual camera"
       VALUE "FileVersion", "{version}"
-      VALUE "InternalName", "nectarlink_vcam"
+      VALUE "InternalName", "sa6i_link_vcam"
       VALUE "LegalCopyright", "GPL-3.0-or-later"
-      VALUE "OriginalFilename", "nectarlink_vcam.dll"
-      VALUE "ProductName", "NectarLink"
+      VALUE "OriginalFilename", "sa6i_link_vcam.dll"
+      VALUE "ProductName", "Sa6i Link"
       VALUE "ProductVersion", "{version}"
     END
   END
@@ -40,7 +40,7 @@ BEGIN
 END
 "#
     );
-    let rc_path = out.join("nectarlink_vcam.rc");
+    let rc_path = out.join("sa6i_link_vcam.rc");
     if std::fs::read_to_string(&rc_path).ok().as_deref() != Some(rc.as_str()) {
         std::fs::write(&rc_path, rc).expect("write resource script");
     }

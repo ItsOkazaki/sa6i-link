@@ -10,7 +10,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use nectarlink_core::Notification;
+use sa6i_link_core::Notification;
 
 use crate::{core_host, settings};
 
@@ -46,13 +46,13 @@ pub fn build_pc_notification(
     .sanitized()
 }
 
-/// Returns `true` when the notification originated from NectarLink itself or a
+/// Returns `true` when the notification originated from Sa6i Link itself or a
 /// blocked system self-source so we never create a forwarding loop.
 #[cfg(any(target_os = "linux", test))]
 pub fn is_blocked_self_source(app_name: &str) -> bool {
     let lower = app_name.trim().to_lowercase();
     lower.is_empty()
-        || lower.contains("nectarlink")
+        || lower.contains("sa6i-link")
         || lower == "notify-send"
         || lower == "org.freedesktop.notifications"
 }
@@ -220,8 +220,8 @@ mod tests {
 
     #[test]
     fn blocks_self_source_notifications() {
-        assert!(is_blocked_self_source("NectarLink"));
-        assert!(is_blocked_self_source("nectarlink-desktop"));
+        assert!(is_blocked_self_source("Sa6i Link"));
+        assert!(is_blocked_self_source("sa6i-link"));
         assert!(is_blocked_self_source("notify-send"));
         assert!(is_blocked_self_source(""));
         assert!(!is_blocked_self_source("Firefox"));
@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn forward_pc_toast_ignores_self_and_empty() {
-        assert!(!forward_pc_toast("NectarLink", "Connected", "Pixel 9"));
+        assert!(!forward_pc_toast("Sa6i Link", "Connected", "Pixel 9"));
         assert!(!forward_pc_toast("Firefox", "   ", ""));
     }
 

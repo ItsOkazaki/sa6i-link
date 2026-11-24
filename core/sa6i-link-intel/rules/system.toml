@@ -1,0 +1,14 @@
+# The numbers the uptime rule decides with. Uptime is a reading, not a window:
+# there is nothing to sustain, so the key is `long_after` rather than `sustained`.
+
+[[rule]]
+id = "system.long_uptime"
+severity = "info"
+confidence = "certain"
+requires = ["system.uptime_seconds"]
+
+# Two weeks without a restart is when "have you restarted?" is worth saying.
+long_after = "14d"
+
+firing = "uptime-twenty-days"
+near_miss = "uptime-one-hour"

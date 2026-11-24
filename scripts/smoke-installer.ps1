@@ -20,18 +20,18 @@ if (-not $Setup) {
     if ($match) { $Setup = $match.FullName }
 }
 if (-not $Setup -or -not (Test-Path $Setup)) { throw "no setup installer found to test under target\package" }
-$dir = Join-Path $env:ProgramFiles 'Nectarlink'
-$exe = Join-Path $dir 'nectarlink-desktop.exe'
-$uninstallKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Nectarlink'
-$shortcut = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Nectarlink.lnk'
-$desktopShortcut = Join-Path $env:PUBLIC 'Desktop\NectarLink.lnk'
-$data = if ($env:RUNNER_TEMP) { Join-Path $env:RUNNER_TEMP 'nectarlink-smoke' } else { Join-Path $env:TEMP 'nectarlink-smoke' }
+$dir = Join-Path $env:ProgramFiles 'Sa6iLink'
+$exe = Join-Path $dir 'sa6i-link.exe'
+$uninstallKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Sa6iLink'
+$shortcut = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Sa6iLink.lnk'
+$desktopShortcut = Join-Path $env:PUBLIC 'Desktop\Sa6i Link.lnk'
+$data = if ($env:RUNNER_TEMP) { Join-Path $env:RUNNER_TEMP 'sa6i-link-smoke' } else { Join-Path $env:TEMP 'sa6i-link-smoke' }
 
 function Check($what, [bool]$ok) {
     if (-not $ok) { throw "FAILED: $what" }
     Write-Host "ok: $what"
 }
-function FirewallRule { (netsh advfirewall firewall show rule name=Nectarlink) -match 'Nectarlink' }
+function FirewallRule { (netsh advfirewall firewall show rule name=Sa6iLink) -match 'Sa6iLink' }
 # Whether an allow entry for `$sid` grants every bit of `$rights`.
 function Test-TaskRights($sd, [string]$sid, [int]$rights) {
     [bool]($sd.DiscretionaryAcl | Where-Object {
@@ -51,7 +51,7 @@ function Test-OthersMayWrite($sd) {
 function UpdateTask {
     $scheduler = New-Object -ComObject Schedule.Service
     $scheduler.Connect()
-    try { $scheduler.GetFolder('\').GetTask('Nectarlink Update') } catch { $null }
+    try { $scheduler.GetFolder('\').GetTask('Sa6iLink Update') } catch { $null }
 }
 
 Write-Host "Installing $Setup"
@@ -120,9 +120,9 @@ Check "the update task is gone" ($null -eq (UpdateTask))
 # passes it: /D last and unquoted. Its parent doesn't exist, so setup
 # creates both and locks them like Program Files.
 $top = 'C:\nl smoke'
-$custom = Join-Path $top 'Apps\Nectarlink'
-$customExe = Join-Path $custom 'nectarlink-desktop.exe'
-$reg = 'HKLM:\Software\Nectarlink'
+$custom = Join-Path $top 'Apps\Sa6iLink'
+$customExe = Join-Path $custom 'sa6i-link.exe'
+$reg = 'HKLM:\Software\Sa6iLink'
 function Test-Locked($path) {
     $acl = Get-Acl $path
     $sd = New-Object System.Security.AccessControl.RawSecurityDescriptor $acl.Sddl
@@ -159,11 +159,11 @@ while ((Test-Path $custom) -and (Get-Date) -lt $deadline) { Start-Sleep 1 }
 Check "it uninstalls from there" (-not (Test-Path $custom))
 
 # A folder that already has files in it is refused.
-$busy = Join-Path $top 'Busy\Nectarlink'
+$busy = Join-Path $top 'Busy\Sa6iLink'
 New-Item -ItemType Directory -Force $busy | Out-Null
 Set-Content (Join-Path $busy 'someone-elses.txt') 'x'
 $run = Start-Process $Setup -ArgumentList "/S /ADMINONLY=1 /D=$busy" -Wait -PassThru
-Check "a folder with files in it is refused" ($run.ExitCode -ne 0 -and -not (Test-Path (Join-Path $busy 'nectarlink-desktop.exe')))
+Check "a folder with files in it is refused" ($run.ExitCode -ne 0 -and -not (Test-Path (Join-Path $busy 'sa6i-link.exe')))
 Check "a refused folder leaves no update task" ($null -eq (UpdateTask))
 Remove-Item -Recurse -Force $top
 Write-Host "Installer smoke test passed."

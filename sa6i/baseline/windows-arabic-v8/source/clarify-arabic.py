@@ -13,7 +13,7 @@ def transform(text):
   if data[a:b].decode('utf-16-le')!=old:raise ValueError('offset mismatch')
   data=data[:a]+new.encode('utf-16-le')+data[b:];counts[old+' → '+new]+=1
  return data.decode('utf-16-le')
-w=E.parse(P+'/nectarlink_ar-checked.ts')
+w=E.parse(P+'/sa6i-link_ar-checked.ts')
 for ctx in w.findall('./context'):
  for msg in ctx.findall('message'):
   source=msg.findtext('source') or '';t=msg.find('translation');
@@ -22,7 +22,7 @@ for ctx in w.findall('./context'):
    if n.text:
     n.text=transform(n.text)
     if collections.Counter(token.findall(source))!=collections.Counter(token.findall(n.text)):bad.append(source)
-E.indent(w,space='    ');w.write(P+'/nectarlink_ar-reviewed.ts',encoding='utf-8',xml_declaration=True)
+E.indent(w,space='    ');w.write(P+'/sa6i-link_ar-reviewed.ts',encoding='utf-8',xml_declaration=True)
 a=E.parse(P+'/android-ar-checked-strings.xml'); base={x.get('name'):''.join(x.itertext()) for x in E.parse(P+'/android-English.xml').findall('.//string')}
 for e in a.findall('./string'):
  e.text=transform(e.text or '');source=base.get(e.get('name'),'')

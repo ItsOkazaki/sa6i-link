@@ -1,0 +1,18 @@
+{
+  "name": "memory-dipped-inside-the-window",
+  "about": "Three minutes at 95 % followed by a minute at 70 %: the last two minutes contain the dip, so the pressure is not sustained and nothing is said.",
+  "segments": [
+    {
+      "minutes": 3,
+      "memory_percent": 95
+    },
+    {
+      "minutes": 1,
+      "memory_percent": 70
+    }
+  ],
+  "expect": [],
+  "quiets": [
+    "memory.pressure"
+  ]
+}

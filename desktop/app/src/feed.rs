@@ -10,9 +10,9 @@
 //! ```json
 //! { "schema": 1, "channel": "nightly", "version": "0.1.5-nightly.7",
 //!   "name": "Amber Clover", "published": "2026-11-03T10:17:00Z",
-//!   "notes": "https://github.com/thtbee/nectarlink/releases/tag/v0.1.5-nightly.7",
-//!   "files": [{ "name": "Nectarlink-0.1.5-nightly.7-x64-setup.exe",
-//!               "url": "https://github.com/thtbee/nectarlink/releases/download/…",
+//!   "notes": "https://github.com/ItsOkazaki/sa6i-link/releases/tag/v0.1.5-nightly.7",
+//!   "files": [{ "name": "Sa6iLink-0.1.5-nightly.7-x64-setup.exe",
+//!               "url": "https://github.com/ItsOkazaki/sa6i-link/releases/download/…",
 //!               "sha256": "…", "size": 41234567 }] }
 //! ```
 
@@ -26,11 +26,11 @@ use crate::{
 };
 
 /// Where the feeds are: `<FEEDS><channel>.json`.
-const FEEDS: &str = "https://raw.githubusercontent.com/thtbee/nectarlink/channels/";
+const FEEDS: &str = "https://raw.githubusercontent.com/ItsOkazaki/sa6i-link/channels/";
 /// The only place a feed's files may come from.
-pub const RELEASE_DOWNLOADS: &str = "https://github.com/thtbee/nectarlink/releases/download/";
+pub const RELEASE_DOWNLOADS: &str = "https://github.com/ItsOkazaki/sa6i-link/releases/download/";
 /// Release notes live on the repository's own pages.
-const NOTES: &str = "https://github.com/thtbee/nectarlink/";
+const NOTES: &str = "https://github.com/ItsOkazaki/sa6i-link/";
 /// A feed is a few hundred bytes; anything near this is not one.
 const MAX_FEED: usize = 64 * 1024;
 const SCHEMA: u32 = 1;
@@ -137,10 +137,10 @@ mod tests {
             version: version.into(),
             name: Some("Amber Clover".into()),
             published: None,
-            notes: "https://github.com/thtbee/nectarlink/releases/tag/v1".into(),
+            notes: "https://github.com/ItsOkazaki/sa6i-link/releases/tag/v1".into(),
             files: vec![FeedFile {
-                name: "Nectarlink-0.1.5-nightly.7-x64-setup.exe".into(),
-                url: format!("{RELEASE_DOWNLOADS}v0.1.5-nightly.7/Nectarlink-0.1.5-nightly.7-x64-setup.exe"),
+                name: "Sa6iLink-0.1.5-nightly.7-x64-setup.exe".into(),
+                url: format!("{RELEASE_DOWNLOADS}v0.1.5-nightly.7/Sa6iLink-0.1.5-nightly.7-x64-setup.exe"),
                 sha256: "A".repeat(64),
                 size: 1,
             }],
@@ -172,7 +172,7 @@ mod tests {
         let mut f = feed("nightly", "0.1.5-nightly.7");
         let good = f.files[0].clone();
         f.files = vec![
-            FeedFile { url: "https://evil.example/Nectarlink-setup.exe".into(), ..good.clone() },
+            FeedFile { url: "https://evil.example/Sa6iLink-setup.exe".into(), ..good.clone() },
             FeedFile { url: format!("{RELEASE_DOWNLOADS}../../other/x.exe"), ..good.clone() },
             FeedFile { name: "..\\setup.exe".into(), ..good.clone() },
             FeedFile { sha256: "xyz".into(), ..good.clone() },
@@ -187,9 +187,9 @@ mod tests {
     #[test]
     fn real_json_parses() {
         let json = br#"{"schema":1,"channel":"nightly","version":"0.1.5-nightly.7","name":"Amber Clover",
-            "published":"2026-11-03T10:17:00Z","notes":"https://github.com/thtbee/nectarlink/releases/tag/v0.1.5-nightly.7",
-            "files":[{"name":"Nectarlink-0.1.5-nightly.7-android.apk",
-            "url":"https://github.com/thtbee/nectarlink/releases/download/v0.1.5-nightly.7/Nectarlink-0.1.5-nightly.7-android.apk",
+            "published":"2026-11-03T10:17:00Z","notes":"https://github.com/ItsOkazaki/sa6i-link/releases/tag/v0.1.5-nightly.7",
+            "files":[{"name":"Sa6iLink-0.1.5-nightly.7-android.apk",
+            "url":"https://github.com/ItsOkazaki/sa6i-link/releases/download/v0.1.5-nightly.7/Sa6iLink-0.1.5-nightly.7-android.apk",
             "sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":12}],"later":"ignored"}"#;
         let parsed: Feed = serde_json::from_slice(json).unwrap();
         assert_eq!(validated(parsed, Channel::Nightly).unwrap().files.len(), 1);

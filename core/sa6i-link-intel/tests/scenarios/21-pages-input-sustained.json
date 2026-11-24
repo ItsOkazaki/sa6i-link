@@ -1,0 +1,15 @@
+{
+  "name": "pages-input-sustained",
+  "about": "150 hard faults a second for six minutes with RAM at half: memory is being written out and fetched back, so the disk is standing in for it.",
+  "segments": [
+    {
+      "minutes": 6,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "pages_input_per_second": 150
+    }
+  ],
+  "expect": [
+    { "rule": "memory.paging", "severity": "Warning", "subject": "system" }
+  ]
+}

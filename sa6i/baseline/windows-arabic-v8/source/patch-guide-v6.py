@@ -7,6 +7,6 @@ pos=0x1d6b5fd;n=struct.unpack_from('>I',b,pos-8)[0]; original=zlib.decompress(b[
 raw=open(qml,'rb').read();packed=zlib.compress(raw,9);assert len(packed)<=n-4, 'QML resource slot too small'
 # Qt's qUncompress accepts padding after the zlib stream; resource allocation stays unchanged.
 struct.pack_into('>I',b,pos-4,len(raw)); b[pos:pos+n-4]=packed+bytes(n-4-len(packed))
-key='/qt/qml/app/nectarlink/qml/pages/FeaturesGuidePage.qml'.encode('utf-16le');a=0x1d8c0e0;assert b[a:a+len(key)]==key
-j=a+len('/qt/qml/app/nectarlink/qml/pages/'.encode('utf-16le'));assert b[j:j+2]==b'F\0';b[j]=ord('G')
+key='/qt/qml/app/sa6i-link/qml/pages/FeaturesGuidePage.qml'.encode('utf-16le');a=0x1d8c0e0;assert b[a:a+len(key)]==key
+j=a+len('/qt/qml/app/sa6i-link/qml/pages/'.encode('utf-16le'));assert b[j:j+2]==b'F\0';b[j]=ord('G')
 open(out,'wb').write(b);print('sha256',hashlib.sha256(b).hexdigest())

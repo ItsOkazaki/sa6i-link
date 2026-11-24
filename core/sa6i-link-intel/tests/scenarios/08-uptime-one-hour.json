@@ -1,0 +1,14 @@
+{
+  "name": "uptime-one-hour",
+  "about": "An hour since boot is a normal machine; a long uptime only gets mentioned after a fortnight.",
+  "segments": [
+    {
+      "minutes": 1,
+      "uptime_days": 0.0417
+    }
+  ],
+  "expect": [],
+  "quiets": [
+    "system.long_uptime"
+  ]
+}

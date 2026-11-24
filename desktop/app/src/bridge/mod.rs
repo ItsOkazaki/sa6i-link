@@ -16,6 +16,8 @@ pub mod devices;
 #[allow(unsafe_code)]
 pub mod history;
 #[allow(unsafe_code)]
+pub mod intel;
+#[allow(unsafe_code)]
 pub mod media;
 #[allow(unsafe_code)]
 pub mod messages;
@@ -54,7 +56,7 @@ use std::{
 
 use cxx_qt::{CxxQtThread, Threading};
 use cxx_qt_lib::QString;
-use nectarlink_core::DeviceId;
+use sa6i_link_core::DeviceId;
 
 use crate::state::Changes;
 

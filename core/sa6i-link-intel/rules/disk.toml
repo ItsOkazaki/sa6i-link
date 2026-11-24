@@ -1,0 +1,25 @@
+# The numbers the disk rule decides with.
+#
+# These are the values M1 shipped as constants in `rules.rs`. A test loads this
+# file and asserts the result equals `Thresholds::default()` exactly, so this page
+# and that struct cannot drift apart: change one, and the test names the other.
+#
+# What a file may not do, and why each refusal exists, is in
+# `docs/plan/M2-RULES.md`. In one line: it may change numbers, never identity.
+
+[[rule]]
+id = "disk.low_free_space"
+severity = "warning"
+confidence = "certain"
+requires = ["volume.*.percent_used"]
+
+# At or above this share of a local volume is nearly full...
+warn_percent = 90.0
+# ...and at or above this one, critical. Windows slows down below about 10 % free.
+critical_percent = 97.0
+# Disk use moves slowly in normal work, so a spike is a download, not a problem.
+sustained = "10m"
+
+# The pair that proves the rule: it fires here, and it stays quiet here.
+firing = "disk-full-for-eleven-minutes"
+near_miss = "disk-cleared-before-the-window"

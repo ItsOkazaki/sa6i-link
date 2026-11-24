@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Disposable Windows runner. Runs the pinned upstream deletion functions against
+# synthetic files in a temporary folder only: no cleaner UI, no real caches, no
+# Recycle Bin, no user data. Never runs on a user's PC.
+name: Sa6i Clean Windows cleanup probe
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-windows-cleanup-probe.yml'
+      - 'sa6i/clean/harden_upstream.py'
+      - 'sa6i/clean/harden_cleaner.py'
+      - 'sa6i/clean/tests/probe_upstream_cleanup*.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      UPSTREAM_COMMIT: b62bef4d4478cd8d570dcdc537eaddb61ae53eeb
+      ESBUILD_DIR: ${{ github.workspace }}\probe-tools
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch the pinned Cleanly source
+        shell: pwsh
+        run: |
+          $url = "https://codeload.github.com/0xCodez/cleanly/tar.gz/$env:UPSTREAM_COMMIT"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\cleanly.tar.gz"
+          New-Item -ItemType Directory -Path "$env:RUNNER_TEMP\upstream" | Out-Null
+          tar -xzf "$env:RUNNER_TEMP\cleanly.tar.gz" -C "$env:RUNNER_TEMP\upstream"
+          $dir = (Get-ChildItem "$env:RUNNER_TEMP\upstream" -Directory | Select-Object -First 1).FullName
+          "UPSTREAM_DIR=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Prepare the hardened source and run the guard probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            python sa6i/clean/harden_upstream.py "$env:UPSTREAM_DIR" "$env:RUNNER_TEMP\patched"
+            if ($LASTEXITCODE -ne 0) { throw 'harden_upstream.py failed' }
+            New-Item -ItemType Directory -Path $env:ESBUILD_DIR | Out-Null
+            Set-Content "$env:ESBUILD_DIR\package.json" '{"name":"probe-tools","private":true}'
+            Push-Location $env:ESBUILD_DIR
+            npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2
+            if ($LASTEXITCODE -ne 0) { throw 'esbuild install failed' }
+            Pop-Location
+            $out = node sa6i/clean/tests/probe_upstream_cleanup_windows.mjs "$env:RUNNER_TEMP\patched" 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            Write-Host $out
+            $line = ($out -split "`r?`n" | Where-Object { $_ -like 'PROBE_RESULT=*' } | Select-Object -First 1) -replace '^PROBE_RESULT=', ''
+            if ($line) { Write-Host "::notice title=Guard probe results::$line" }
+            if ($code -ne 0) {
+              $tail = ($out -split "`r?`n" | Where-Object { $_ -match 'Error|error|Expected|expected|actual|assert' } | Select-Object -Last 3) -join ' | '
+              throw "probe exited $code`: $tail"
+            }
+          } catch {
+            $message = $_.Exception.Message
+            Write-Host "::error title=Guard probe failed::$($message.Substring(0, [Math]::Min(900, $message.Length)))"
+            exit 1
+          }
+      - name: Record runner facts
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ComputerInfo -Property OsName,OsVersion,OsBuildNumber | Format-List
+          node --version

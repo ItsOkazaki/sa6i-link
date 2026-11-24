@@ -1,0 +1,22 @@
+{
+  "name": "disk-ninety-eight-is-critical",
+  "about": "C: at 98 % (10 GiB free of 500) is the same rule at a severity that says data loss is plausible.",
+  "segments": [
+    {
+      "minutes": 11,
+      "volumes": [
+        {
+          "letter": "C:",
+          "percent_used": 98
+        }
+      ]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "disk.low_free_space",
+      "severity": "Critical",
+      "subject": "C:"
+    }
+  ]
+}

@@ -18,7 +18,7 @@ INSTALL
    Sa6i-Link-Win7-UI-v8.exe
    Start Sa6i Link v8.exe
    sa6i-icon-hook-v4.dll
-   nectarlink_ar.qm
+   sa6i-link_ar.qm
    The icon helper is unchanged from v5. Keep the existing one if already present.
 3. Copy translations/qtbase_ar.qm into the existing translations folder, creating that folder if needed. Do not overwrite other language files or any system DLLs. If there is already a qtbase_ar.qm there, keep a backup first.
 4. Enable VxKex for Sa6i-Link-Win7-UI-v8.exe just as with v4/v5. Run Start Sa6i Link v8.exe.
@@ -26,4 +26,4 @@ INSTALL
 6. Do not use the original updater. Do not copy the DLLs from this package into Windows system directories.
 
 PROVENANCE
-This is a private experimental binary/resource patch of official NectarLink 0.1.5 x64, not an official or source-compiled Sa6i build. EXE SHA-256: f2a7598aa067eb1ed19628e73b8c958d97db3bb8e09c424a6ab14f393e33d19c. Source/ includes the modifications, translation draft, guide, launcher, previous patch chain and licence texts. Original corresponding upstream code: https://github.com/thtbee/nectarlink/tree/v0.1.5. Qt's Arabic base catalogue is supplied separately under its Qt licensing; see source/QT-TRANSLATIONS-COPYRIGHT.txt.
+This is a private experimental binary/resource patch of official Sa6i Link 0.1.5 x64, not an official or source-compiled Sa6i build. EXE SHA-256: f2a7598aa067eb1ed19628e73b8c958d97db3bb8e09c424a6ab14f393e33d19c. Source/ includes the modifications, translation draft, guide, launcher, previous patch chain and licence texts. Original corresponding upstream code: https://github.com/ItsOkazaki/sa6i-link/tree/v0.1.5. Qt's Arabic base catalogue is supplied separately under its Qt licensing; see source/QT-TRANSLATIONS-COPYRIGHT.txt.

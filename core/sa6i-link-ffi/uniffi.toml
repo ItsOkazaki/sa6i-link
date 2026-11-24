@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
+[bindings.kotlin]
+package_name = "sa6i.link.core"
+cdylib_name = "sa6i_link_ffi"

@@ -115,7 +115,7 @@ const auto& alternates()
         const auto executable = std::filesystem::read_symlink("/proc/self/exe", error);
         if (error) return result;
         for (size_t i = 0; i < result.size(); ++i) {
-            const auto name = "libnectarlink-video-ffmpeg" + std::to_string(i + 7) + ".so";
+            const auto name = "libsa6i_link-video-ffmpeg" + std::to_string(i + 7) + ".so";
             result[i] = load_backend(executable.parent_path() / name);
         }
         return result;

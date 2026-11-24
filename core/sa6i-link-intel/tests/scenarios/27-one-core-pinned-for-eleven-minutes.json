@@ -1,0 +1,20 @@
+{
+  "name": "one-core-pinned-for-eleven-minutes",
+  "about": "Core 0 at 98 % for eleven minutes while the machine sits at 22 %: one program doing all of its work on a single thread, on a machine with seven cores going spare. The overview reads calm and the program will take as long as one thread takes.",
+  "segments": [
+    {
+      "minutes": 11,
+      "cpu_percent": 22,
+      "memory_percent": 50,
+      "cores": [98, 11, 12, 9, 13, 10, 11, 12]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "cpu.one_core_pinned",
+      "severity": "Notice",
+      "subject": "system"
+    }
+  ],
+  "quiets": ["cpu.sustained_high"]
+}

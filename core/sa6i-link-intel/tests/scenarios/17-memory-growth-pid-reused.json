@@ -1,0 +1,23 @@
+{
+  "name": "memory-growth-pid-reused",
+  "about": "Pid 5150 holds 300 MiB for fifteen minutes, exits, and the pid is handed to a process that starts at 900 MiB. Comparing the two would report 600 MiB of growth in a process that never grew at all - which is why the rule asks for the same creation stamp at both ends.",
+  "segments": [
+    {
+      "minutes": 15,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 300, "created": 1000 }
+      ]
+    },
+    {
+      "minutes": 16,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "processes": [
+        { "pid": 5150, "name": "sync.exe", "cpu_percent": 5, "working_set_mb": 900, "created": 2000 }
+      ]
+    }
+  ],
+  "quiets": ["process.memory_growth"]
+}

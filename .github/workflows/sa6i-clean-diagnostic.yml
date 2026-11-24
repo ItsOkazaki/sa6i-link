@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Sa6i Clean file diagnostic
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-diagnostic.yml'
+      - 'sa6i/clean/tests/check_cleaner_files.ps1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Exercise diagnostic with inert files in Windows PowerShell
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = Join-Path $env:RUNNER_TEMP 'sa6i-diagnostic-inert'
+          New-Item -ItemType Directory -Path (Join-Path $dir 'Sa6i Clean/resources') -Force | Out-Null
+          Set-Content (Join-Path $dir 'sa6i-link.exe') 'inert desktop'
+          Set-Content (Join-Path $dir 'Sa6i Clean/Sa6i Clean Integration.exe') 'inert cleaner'
+          Set-Content (Join-Path $dir 'Sa6i Clean/resources/app.asar') 'inert asar'
+          $result = & ./sa6i/clean/tests/check_cleaner_files.ps1 -AppDir $dir 6>&1 | Out-String
+          Write-Host $result
+          if (($result -split 'DIFFERENT').Count -ne 4 -or $result -match 'READ OR HASH ERROR' -or $result -notmatch 'Windows SHA-256 provider: OK') {
+            throw 'Diagnostic did not report the inert fixtures correctly'
+          }
+          Remove-Item (Join-Path $dir 'Sa6i Clean/resources/app.asar')
+          $result = & ./sa6i/clean/tests/check_cleaner_files.ps1 -AppDir $dir 6>&1 | Out-String
+          if ($result -notmatch 'Cleaner app.asar: NOT FOUND') { throw 'Missing file was not reported' }

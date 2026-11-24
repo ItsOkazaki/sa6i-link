@@ -49,7 +49,7 @@ def patched_app(data):
         raise ValueError("Patched QML exceeds its reserved resource space")
     # The v8 patch already redirects the cached MainWindow unit to NainWindow,
     # so Qt falls back to the edited source resource.
-    marker = "/qt/qml/app/nectarlink/qml/NainWindow.qml".encode("utf-16le")
+    marker = "/qt/qml/app/sa6i-link/qml/NainWindow.qml".encode("utf-16le")
     if buf.count(marker) != 1:
         raise ValueError("Expected QML cache fallback marker not found")
     struct.pack_into(">I", buf, QML_OFFSET - 8, len(compressed) + 4)

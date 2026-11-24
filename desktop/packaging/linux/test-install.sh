@@ -11,13 +11,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER="${DOCKER:-docker}"
-WORK="$(mktemp -d -t nectarlink-test-install-XXXXXX)"
+WORK="$(mktemp -d -t sa6i-link-test-install-XXXXXX)"
 trap 'rm -rf "${WORK}"' EXIT
 DIST="${WORK}/dist"
 mkdir -p "${DIST}" "${WORK}/qt"/{lib,plugins,qml}
 
 # A private Qt that's empty, so the packages need no Qt from the system.
-cp /bin/true "${WORK}/nectarlink-desktop"
+cp /bin/true "${WORK}/sa6i-link"
 cat > "${WORK}/qmake" <<EOF
 #!/bin/sh
 case "\$2" in
@@ -28,7 +28,7 @@ esac
 EOF
 chmod +x "${WORK}/qmake"
 
-export BIN_PATH="${WORK}/nectarlink-desktop" QMAKE="${WORK}/qmake" OUT_DIR="${DIST}" VERSION=9.9.9
+export BIN_PATH="${WORK}/sa6i-link" QMAKE="${WORK}/qmake" OUT_DIR="${DIST}" VERSION=9.9.9
 "${SCRIPT_DIR}/build-deb.sh" >/dev/null
 "${SCRIPT_DIR}/build-rpm.sh" >/dev/null
 "${SCRIPT_DIR}/build-tarball.sh" >/dev/null
@@ -39,7 +39,7 @@ chmod -R a+rX "${WORK}"
 check() {
     local name="$1" image="$2" script="$3"
     echo "--- ${name} (${image})"
-    if "${DOCKER}" run --rm -v "${DIST}:/dist:ro" -e NECTARLINK_ASSETS_DIR=/dist "${image}" sh -euc "${script}" \
+    if "${DOCKER}" run --rm -v "${DIST}:/dist:ro" -e SA6I_ASSETS_DIR=/dist "${image}" sh -euc "${script}" \
         > "${WORK}/${name}.log" 2>&1; then
         grep -E '^(\[|      [A-Z])' "${WORK}/${name}.log" || true
         echo "--- ${name}: passed"
@@ -52,25 +52,25 @@ check() {
 
 ROOT_ROUND_TRIP='
     sh /dist/install.sh
-    nectarlink-desktop --version >/dev/null
-    test -f /etc/udev/rules.d/70-nectarlink-uinput.rules
+    sa6i-link --version >/dev/null
+    test -f /etc/udev/rules.d/70-sa6i-link-uinput.rules
     sh /dist/install.sh --uninstall
-    ! command -v nectarlink-desktop
-    ! test -e /etc/udev/rules.d/70-nectarlink-uinput.rules'
+    ! command -v sa6i-link
+    ! test -e /etc/udev/rules.d/70-sa6i-link-uinput.rules'
 
 check deb docker.io/library/ubuntu:24.04 "${ROOT_ROUND_TRIP}"
 check rpm registry.fedoraproject.org/fedora:40 "${ROOT_ROUND_TRIP}"
 check tarball docker.io/library/archlinux:latest "${ROOT_ROUND_TRIP}"
 check home-folder docker.io/library/ubuntu:24.04 '
     useradd -m user
-    su user -c "NECTARLINK_ASSETS_DIR=/dist sh /dist/install.sh"
-    su user -c "~/.local/bin/nectarlink-desktop --version" >/dev/null
-    test -f /home/user/.local/share/applications/nectarlink.desktop
-    su user -c "NECTARLINK_ASSETS_DIR=/dist sh /dist/install.sh --uninstall"
-    ! test -e /home/user/.local/bin/nectarlink-desktop'
+    su user -c "SA6I_ASSETS_DIR=/dist sh /dist/install.sh"
+    su user -c "~/.local/bin/sa6i-link --version" >/dev/null
+    test -f /home/user/.local/share/applications/sa6i-link.desktop
+    su user -c "SA6I_ASSETS_DIR=/dist sh /dist/install.sh --uninstall"
+    ! test -e /home/user/.local/bin/sa6i-link'
 check bad-checksum docker.io/library/ubuntu:24.04 '
     mkdir /tampered && cp /dist/* /tampered/
-    echo tampered >> /tampered/nectarlink_9.9.9_amd64.deb
-    ! NECTARLINK_ASSETS_DIR=/tampered sh /tampered/install.sh
-    ! command -v nectarlink-desktop'
+    echo tampered >> /tampered/sa6i-link_9.9.9_amd64.deb
+    ! SA6I_ASSETS_DIR=/tampered sh /tampered/install.sh
+    ! command -v sa6i-link'
 echo "All install.sh checks passed."

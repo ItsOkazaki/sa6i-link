@@ -1,0 +1,17 @@
+{
+  "name": "uptime-twenty-days",
+  "about": "Twenty days without a restart is worth a sentence, not an alarm.",
+  "segments": [
+    {
+      "minutes": 1,
+      "uptime_days": 20
+    }
+  ],
+  "expect": [
+    {
+      "rule": "system.long_uptime",
+      "severity": "Info",
+      "subject": "system"
+    }
+  ]
+}

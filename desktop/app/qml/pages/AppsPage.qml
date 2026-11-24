@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 // Apps: every app on the phone, to open one in a window of its own on this PC
 // (Elevated: the phone runs it on a display of its own). Searchable; Enter
@@ -91,7 +91,7 @@ Item {
                     ? qsTr("Opening apps in windows isn't supported on this phone.")
                     : String(page.feature.reason || "").startsWith("android:")
                         ? qsTr("Opening apps in windows needs Android %1 or newer on the phone.").arg(page.feature.reason.slice(8))
-                        : (page.feature.reason || qsTr("Set up Wireless debugging in NectarLink on the phone to open its apps here.").replace(/NectarLink/g, "Sa6i Link"))
+                        : (page.feature.reason || qsTr("Set up Wireless debugging in Sa6i Link on the phone to open its apps here."))
         }
         LockChip {
             anchors.horizontalCenter: parent.horizontalCenter

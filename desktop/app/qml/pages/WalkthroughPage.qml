@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtQuick.Layouts
-import app.nectarlink
+import sa6i.link
 
 // First-run setup walkthrough (7 steps): Welcome, Privacy, Install phone app,
 // Pair, Choose what to share, Optional setup, and You are set.
@@ -18,7 +18,7 @@ FocusScope {
 
     readonly property int totalSteps: 7
     // Matches the APK name on the GitHub release (see .github/workflows/release.yml).
-    readonly property string adbCommand: "adb install -r Nectarlink-" + AppController.version + "-android.apk"
+    readonly property string adbCommand: "adb install -r Sa6iLink-" + AppController.version + "-android.apk"
     property int step: Math.max(0, Math.min(totalSteps - 1, Preferences.walkthroughStep))
     property alias currentStep: walkthrough.step
 
@@ -94,9 +94,9 @@ FocusScope {
     ]
 
     readonly property var stepTitles: [
-        qsTr("Welcome to NectarLink").replace(/NectarLink/g, "Sa6i Link"),
+        qsTr("Welcome to Sa6i Link"),
         qsTr("Your data stays on your devices"),
-        qsTr("Install NectarLink on your phone").replace(/NectarLink/g, "Sa6i Link"),
+        qsTr("Install Sa6i Link on your phone"),
         qsTr("Pair your phone and PC"),
         qsTr("Choose what to share"),
         qsTr("Optional setup"),
@@ -107,7 +107,7 @@ FocusScope {
         qsTr("Your Android phone and your PC, working together on your local network."),
         qsTr("No accounts, no cloud servers, and no telemetry."),
         qsTr("Get the Android app from GitHub Releases or install the APK over USB."),
-        qsTr("Scan the QR code from the NectarLink Android app, or pick your phone from nearby devices.").replace(/NectarLink/g, "Sa6i Link"),
+        qsTr("Scan the QR code from the Sa6i Link Android app, or pick your phone from nearby devices."),
         qsTr("Safe features are on by default. Higher-trust access stays off until you turn it on."),
         qsTr("Three quick checks so notifications and discovery work reliably on your PC."),
         qsTr("Reopen it from Settings or the Command Palette.")
@@ -920,7 +920,7 @@ FocusScope {
                             }
                         }
 
-                        // STEP 2: Install NectarLink on your phone
+                        // STEP 2: Install Sa6i Link on your phone
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 12
@@ -978,7 +978,7 @@ FocusScope {
                                             variant: "tonal"
                                             size: "sm"
                                             Accessible.name: qsTr("Open Android release page in browser")
-                                            onClicked: Qt.openUrlExternally("https://github.com/thtbee/nectarlink/releases/latest")
+                                            onClicked: Qt.openUrlExternally("https://github.com/ItsOkazaki/sa6i-link/releases/latest")
                                         }
 
                                         Button {
@@ -990,7 +990,7 @@ FocusScope {
                                             size: "sm"
                                             Accessible.name: qsTr("Copy Android release URL")
                                             onClicked: {
-                                                AppController.copyText("https://github.com/thtbee/nectarlink/releases/latest")
+                                                AppController.copyText("https://github.com/ItsOkazaki/sa6i-link/releases/latest")
                                                 copied = true
                                                 resetCopyUrlTimer.restart()
                                             }
@@ -1475,7 +1475,7 @@ FocusScope {
                                                     : qsTr("Enabled in Windows Settings."))
                                                 : (Qt.platform.os === "linux"
                                                     ? qsTr("Notifications are muted or Do Not Disturb is active.")
-                                                    : qsTr("Notifications are off for NectarLink in Windows Settings."))
+                                                    : qsTr("Notifications are off for Sa6i Link in Windows Settings."))
                                             role: "caption"
                                             color: Theme.surfaceContentVariant
                                             wrapMode: Text.WordWrap
@@ -1551,7 +1551,7 @@ FocusScope {
 
                                         Txt {
                                             Layout.fillWidth: true
-                                            text: qsTr("Keep NectarLink ready in the system tray when you sign in.").replace(/NectarLink/g, "Sa6i Link")
+                                            text: qsTr("Keep Sa6i Link ready in the system tray when you sign in.")
                                             role: "caption"
                                             color: Theme.surfaceContentVariant
                                             wrapMode: Text.WordWrap
@@ -1651,7 +1651,7 @@ FocusScope {
                                             : qsTr("Pair a phone anytime from Home"),
                                         body: walkthrough.hasPairedDevice
                                             ? qsTr("Your phone is linked and ready on your local network.")
-                                            : qsTr("Open the NectarLink Android app whenever you are ready to scan the QR code.").replace(/NectarLink/g, "Sa6i Link")
+                                            : qsTr("Open the Sa6i Link Android app whenever you are ready to scan the QR code.")
                                     },
                                     {
                                         icon: Icons.search,
@@ -1661,7 +1661,7 @@ FocusScope {
                                     {
                                         icon: Icons.book,
                                         title: qsTr("Features guide"),
-                                        body: qsTr("Browse every feature in NectarLink, see what permissions it needs, and jump straight to it.").replace(/NectarLink/g, "Sa6i Link")
+                                        body: qsTr("Browse every feature in Sa6i Link, see what permissions it needs, and jump straight to it.")
                                     }
                                 ]
 

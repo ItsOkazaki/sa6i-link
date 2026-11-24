@@ -1,0 +1,19 @@
+{
+  "name": "gpu-vram-over-the-line-for-six-minutes",
+  "about": "One discrete adapter uses 7865 of its 8192 MiB of dedicated memory - 96 % - for six minutes. Past the five-minute window, so it is the driver moving data into system memory rather than one level loading.",
+  "segments": [
+    {
+      "minutes": 6,
+      "cpu_percent": 30,
+      "memory_percent": 60,
+      "gpus": [
+        {
+          "instance": "luid_0x00000000_0x0000FB33_phys_0",
+          "used_mb": 7865,
+          "limit_mb": 8192
+        }
+      ]
+    }
+  ],
+  "expect": [{ "rule": "gpu.vram_pressure", "severity": "Warning", "subject": "GPU 1" }]
+}

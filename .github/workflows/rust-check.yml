@@ -1,0 +1,177 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Rust check
+
+# Why this exists next to ci.yml. The machine this repository is worked from has no
+# Rust, no Qt, no Windows and no Android toolchain, and a job's log download is served
+# from blob storage that same machine cannot reach - so a compile run there is
+# invisible, and an invisible compile is the same as no compile. This workflow compiles
+# the crates that need neither Qt nor the NDK, and publishes what the compiler said
+# into one rolling issue, which the API does serve. It answers one question only: does
+# the Rust build. ci.yml stays the thing that judges a release.
+
+on:
+  push:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "core/**"
+      - "tools/xtask/**"
+      - "desktop/vcam/**"
+      - ".github/workflows/rust-check.yml"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  # Write, so the formatting step can commit rustfmt's own answer back to the
+  # branch it ran on. Nothing else here pushes.
+  contents: write
+  issues: write
+
+concurrency:
+  group: rust-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: never
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  check:
+    name: Compile and test what needs no Qt (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux type-checks the platform-free code; Windows type-checks the half
+        # behind `#[cfg(windows)]`, which a Linux build never looks at. Neither
+        # builds the app, which needs Qt.
+        os: [ubuntu-latest, windows-latest]
+    # Artifacts go to \$RUNNER_TEMP, which the shell expands, and not through an
+    # `env:` entry: the `runner` context is not available to `jobs.<id>.env`, and a
+    # workflow that names it there does not parse - which GitHub reports as a run with
+    # zero jobs and nothing readable in it. Learned the slow way, twice.
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Say which compiler this is
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+
+      - name: Compile every target of every crate with no Qt in it
+        run: |
+          set +e
+          {
+            echo "## toolchain"
+            rustc --version || true
+            cargo --version || true
+            echo
+            echo "## cargo check --locked --all-targets"
+            cargo check --locked --all-targets --keep-going \
+              -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi \
+              -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel \
+              -p sa6i-link-intel-win -p xtask 2>&1
+            echo "EXIT:check:$?"
+            echo
+            echo "## cargo test --locked"
+            cargo test --locked --no-fail-fast \
+              -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-cli \
+              -p sa6i-link-adb -p sa6i-link-intel -p sa6i-link-intel-win 2>&1
+            echo "EXIT:test:$?"
+          } > "$RUNNER_TEMP/report.txt"
+          # The step itself always succeeds: publishing is the next step's job, and the
+          # exit codes are recorded above where nothing can swallow them.
+          exit 0
+
+      - name: Format the source, and commit it when that changed something
+        # On a push only: a pull request from a fork cannot be pushed to, and the
+        # commit is the point. Idempotent - a formatted tree commits nothing.
+        if: github.event_name == 'push'
+        run: |
+          cargo fmt --all
+          if git diff --quiet; then
+            echo "already formatted"
+            exit 0
+          fi
+          git config user.name "rust-check"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: cargo fmt --all
+
+          Nothing has ever formatted this source, and rustfmt is the only thing here
+          that gets to decide what formatted means. This commit is rustfmt's output and
+          nothing else."
+          # A push that lands first is not this step's failure: the next run formats
+          # what is left. Failing here would report a race as a broken build.
+          git push || echo "another commit landed first; the next run will format it"
+
+      - name: Lint the way ci.yml lints
+        run: |
+          set +e
+          {
+            echo
+            echo "## cargo clippy --locked --all-targets -- -D warnings"
+            cargo clippy --locked --all-targets --keep-going \
+              -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi \
+              -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel \
+              -p sa6i-link-intel-win -p xtask -- -D warnings 2>&1
+            echo "EXIT:clippy:$?"
+          } >> "$RUNNER_TEMP/report.txt"
+          exit 0
+
+      - name: Publish the errors into one rolling issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Rust check - $(date -u +%Y-%m-%dT%H:%MZ)"
+            echo
+            echo "Commit [\`${GITHUB_SHA:0:7}\`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) ·"
+            echo "[\`cargo check\`](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) ·"
+            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | tr '\n' ' ')\`"
+            echo
+            echo "#### What the compiler refused"
+            echo '```text'
+            grep -E -A 5 '^(error(\[E[0-9]+\])?|warning: unused)' "$RUNNER_TEMP/report.txt" | head -260 || true
+            echo '```'
+            echo
+            echo "#### What the tests said"
+            echo '```text'
+            grep -E -B 3 -A 14 '^(---- |failures:)' "$RUNNER_TEMP/report.txt" | head -320 || true
+            grep -E '^test result:' "$RUNNER_TEMP/report.txt" | head -40 || true
+            echo '```'
+            echo
+            echo "#### The last thirty lines"
+            echo '```text'
+            tail -30 "$RUNNER_TEMP/report.txt"
+            echo '```'
+          } > "$RUNNER_TEMP/body.md"
+          head -c 55000 "$RUNNER_TEMP/body.md" > "$RUNNER_TEMP/body.md.cut"
+          # Filter in jq rather than in the query: parentheses and two in:title
+          # qualifiers are not something to bet an update on.
+          n=$(gh issue list --search 'in:title "Rust check"' --limit 50 \
+                --json number,title \
+                --jq '.[] | select(.title | contains("(${{ matrix.os }})")) | .number' \
+                | head -1 || true)
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body-file "$RUNNER_TEMP/body.md.cut"
+            echo "updated issue #$n"
+          else
+            gh issue create --title "Rust check (${{ matrix.os }})" --body-file "$RUNNER_TEMP/body.md.cut"
+          fi
+
+      - name: Fail when the compiler did not agree
+        run: |
+          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | cut -d: -f3 | sort -u | tr '\n' ' ')
+          echo "exit codes: $codes"
+          if grep -q 'EXIT:[a-z]*:[1-9]' "$RUNNER_TEMP/report.txt"; then
+            echo "something did not compile or did not pass; issue carries the text"
+            exit 1
+          fi

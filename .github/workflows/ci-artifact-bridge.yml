@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Temporary bridge: CI writes a build output to a throwaway branch so the
+# workspace can fetch it over git, because artifact storage is unreachable
+# there. Delete the branch after fetching; it is never part of a release.
+name: CI artifact bridge
+
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/ci-artifact-bridge.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Publish a probe file to the throwaway branch
+        run: |
+          set -euo pipefail
+          mkdir -p ci-artifacts
+          printf 'bridge ok %s\n%s\n' "$(git rev-parse HEAD)" "$(date -u +%FT%TZ)" > ci-artifacts/bridge.txt
+          git config user.name "Sa6i build bridge"
+          git config user.email "sa6i-bridge@users.noreply.github.com"
+          git checkout --orphan ci-artifacts
+          git rm -r --cached . >/dev/null
+          git add -f ci-artifacts/bridge.txt
+          git commit -m "CI artifact bridge probe"
+          git push --force origin ci-artifacts

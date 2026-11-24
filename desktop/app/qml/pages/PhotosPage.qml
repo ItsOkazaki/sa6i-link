@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtQuick.Dialogs
-import app.nectarlink
+import sa6i.link
 
 // Photos: the phone's gallery on the PC. Albums on the left, a virtualized
 // GridView of thumbnails grouped by day on the right, multi-select, Save (to
-// a chosen folder or Downloads\Nectarlink), Copy to clipboard, Open in the
+// a chosen folder or Downloads\Sa6iLink), Copy to clipboard, Open in the
 // Windows Photos app, and an in-app viewer with arrow-key navigation.
 Item {
     id: page

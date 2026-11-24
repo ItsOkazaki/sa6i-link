@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtQuick.Shapes
-import app.nectarlink
+import sa6i.link
 
 // Minimize, maximize/restore and close, drawn like Windows 11's own on Windows
 // (Segoe Fluent Icons, or Segoe MDL2 Assets on Windows 10) and with crisp vector strokes on Linux where that font
@@ -11,6 +11,7 @@ Row {
     id: buttons
     required property NativeWindow window
     readonly property bool maximized: window.visibility === Window.Maximized
+    readonly property bool useFontGlyphs: Qt.platform.os === "windows" && Theme.captionIconFont.length > 0
 
     visible: Qt.platform.os !== "osx"
     width: visible ? implicitWidth : 0
@@ -92,7 +93,7 @@ Row {
         }
         Text {
             anchors.centerIn: parent
-            visible: Qt.platform.os === "windows"
+            visible: buttons.useFontGlyphs
             text: button.glyph
             font.family: Theme.captionIconFont
             font.pixelSize: 10
@@ -101,7 +102,7 @@ Row {
         }
         Shape {
             anchors.centerIn: parent
-            visible: Qt.platform.os !== "windows"
+            visible: !buttons.useFontGlyphs
             width: 10
             height: 10
             opacity: buttons.window.active || button.hovered ? 1 : 0.45

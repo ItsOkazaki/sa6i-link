@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Builds the QML module `app.nectarlink` (QML files compiled ahead of time,
+//! Builds the QML module `sa6i.link` (QML files compiled ahead of time,
 //! Rust QObjects, C++ helpers), compiles in the bundled fonts, gives the
 //! executable its icon and version information, and links the Windows
 //! libraries C++ uses.
@@ -28,6 +28,10 @@ const QML: &[&str] = &[
     "qml/components/CallCard.qml",
     "qml/components/CaptionButtons.qml",
     "qml/components/Card.qml",
+    "qml/components/CleanEntry.qml",
+    "qml/components/CleanView.qml",
+    "qml/components/CleanCloseGate.qml",
+    "qml/components/Sa6iCleanIntegration.qml",
     "qml/components/Chip.qml",
     "qml/components/CodeDigits.qml",
     "qml/components/CommandPalette.qml",
@@ -46,6 +50,7 @@ const QML: &[&str] = &[
     "qml/components/RoundedImage.qml",
     "qml/components/Segmented.qml",
     "qml/components/Sheet.qml",
+    "qml/components/Sparkline.qml",
     "qml/components/Spinner.qml",
     "qml/components/StatusDot.qml",
     "qml/components/Toast.qml",
@@ -61,6 +66,7 @@ const QML: &[&str] = &[
     "qml/pages/FeaturesGuidePage.qml",
     "qml/pages/HomePage.qml",
     "qml/pages/MessagesPage.qml",
+    "qml/pages/MonitorPage.qml",
     "qml/pages/PairingPanel.qml",
     "qml/pages/PhotosPage.qml",
     "qml/pages/SettingsPage.qml",
@@ -101,6 +107,22 @@ fn fonts_qrc() -> PathBuf {
     }
     qrc.push_str("  </qresource>\n</RCC>\n");
     let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR")).join("fonts.qrc");
+    write_if_changed(&out, qrc);
+    out
+}
+
+/// The reviewed Sa6i Link artwork for the visible in-app mark.
+fn branding_qrc() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../sa6i/assets/windows/Square150x150Logo.png")
+        .canonicalize()
+        .expect("missing Sa6i Link artwork");
+    println!("cargo::rerun-if-changed={}", path.display());
+    let path = path.display().to_string().trim_start_matches(r"\\?\").replace('\\', "/");
+    let qrc = format!(
+        "<RCC>\n  <qresource prefix=\"/branding\">\n    <file alias=\"sa6i-link.png\">{path}</file>\n  </qresource>\n</RCC>\n"
+    );
+    let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR")).join("branding.qrc");
     write_if_changed(&out, qrc);
     out
 }
@@ -196,7 +218,7 @@ fn shaders_qrc() -> PathBuf {
 /// Task Manager show).
 fn windows_resources() {
     let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR"));
-    let ico = out.join("nectarlink.ico");
+    let ico = out.join("sa6i-link.ico");
     write_if_changed(&ico, icon_file());
     let version = std::env::var("CARGO_PKG_VERSION").expect("version");
     let numbers: Vec<&str> = version.split(['.', '-', '+']).take(3).collect();
@@ -215,13 +237,13 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "The NectarLink contributors"
-      VALUE "FileDescription", "NectarLink"
+      VALUE "CompanyName", "The Sa6i Link contributors"
+      VALUE "FileDescription", "Sa6i Link"
       VALUE "FileVersion", "{version}"
-      VALUE "InternalName", "nectarlink-desktop"
+      VALUE "InternalName", "sa6i-link"
       VALUE "LegalCopyright", "GPL-3.0-or-later"
-      VALUE "OriginalFilename", "nectarlink-desktop.exe"
-      VALUE "ProductName", "NectarLink"
+      VALUE "OriginalFilename", "sa6i-link.exe"
+      VALUE "ProductName", "Sa6i Link"
       VALUE "ProductVersion", "{version}"
     END
   END
@@ -233,7 +255,7 @@ END
 "#,
         ico = ico.display().to_string().replace('\\', "/"),
     );
-    let rc_path = out.join("nectarlink.rc");
+    let rc_path = out.join("sa6i-link.rc");
     write_if_changed(&rc_path, rc);
     embed_resource::compile(&rc_path, embed_resource::NONE).manifest_required().expect("compile resources");
 }
@@ -331,7 +353,7 @@ fn compile_translations() {
         let Some(stem) = ts.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
-        let Some(lang) = stem.strip_prefix("nectarlink_") else {
+        let Some(lang) = stem.strip_prefix("sa6i-link_") else {
             continue;
         };
         if !offered.contains(lang) {
@@ -358,6 +380,7 @@ fn main() {
         build_linux_video_codec();
     }
     println!("cargo:rerun-if-changed=src/mark.rs");
+    println!("cargo:rerun-if-changed=assets/mark");
     for qml in QML.iter().chain(QML_SINGLETONS.iter()) {
         println!("cargo:rerun-if-changed={qml}");
     }
@@ -367,10 +390,45 @@ fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         compile_translations();
     }
-    let module = QmlModule::new("app.nectarlink")
+    let module = QmlModule::new("sa6i.link")
         .qml_files(QML.iter().map(|f| QmlFile::from(*f)))
         .qml_files(QML_SINGLETONS.iter().map(|f| QmlFile::from(*f).singleton(true)));
-    let mut builder = CxxQtBuilder::new_qml_module(module).qt_module("Quick");
+    // Never enable the cleaner in ordinary builds. This is a separate,
+    // Windows-only experiment and still requires an explicit runtime argument.
+    println!("cargo:rerun-if-env-changed=SA6I_CLEAN_EXPERIMENT");
+    println!("cargo:rerun-if-env-changed=SA6I_CLEAN_FULL_FIXTURE");
+    let clean_experiment = std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("SA6I_CLEAN_EXPERIMENT").as_deref() == Ok("1");
+    // An independent, explicitly selected build can exercise the full cleaner.
+    // This is still an experiment: it can permanently delete selected files.
+    let full_clean_fixture =
+        clean_experiment && std::env::var("SA6I_CLEAN_FULL_FIXTURE").as_deref() == Ok("1");
+    // Use the same build-time decision in Rust and C++: this must never depend
+    // on an environment variable supplied to an already-built executable.
+    println!("cargo::rustc-check-cfg=cfg(sa6i_clean_experiment)");
+    if clean_experiment {
+        println!("cargo::rustc-cfg=sa6i_clean_experiment");
+    }
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR"));
+    write_if_changed(
+        &out_dir.join("sa6i_clean_config.h"),
+        format!(
+            "#define SA6I_CLEAN_EXPERIMENT {}\n#define SA6I_CLEAN_FULL_FIXTURE {}\n",
+            u8::from(clean_experiment),
+            u8::from(full_clean_fixture)
+        ),
+    );
+    let mut builder = CxxQtBuilder::new_qml_module(module).qt_module("Quick").include_dir(&out_dir);
+    if clean_experiment {
+        builder = builder.include_dir("../../sa6i/clean").cpp_files([
+            "../../sa6i/clean/qt_embed_adapter.h",
+            "../../sa6i/clean/qt_embed_adapter.cpp",
+            "../../sa6i/clean/native_embed.c",
+            "../../sa6i/clean/viewport_geometry.c",
+        ]);
+        println!("cargo:rerun-if-changed=../../sa6i/clean/native_embed.h");
+        println!("cargo:rerun-if-changed=../../sa6i/clean/viewport_geometry.h");
+    }
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         builder = builder.qt_module("Widgets");
     }
@@ -384,6 +442,7 @@ fn main() {
             "cpp/video_view.cpp",
         ])
         .qrc(fonts_qrc())
+        .qrc(branding_qrc())
         .qrc(shaders_qrc())
         .files([
             "src/bridge/native.rs",
@@ -391,6 +450,7 @@ fn main() {
             "src/bridge/calls.rs",
             "src/bridge/devices.rs",
             "src/bridge/history.rs",
+            "src/bridge/intel.rs",
             "src/bridge/media.rs",
             "src/bridge/messages.rs",
             "src/bridge/mirror.rs",
@@ -413,11 +473,14 @@ fn main() {
         println!("cargo:rustc-link-lib=ole32");
         println!("cargo:rustc-link-lib=shell32");
         println!("cargo:rustc-link-lib=user32");
+        if clean_experiment {
+            println!("cargo:rustc-link-lib=advapi32");
+        }
     } else if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         println!("cargo:rustc-link-lib=Qt6Quick");
         println!("cargo:rustc-link-lib=Qt6Widgets");
         println!(
-            "cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib:$ORIGIN/../lib/nectarlink/lib"
+            "cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib:$ORIGIN/../lib/sa6i-link/lib"
         );
     } else if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         println!("cargo:rustc-link-lib=framework=AppKit");
@@ -451,8 +514,8 @@ fn build_linux_video_codec() {
         .cpp(true)
         .std("c++17")
         .file("cpp/linux_video_dispatch.cpp")
-        .compile("nectarlink_linux_video_dispatch");
-    build.compile("nectarlink_linux_video_codec");
+        .compile("sa6i-link_linux_video_dispatch");
+    build.compile("sa6i-link_linux_video_codec");
     println!("cargo::rustc-link-lib=dl");
     println!("cargo::rustc-cfg=linux_ffmpeg_video");
 }

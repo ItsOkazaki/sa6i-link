@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import QtTest
-import app.nectarlink
+import sa6i.link
 
 // A locked feature that the PC can unlock takes you to the right page of Settings.
 Item {

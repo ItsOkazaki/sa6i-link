@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="Sa6i">
+  <title>Sa6i mark — connected S</title>
+  <defs>
+    <linearGradient id="sa6iSpine" x1="16" y1="12" x2="80" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8065FF"/>
+      <stop offset="1" stop-color="#36D6E7"/>
+    </linearGradient>
+  </defs>
+  <!-- one continuous spine: bars at y=18,48,78; turns of r=15 at x=61 and x=35; stroke 13 -->
+  <path d="M22 18 H61 A15 15 0 0 1 61 48 H35 A15 15 0 0 0 35 78 H74"
+        fill="none" stroke="url(#sa6iSpine)" stroke-width="13"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="48" r="6" fill="#F0F2FA"/>
+</svg>

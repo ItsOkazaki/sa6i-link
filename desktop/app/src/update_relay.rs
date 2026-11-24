@@ -7,7 +7,7 @@
 
 use std::{collections::HashMap, sync::Mutex};
 
-use nectarlink_core::NodeEvent;
+use sa6i_link_core::NodeEvent;
 
 use crate::{
     core_host,

@@ -23,7 +23,7 @@ use serde_json::{Map, Value};
 
 const TOKENS: &str = "docs/design/tokens.json";
 const QML_OUT: &str = "desktop/app/qml/Tokens.qml";
-const KOTLIN_OUT: &str = "android/app/src/main/kotlin/app/nectarlink/android/ui/theme/Tokens.kt";
+const KOTLIN_OUT: &str = "android/app/src/main/kotlin/app/sa6i-link/android/ui/theme/Tokens.kt";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -117,7 +117,7 @@ fn validate(tokens: &Value) -> Result<()> {
         }
     }
     // Fixed-palette themes carry their own status colors.
-    for theme in ["graphite", "hive"] {
+    for theme in ["graphite", "hive", "signal"] {
         let variants = themes
             .pointer(&format!("/{theme}/variants"))
             .and_then(Value::as_object)
@@ -290,7 +290,7 @@ fn render_kotlin(tokens: &Value) -> Result<String> {
     let mut out: Vec<String> = vec![
         "// SPDX-License-Identifier: GPL-3.0-or-later".into(),
         "// Generated from docs/design/tokens.json by `cargo xtask tokens`. Do not edit.".into(),
-        "package app.nectarlink.android.ui.theme".into(),
+        "package sa6i.link.android.ui.theme".into(),
         String::new(),
         "import androidx.compose.runtime.Immutable".into(),
         "import androidx.compose.ui.graphics.Color".into(),
@@ -341,6 +341,7 @@ fn render_kotlin(tokens: &Value) -> Result<String> {
             out.push(format!("    val {field} = {}", kotlin_color(hex)));
         }
     }
+    let signal_variants = tokens.pointer("/themes/signal/variants").context("missing signal variants")?;
     let comb = tokens.pointer("/themes/hive/comb").context("missing hive comb")?;
     let number =
         |key: &str| comb.get(key).and_then(Value::as_f64).with_context(|| format!("missing comb.{key}"));
@@ -355,6 +356,12 @@ fn render_kotlin(tokens: &Value) -> Result<String> {
     out.push(format!("    const val COMB_PULSE_SECONDS = {}f", number("pulseSeconds")?));
     out.push(format!("    const val COMB_FRAME_MS = {}L", number("frameMs")? as i64));
     out.push(String::new());
+    for (field, variant) in [("Midnight", "midnight"), ("Daylight", "daylight")] {
+        let palette =
+            signal_variants.get(variant).with_context(|| format!("missing signal variants.{variant}"))?;
+        out.push(format!("    val signal{field} = {}", kotlin_palette(palette, 4)?));
+        out.push(String::new());
+    }
     out.push(format!("    val warningLight = {}", status_color("light", "warning")?));
     out.push(format!("    val warningDark = {}", status_color("dark", "warning")?));
     out.push(format!("    val errorLight = {}", status_color("light", "error")?));

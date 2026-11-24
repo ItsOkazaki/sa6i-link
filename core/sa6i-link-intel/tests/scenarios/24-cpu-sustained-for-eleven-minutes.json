@@ -1,0 +1,20 @@
+{
+  "name": "cpu-sustained-for-eleven-minutes",
+  "about": "Every core at about 92 % for eleven minutes: a machine using all of itself, which is a render or a build. The whole-machine rule fires and the pinned-core rule stays quiet — a machine busy everywhere is not one program on one thread.",
+  "segments": [
+    {
+      "minutes": 11,
+      "cpu_percent": 92,
+      "memory_percent": 50,
+      "cores": [92, 93, 91, 94, 92, 90, 93, 91]
+    }
+  ],
+  "expect": [
+    {
+      "rule": "cpu.sustained_high",
+      "severity": "Warning",
+      "subject": "system"
+    }
+  ],
+  "quiets": ["cpu.one_core_pinned"]
+}

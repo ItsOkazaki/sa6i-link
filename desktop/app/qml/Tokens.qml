@@ -477,6 +477,86 @@ QtObject {
               "warning": "#7A4A00"
             }
           }
+        },
+        "signal": {
+          "brand": {
+            "cyan": "#36D6E7",
+            "deepNavy": "#131C32",
+            "midnight": "#0B1020",
+            "mutedSlate": "#8793AA",
+            "softWhite": "#F0F2FA",
+            "violet": "#8065FF"
+          },
+          "description": "Signal: the Sa6i ecosystem brand. Midnight and Deep Navy surfaces, electric violet on cyan. Fixed palette, no wallpaper or phone colors, no traffic-light green.",
+          "dynamicColor": false,
+          "fonts": {
+            "display": "Figtree",
+            "label": "Figtree",
+            "mono": "Space Mono",
+            "ui": "Figtree"
+          },
+          "label": {
+            "case": "none",
+            "size": 12.5,
+            "tracking": 0,
+            "weight": 600
+          },
+          "rules": [
+            "No green: success and connected use primary and primaryContainer.",
+            "Unknown metrics render as a hatched block with the reason, never as zero.",
+            "Sparklines draw gaps where samples are missing; they never interpolate across a gap.",
+            "Electric Violet is a fill and focus colour, never body text."
+          ],
+          "shape": {
+            "full": 999,
+            "lg": 16,
+            "md": 12,
+            "sm": 8,
+            "xl": 22,
+            "xs": 4
+          },
+          "variants": {
+            "daylight": {
+              "error": "#B3261E",
+              "onError": "#FFFFFF",
+              "onPrimary": "#FFFFFF",
+              "onPrimaryContainer": "#1E0F4D",
+              "onSecondaryContainer": "#05303A",
+              "onSurface": "#131C32",
+              "onSurfaceVariant": "#485470",
+              "outline": "#68748F",
+              "outlineVariant": "#C3CBDB",
+              "primary": "#5335C8",
+              "primaryContainer": "#E4DCFF",
+              "secondaryContainer": "#CDEDF4",
+              "surface": "#F7F8FC",
+              "surfaceContainer": "#E9ECF5",
+              "surfaceContainerHigh": "#E1E5F0",
+              "surfaceContainerHighest": "#D9DEEB",
+              "surfaceContainerLow": "#F1F3F9",
+              "warning": "#7A5000"
+            },
+            "midnight": {
+              "error": "#FFA9A2",
+              "onError": "#3B0B07",
+              "onPrimary": "#1A0F45",
+              "onPrimaryContainer": "#E6DEFF",
+              "onSecondaryContainer": "#BFEDF5",
+              "onSurface": "#F0F2FA",
+              "onSurfaceVariant": "#AAB5CC",
+              "outline": "#6C7893",
+              "outlineVariant": "#2A3654",
+              "primary": "#B3A0FF",
+              "primaryContainer": "#33246E",
+              "secondaryContainer": "#123A45",
+              "surface": "#0B1020",
+              "surfaceContainer": "#131C32",
+              "surfaceContainerHigh": "#18223C",
+              "surfaceContainerHighest": "#1E2946",
+              "surfaceContainerLow": "#0E1426",
+              "warning": "#F2C14E"
+            }
+          }
         }
       },
       "typography": {

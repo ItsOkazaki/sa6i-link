@@ -2,12 +2,54 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Effects
-import app.nectarlink
+import sa6i.link
 
 // The main window: navigation rail, title bar and pages. Before any device
 // is paired it shows the welcome (pairing) screen instead.
 NativeWindow {
     id: window
+
+    // Null in normal builds. The experimental backend fails closed if its
+    // coordinator cannot be loaded; it must never be unloaded while tracked.
+    signal sa6iCloseApproved(string action)
+    function requestSa6iClose(action) {
+        if (!sa6iCleanBackend) return false
+        if (!sa6iCleanLoader.item) {
+            console.warn("Sa6i Clean coordinator unavailable; keeping the window open")
+            return true
+        }
+        return sa6iCleanLoader.item.requestClose(action)
+    }
+    function resumeSa6iAfterTrayReactivation() {
+        if (sa6iCleanLoader.item)
+            sa6iCleanLoader.item.resumeAfterTrayReactivation()
+    }
+    function cancelSa6iTrayCloseForReactivation() {
+        if (sa6iCleanLoader.item)
+            sa6iCleanLoader.item.cancelTrayCloseForReactivation()
+    }
+    Loader {
+        id: sa6iCleanLoader
+        anchors.fill: parent
+        z: 1100
+        active: !!window.sa6iCleanBackend
+        sourceComponent: Sa6iCleanIntegration {
+            hostWindow: window
+            titleBarHeight: Theme.topBarHeight
+            captionButtonsWidth: captionButtons.width
+            headerColor: window.windowSurface
+            headerTextColor: Theme.surfaceContent
+            darkTheme: Theme.dark
+            // Sheet.visible includes its closing fade; keep the native child
+            // hidden until the QML overlay is actually gone. This is still a
+            // best-effort hide because cross-process Win32 calls are async.
+            externalOverlayOpen: pairingSheet.visible || ringingSheet.visible || remotePromptSheet.visible
+                || pcMirrorPromptSheet.visible || continuityPasteSheet.visible
+                || (doctorLoader.item && doctorLoader.item.visible) || commandPaletteLoader.active
+                || toast.visible
+            onCloseApproved: (action) => window.sa6iCloseApproved(action)
+        }
+    }
 
     readonly property bool showWalkthrough: AppController.status === "ready" && !Preferences.walkthroughCompleted
     readonly property bool welcome: AppController.status !== "ready" || showWalkthrough
@@ -569,12 +611,12 @@ NativeWindow {
             y: (Theme.topBarHeight - height) / 2
             width: 38; height: 38
             radius: Theme.radiusSm
-            color: Theme.graphite ? Theme.surfaceContent : Theme.primary
-            Icon {
-                anchors.centerIn: parent
-                path: Icons.mark
-                stroke: 2.4
-                color: Theme.graphite ? Theme.surface : Theme.primaryContent
+            color: "black"
+            Image {
+                anchors.fill: parent
+                anchors.margins: 2
+                fillMode: Image.PreserveAspectFit
+                source: "qrc:/branding/sa6i-link.png"
             }
         }
         Column {
@@ -636,6 +678,17 @@ NativeWindow {
                     else if (rail.hoveredNav === "apps") rail.hoveredNav = ""
                 }
                 onClicked: window.page = "apps"
+            }
+            NavItem {
+                iconPath: Icons.pulse
+                text: qsTr("Monitor")
+                selected: window.page === "monitor"
+                activeHover: rail.hoveredNav === "monitor"
+                onHoveredChanged: {
+                    if (hovered) rail.hoveredNav = "monitor"
+                    else if (rail.hoveredNav === "monitor") rail.hoveredNav = ""
+                }
+                onClicked: window.page = "monitor"
             }
             NavItem {
                 iconPath: Icons.deck
@@ -716,6 +769,7 @@ NativeWindow {
                     : window.page === "calls" ? qsTr("Calls")
                     : window.page === "photos" ? qsTr("Photos")
                     : window.page === "apps" ? qsTr("Apps")
+                    : window.page === "monitor" ? qsTr("Monitor")
                     : window.page === "deck" ? qsTr("Deck")
                     : window.page === "guide" ? qsTr("Features guide")
                     : qsTr("Settings")
@@ -926,15 +980,16 @@ NativeWindow {
                 source: {
                     if (!active) return ""
                     switch (window.page) {
-                    case "timeline": return "qrc:/qt/qml/app/nectarlink/qml/pages/TimelinePage.qml"
-                    case "messages": return "qrc:/qt/qml/app/nectarlink/qml/pages/MessagesPage.qml"
-                    case "calls": return "qrc:/qt/qml/app/nectarlink/qml/pages/CallsPage.qml"
-                    case "photos": return "qrc:/qt/qml/app/nectarlink/qml/pages/PhotosPage.qml"
-                    case "apps": return "qrc:/qt/qml/app/nectarlink/qml/pages/AppsPage.qml"
-                    case "deck": return "qrc:/qt/qml/app/nectarlink/qml/pages/DeckPage.qml"
-                    case "guide": return "qrc:/qt/qml/app/nectarlink/qml/pages/FeaturesGuidePage.qml"
-                    case "settings": return "qrc:/qt/qml/app/nectarlink/qml/pages/SettingsPage.qml"
-                    default: return "qrc:/qt/qml/app/nectarlink/qml/pages/HomePage.qml"
+                    case "timeline": return "qrc:/qt/qml/sa6i/link/qml/pages/TimelinePage.qml"
+                    case "messages": return "qrc:/qt/qml/sa6i/link/qml/pages/MessagesPage.qml"
+                    case "calls": return "qrc:/qt/qml/sa6i/link/qml/pages/CallsPage.qml"
+                    case "photos": return "qrc:/qt/qml/sa6i/link/qml/pages/PhotosPage.qml"
+                    case "apps": return "qrc:/qt/qml/sa6i/link/qml/pages/AppsPage.qml"
+                    case "monitor": return "qrc:/qt/qml/sa6i/link/qml/pages/MonitorPage.qml"
+                    case "deck": return "qrc:/qt/qml/sa6i/link/qml/pages/DeckPage.qml"
+                    case "guide": return "qrc:/qt/qml/sa6i/link/qml/pages/FeaturesGuidePage.qml"
+                    case "settings": return "qrc:/qt/qml/sa6i/link/qml/pages/SettingsPage.qml"
+                    default: return "qrc:/qt/qml/sa6i/link/qml/pages/HomePage.qml"
                     }
                 }
                 onLoaded: {
@@ -981,14 +1036,14 @@ NativeWindow {
     Loader {
         anchors.fill: parent
         active: AppController.status !== "ready"
-        source: active ? "qrc:/qt/qml/app/nectarlink/qml/pages/WelcomePage.qml" : ""
+        source: active ? "qrc:/qt/qml/sa6i/link/qml/pages/WelcomePage.qml" : ""
     }
 
     Loader {
         id: walkthroughLoader
         anchors.fill: parent
         active: window.showWalkthrough
-        source: active ? "qrc:/qt/qml/app/nectarlink/qml/pages/WalkthroughPage.qml" : ""
+        source: active ? "qrc:/qt/qml/sa6i/link/qml/pages/WalkthroughPage.qml" : ""
         onLoaded: {
             if ("deviceId" in item)
                 item.deviceId = Qt.binding(() => window.currentDeviceId)
@@ -1016,7 +1071,7 @@ NativeWindow {
             id: pairingLoader
             width: parent.width
             active: pairingSheet.opened
-            source: active ? "qrc:/qt/qml/app/nectarlink/qml/pages/PairingPanel.qml" : ""
+            source: active ? "qrc:/qt/qml/sa6i/link/qml/pages/PairingPanel.qml" : ""
             onLoaded: {
                 item.width = Qt.binding(() => pairingLoader.width)
                 item.running = Qt.binding(() => pairingSheet.opened)
@@ -1212,7 +1267,7 @@ NativeWindow {
         id: doctorLoader
         anchors.fill: parent
         active: false
-        source: active ? "qrc:/qt/qml/app/nectarlink/qml/components/DoctorSheet.qml" : ""
+        source: active ? "qrc:/qt/qml/sa6i/link/qml/components/DoctorSheet.qml" : ""
         onLoaded: item.open()
     }
     Connections {
@@ -1239,7 +1294,7 @@ NativeWindow {
         id: commandPaletteLoader
         anchors.fill: parent
         active: AppController.commandPaletteOpen
-        source: active ? "qrc:/qt/qml/app/nectarlink/qml/components/CommandPalette.qml" : ""
+        source: active ? "qrc:/qt/qml/sa6i/link/qml/components/CommandPalette.qml" : ""
     }
 
     Toast {

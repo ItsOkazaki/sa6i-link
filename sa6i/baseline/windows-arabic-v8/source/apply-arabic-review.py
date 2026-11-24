@@ -25,7 +25,7 @@ def finish(src,text,ctx='',platform=''):
  if src=='Back' and ctx in ('HomePage','SettingsPage') and platform=='Windows':text='خلفية'
  if collections.Counter(token.findall(src))!=collections.Counter(token.findall(text)):errors.append((platform,ctx,src,text))
  return text
-win=E.parse(P+'/nectarlink_ar-DRAFT.ts')
+win=E.parse(P+'/sa6i-link_ar-DRAFT.ts')
 plural={
  '%n min ago':['قبل %n دقيقة','قبل دقيقة واحدة (%n)','قبل دقيقتين (%n)','قبل %n دقائق','قبل %n دقيقة','قبل %n دقيقة'],
  '%n h ago':['قبل %n ساعة','قبل ساعة واحدة (%n)','قبل ساعتين (%n)','قبل %n ساعات','قبل %n ساعة','قبل %n ساعة'],
@@ -48,7 +48,7 @@ for context in win.findall('./context'):
    else:
     for x in forms:x.text=finish(src,x.text or '',ctx,'Windows')
   else:trans.text=finish(src,trans.text or '',ctx,'Windows')
-E.indent(win,space='    ');win.write(P+'/nectarlink_ar-checked.ts',encoding='utf-8',xml_declaration=True)
+E.indent(win,space='    ');win.write(P+'/sa6i-link_ar-checked.ts',encoding='utf-8',xml_declaration=True)
 androidbase={x.get('name'):''.join(x.itertext()) for x in E.parse(P+'/android-English.xml').findall('.//string')}
 android=E.parse(P+'/android-ar-DRAFT-strings.xml')
 for x in android.findall('./string'):

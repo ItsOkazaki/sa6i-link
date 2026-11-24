@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Linux on-demand phone storage mount (`~/Nectarlink/<Phone name>`) via the
+//! Linux on-demand phone storage mount (`~/Sa6iLink/<Phone name>`) via the
 //! Linux kernel FUSE (`/dev/fuse` + `fusermount3`) protocol, plus GTK3
 //! (`~/.config/gtk-3.0/bookmarks`) and KDE/freedesktop (`~/.local/share/user-places.xbel`)
 //! file manager sidebar bookmarks.
@@ -20,7 +20,7 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use nectarlink_core::{DeviceId, LinkState, NodeEvent, StorageEntry};
+use sa6i_link_core::{DeviceId, LinkState, NodeEvent, StorageEntry};
 
 use crate::core_host;
 use crate::state::{Changes, CoreStatus};
@@ -422,14 +422,14 @@ pub fn format_file_uri(path: &Path) -> String {
     encoded
 }
 
-/// Formats a single GTK3 bookmark entry (`file://<encoded_path> <DeviceName> (NectarLink)`).
+/// Formats a single GTK3 bookmark entry (`file://<encoded_path> <DeviceName> (Sa6i Link)`).
 pub fn format_gtk_bookmark_line(mount_path: &Path, device_name: &str) -> String {
     let uri = format_file_uri(mount_path);
     let label = sanitize_folder_name(device_name);
-    format!("{uri} {label} (NectarLink)")
+    format!("{uri} {label} (Sa6i Link)")
 }
 
-/// Upserts a NectarLink device bookmark line in the contents of `~/.config/gtk-3.0/bookmarks`.
+/// Upserts a Sa6i Link device bookmark line in the contents of `~/.config/gtk-3.0/bookmarks`.
 pub fn upsert_gtk_bookmarks_content(existing: &str, mount_path: &Path, device_name: &str) -> String {
     let uri = format_file_uri(mount_path);
     let prefix = format!("{uri} ");
@@ -456,7 +456,7 @@ pub fn upsert_gtk_bookmarks_content(existing: &str, mount_path: &Path, device_na
     if lines.is_empty() { String::new() } else { format!("{}\n", lines.join("\n")) }
 }
 
-/// Removes a NectarLink device bookmark line matching `mount_path` from `~/.config/gtk-3.0/bookmarks` content.
+/// Removes a Sa6i Link device bookmark line matching `mount_path` from `~/.config/gtk-3.0/bookmarks` content.
 pub fn remove_gtk_bookmarks_content(existing: &str, mount_path: &Path) -> String {
     let uri = format_file_uri(mount_path);
     let prefix = format!("{uri} ");
@@ -483,13 +483,13 @@ fn escape_xml(s: &str) -> String {
     out
 }
 
-/// Upserts a NectarLink device bookmark in KDE Dolphin / freedesktop `~/.local/share/user-places.xbel`.
+/// Upserts a Sa6i Link device bookmark in KDE Dolphin / freedesktop `~/.local/share/user-places.xbel`.
 pub fn upsert_xbel_bookmarks_content(existing: &str, mount_path: &Path, device_name: &str) -> String {
     let cleaned = remove_xbel_bookmarks_content(existing, mount_path);
     let uri = escape_xml(&format_file_uri(mount_path));
-    let label = escape_xml(&format!("{} (NectarLink)", sanitize_folder_name(device_name)));
+    let label = escape_xml(&format!("{} (Sa6i Link)", sanitize_folder_name(device_name)));
     let entry = format!(
-        " <bookmark href=\"{uri}\" id=\"nectarlink\"><title>{label}</title><info><metadata owner=\"http://freedesktop.org\"><bookmark:icon name=\"smartphone\"/></metadata></info></bookmark>"
+        " <bookmark href=\"{uri}\" id=\"sa6i-link\"><title>{label}</title><info><metadata owner=\"http://freedesktop.org\"><bookmark:icon name=\"smartphone\"/></metadata></info></bookmark>"
     );
 
     if let Some(close_idx) = cleaned.rfind("</xbel>") {
@@ -509,7 +509,7 @@ pub fn upsert_xbel_bookmarks_content(existing: &str, mount_path: &Path, device_n
     }
 }
 
-/// Removes a NectarLink device bookmark matching `mount_path` from `~/.local/share/user-places.xbel` content.
+/// Removes a Sa6i Link device bookmark matching `mount_path` from `~/.local/share/user-places.xbel` content.
 pub fn remove_xbel_bookmarks_content(existing: &str, mount_path: &Path) -> String {
     if existing.trim().is_empty() {
         return String::new();
@@ -942,7 +942,7 @@ fn clear_stale_mount(mount_path: &Path) {
     }
 }
 
-/// Whether `/proc/self/mounts` text lists a NectarLink FUSE mount at `path`
+/// Whether `/proc/self/mounts` text lists a Sa6i Link FUSE mount at `path`
 /// (mount points there escape spaces, tabs, newlines and backslashes as octal).
 pub(crate) fn is_listed_mount(mounts: &str, path: &Path) -> bool {
     fn unescape(field: &str) -> String {
@@ -970,7 +970,7 @@ pub(crate) fn is_listed_mount(mounts: &str, path: &Path) -> bool {
         let (_source, Some(point), Some(kind)) = (fields.next(), fields.next(), fields.next()) else {
             return false;
         };
-        kind == "fuse.nectarlink" && unescape(point) == wanted
+        kind == "fuse.sa6i-link" && unescape(point) == wanted
     })
 }
 
@@ -1077,7 +1077,7 @@ fn open_fuse_mount(mount_path: &Path) -> Option<OwnedFd> {
 
     let child_res = Command::new(fusermount_bin)
         .env("_FUSE_COMMFD", child_sock.to_string())
-        .args(["-o", "rw,nosuid,nodev,default_permissions,fsname=nectarlink,subtype=nectarlink", "--"])
+        .args(["-o", "rw,nosuid,nodev,default_permissions,fsname=sa6i-link,subtype=sa6i-link", "--"])
         .arg(mount_path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -1214,8 +1214,8 @@ fn io_errno(error: &std::io::Error) -> i32 {
 /// The errno a failed phone request reports to the file manager, so "the
 /// phone is offline" and "the phone refused" don't both read as an I/O error.
 /// Logs only the kind of failure, never a path or file name.
-fn storage_errno(error: &nectarlink_core::Error) -> i32 {
-    use nectarlink_core::Error;
+fn storage_errno(error: &sa6i_link_core::Error) -> i32 {
+    use sa6i_link_core::Error;
     let (errno, kind) = match error {
         Error::Offline | Error::NotPaired => (libc::ENOTCONN, "offline"),
         Error::Denied | Error::Declined => (libc::EACCES, "denied"),
@@ -2145,7 +2145,7 @@ pub fn unregister_all() {
         let filtered: Vec<&str> = existing
             .lines()
             .map(str::trim_end)
-            .filter(|line| !line.is_empty() && !line.ends_with(" (NectarLink)"))
+            .filter(|line| !line.is_empty() && !line.ends_with(" (Sa6i Link)"))
             .collect();
         let updated = if filtered.is_empty() { String::new() } else { format!("{}\n", filtered.join("\n")) };
         let _ = fs::write(&bookmarks_file, updated);
@@ -2154,7 +2154,7 @@ pub fn unregister_all() {
         && let Ok(existing) = fs::read_to_string(&xbel_file)
     {
         let updated = remove_xbel_blocks_matching(&existing, |b| {
-            b.contains("id=\"nectarlink\"") || b.contains("(NectarLink)</title>")
+            b.contains("id=\"sa6i-link\"") || b.contains("(Sa6i Link)</title>")
         });
         let _ = fs::write(&xbel_file, updated);
     }
@@ -2169,7 +2169,7 @@ mod tests {
 
     #[test]
     fn phone_failures_map_to_distinct_errnos() {
-        use nectarlink_core::Error;
+        use sa6i_link_core::Error;
         assert_eq!(storage_errno(&Error::Offline), -libc::ENOTCONN);
         assert_eq!(storage_errno(&Error::Denied), -libc::EACCES);
         assert_eq!(storage_errno(&Error::NotFound), -libc::ENOENT);
@@ -2181,9 +2181,9 @@ mod tests {
 
     #[test]
     fn gtk_bookmark_formatting_upsert_and_removal_preserve_unrelated_entries() {
-        let mount = Path::new("/home/alice/Nectarlink/Pixel 9 Pro");
+        let mount = Path::new("/home/alice/Sa6iLink/Pixel 9 Pro");
         let line = format_gtk_bookmark_line(mount, "Pixel 9 Pro");
-        assert_eq!(line, "file:///home/alice/Nectarlink/Pixel%209%20Pro Pixel 9 Pro (NectarLink)");
+        assert_eq!(line, "file:///home/alice/Sa6iLink/Pixel%209%20Pro Pixel 9 Pro (Sa6i Link)");
 
         let initial = "file:///home/alice/Documents Documents\nfile:///home/alice/Downloads Downloads\n";
         let with_phone = upsert_gtk_bookmarks_content(initial, mount, "Pixel 9 Pro");
@@ -2196,11 +2196,11 @@ mod tests {
         assert_eq!(
             updated_phone
                 .lines()
-                .filter(|l| l.starts_with("file:///home/alice/Nectarlink/Pixel%209%20Pro"))
+                .filter(|l| l.starts_with("file:///home/alice/Sa6iLink/Pixel%209%20Pro"))
                 .count(),
             1
         );
-        assert!(updated_phone.contains("Pixel 9 Pro Renamed (NectarLink)"));
+        assert!(updated_phone.contains("Pixel 9 Pro Renamed (Sa6i Link)"));
 
         let cleaned = remove_gtk_bookmarks_content(&updated_phone, mount);
         assert_eq!(cleaned, initial);
@@ -2208,16 +2208,16 @@ mod tests {
 
     #[test]
     fn xbel_bookmark_upsert_and_removal_preserve_user_places() {
-        let mount = Path::new("/home/alice/Nectarlink/Pixel 9 Pro");
+        let mount = Path::new("/home/alice/Sa6iLink/Pixel 9 Pro");
         let initial = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE xbel>\n<xbel xmlns:bookmark=\"http://www.freedesktop.org/standards/desktop-bookmarks\">\n <bookmark href=\"file:///home/alice/Downloads\"><title>Downloads</title></bookmark>\n</xbel>\n";
         let with_phone = upsert_xbel_bookmarks_content(initial, mount, "Pixel 9 Pro");
         assert!(with_phone.contains("href=\"file:///home/alice/Downloads\""));
-        assert!(with_phone.contains("href=\"file:///home/alice/Nectarlink/Pixel%209%20Pro\""));
+        assert!(with_phone.contains("href=\"file:///home/alice/Sa6iLink/Pixel%209%20Pro\""));
         assert!(with_phone.contains("<bookmark:icon name=\"smartphone\"/>"));
 
         // Upsert is idempotent.
         let again = upsert_xbel_bookmarks_content(&with_phone, mount, "Pixel 9 Pro");
-        assert_eq!(again.matches("href=\"file:///home/alice/Nectarlink/Pixel%209%20Pro\"").count(), 1);
+        assert_eq!(again.matches("href=\"file:///home/alice/Sa6iLink/Pixel%209%20Pro\"").count(), 1);
 
         let cleaned = remove_xbel_bookmarks_content(&again, mount);
         assert!(cleaned.contains("href=\"file:///home/alice/Downloads\""));
@@ -2251,23 +2251,23 @@ mod tests {
 
     #[test]
     fn to_remote_rel_path_converts_linux_mount_paths_to_slash_relative_paths() {
-        let root = Path::new("/home/alice/Nectarlink/Pixel 9");
+        let root = Path::new("/home/alice/Sa6iLink/Pixel 9");
         assert_eq!(to_remote_rel_path(root, root), Some(String::new()));
         assert_eq!(
-            to_remote_rel_path(root, Path::new("/home/alice/Nectarlink/Pixel 9/DCIM/Camera/IMG_001.jpg")),
+            to_remote_rel_path(root, Path::new("/home/alice/Sa6iLink/Pixel 9/DCIM/Camera/IMG_001.jpg")),
             Some("DCIM/Camera/IMG_001.jpg".to_owned())
         );
-        assert_eq!(to_remote_rel_path(root, Path::new("/home/alice/Nectarlink/OtherPhone/DCIM")), None);
+        assert_eq!(to_remote_rel_path(root, Path::new("/home/alice/Sa6iLink/OtherPhone/DCIM")), None);
     }
 
     #[test]
     fn finds_a_mount_left_by_an_earlier_run() {
         let mounts = "sysfs /sys sysfs rw 0 0\n\
-                      nectarlink /home/bee/Nectarlink/Pixel\\0409 fuse.nectarlink rw,nosuid,nodev 0 0\n\
+                      sa6i-link /home/bee/Sa6iLink/Pixel\\0409 fuse.sa6i-link rw,nosuid,nodev 0 0\n\
                       portal /run/user/1000/doc fuse.portal rw 0 0\n";
-        assert!(is_listed_mount(mounts, Path::new("/home/bee/Nectarlink/Pixel 9")));
-        assert!(!is_listed_mount(mounts, Path::new("/home/bee/Nectarlink/Galaxy")));
-        assert!(!is_listed_mount(mounts, Path::new("/run/user/1000/doc")), "only NectarLink's own mounts");
+        assert!(is_listed_mount(mounts, Path::new("/home/bee/Sa6iLink/Pixel 9")));
+        assert!(!is_listed_mount(mounts, Path::new("/home/bee/Sa6iLink/Galaxy")));
+        assert!(!is_listed_mount(mounts, Path::new("/run/user/1000/doc")), "only Sa6i Link's own mounts");
     }
 
     fn test_spool_dir(name: &str) -> PathBuf {
@@ -2374,7 +2374,7 @@ mod tests {
 
     #[test]
     fn maintains_gtk_bookmarks_idempotently_and_preserves_user_entries() {
-        let mount = Path::new("/home/alice/Nectarlink/Galaxy S24");
+        let mount = Path::new("/home/alice/Sa6iLink/Galaxy S24");
         let existing = "file:///home/alice/Music Music\n";
         let once = upsert_gtk_bookmarks_content(existing, mount, "Galaxy S24");
         let twice = upsert_gtk_bookmarks_content(&once, mount, "Galaxy S24");
@@ -2384,8 +2384,8 @@ mod tests {
 
     #[test]
     fn normalize_rel_path_rejects_parent_traversal() {
-        let root = Path::new("/home/alice/Nectarlink/Pixel 9");
-        assert_eq!(to_remote_rel_path(root, Path::new("/home/alice/Nectarlink/Pixel 9/../secret")), None);
+        let root = Path::new("/home/alice/Sa6iLink/Pixel 9");
+        assert_eq!(to_remote_rel_path(root, Path::new("/home/alice/Sa6iLink/Pixel 9/../secret")), None);
         assert_eq!(parse_cstr(b"..\0"), None);
         assert_eq!(parse_cstr(b".\0"), None);
         assert_eq!(parse_cstr(b"sub/dir\0"), None);

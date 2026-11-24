@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Real Win32 process/window APIs with a locally built, inert synthetic window.
+# Does NOT use the cleaner, the Qt integration, or Windows 7.
+name: Sa6i Clean native host smoke
+on:
+  push:
+    branches: [arena/077ce3b0-sa6i-link]
+    paths:
+      - '.github/workflows/sa6i-clean-native-host-smoke.yml'
+      - 'sa6i/clean/native_embed.c'
+      - 'sa6i/clean/native_embed.h'
+      - 'sa6i/clean/tests/real_windows_*'
+      - 'sa6i/clean/tests/prepare_real_windows_host.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-host:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build and run inert native window fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'sa6i-native-smoke'
+          $fixture = Join-Path $work 'fixture'
+          $resources = Join-Path $fixture 'resources'
+          New-Item -ItemType Directory -Path $resources -Force | Out-Null
+          $fixtureExe = Join-Path $fixture 'Sa6i Test Window.exe'
+          & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE sa6i/clean/tests/real_windows_fixture.c "/Fe:$fixtureExe" /link /SUBSYSTEM:WINDOWS user32.lib
+          if ($LASTEXITCODE -ne 0) { throw 'Synthetic window compile failed' }
+          [System.IO.File]::WriteAllText((Join-Path $resources 'app.asar'), 'inert fixture; not a real ASAR')
+          python sa6i/clean/tests/prepare_real_windows_host.py $work
+          if ($LASTEXITCODE -ne 0) { throw 'Could not prepare pinned test backend' }
+          $hostExe = Join-Path $work 'native-host-test.exe'
+          $source = Join-Path $work 'native_embed_real_test.c'
+          & cl.exe /nologo /std:c11 /W4 /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" sa6i/clean/tests/real_windows_host_smoke.c $source "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE user32.lib advapi32.lib
+          if ($LASTEXITCODE -ne 0) { throw 'Native host test compile failed' }
+          & $hostExe $fixture 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Native host smoke test failed' }
+          Add-Content -Path (Join-Path $resources 'app.asar') -Value 'tampered'
+          & $hostExe $fixture --reject 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture integrity rejection failed' }
+      - name: Install pinned Qt backport SDK for adapter test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'qt-native-smoke.7z'
+          $url = 'https://github.com/xanasoft/qt-builds/releases/download/v6.8.3-ssl-lgpl/qt-everywhere-6.8.3-Windows_7-MSVC2022-x86_64.7z'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'f1efe461b28d7758e1e68ba189d0a45c8168ac181be1ffe7013d0bbfb6ff145d') { throw 'Qt archive checksum mismatch' }
+          $qtDir = Join-Path $env:RUNNER_TEMP 'qt-native-smoke'
+          & 7z x $archive "-o$qtDir" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Qt extraction failed' }
+          $qmake = @(Get-ChildItem $qtDir -Recurse -File -Filter qmake.exe)
+          $moc = @(Get-ChildItem $qtDir -Recurse -File -Filter moc.exe)
+          if ($qmake.Count -ne 1 -or $moc.Count -ne 1) { throw 'Expected one qmake and one moc' }
+          $qtRoot = Split-Path -Parent $qmake[0].DirectoryName
+          "SA6I_QT_ROOT=$qtRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SA6I_QT_MOC=$($moc[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Run real Qt adapter against the inert fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'sa6i-native-smoke'
+          $fixture = Join-Path $work 'fixture'
+          $resources = Join-Path $fixture 'resources'
+          # Restore exactly the data used to pin this test-only backend.
+          [System.IO.File]::WriteAllText((Join-Path $resources 'app.asar'), 'inert fixture; not a real ASAR')
+          $env:PATH = "$(Join-Path $env:SA6I_QT_ROOT 'bin');$env:PATH"
+          $mocSource = Join-Path $work 'moc_adapter.cpp'
+          & $env:SA6I_QT_MOC sa6i/clean/qt_embed_adapter.h -o $mocSource
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Qt moc exited with $LASTEXITCODE"; throw 'Qt moc failed' }
+          $native = Join-Path $work 'native_embed_real_test.c'
+          $object = Join-Path $work 'native_embed_real_test.obj'
+          $compile = & cl.exe /nologo /std:c11 /MD /c /DUNICODE /D_UNICODE /I sa6i/clean "/I$work" $native "/Fo:$object" 2>&1
+          $code = $LASTEXITCODE
+          $compile | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) { $compile | Where-Object { $_ -match 'error|fatal' } | Select-Object -First 8 | ForEach-Object { Write-Host "::error::$_" }; throw 'Native backend compilation failed' }
+          $inc = Join-Path $env:SA6I_QT_ROOT 'include'
+          $lib = Join-Path $env:SA6I_QT_ROOT 'lib/Qt6Core.lib'
+          $hostExe = Join-Path $work 'qt-adapter-test.exe'
+          $compile = & cl.exe /nologo /std:c++17 /Zc:__cplusplus /permissive- /EHsc /MD /DUNICODE /D_UNICODE /DQT_CORE_LIB /I sa6i/clean "/I$inc" "/I$(Join-Path $inc 'QtCore')" sa6i/clean/tests/real_windows_qt_adapter.cpp sa6i/clean/qt_embed_adapter.cpp $mocSource $object "/Fe:$hostExe" /link /SUBSYSTEM:CONSOLE $lib user32.lib advapi32.lib 2>&1
+          $code = $LASTEXITCODE
+          $compile | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) { $compile | Where-Object { $_ -match 'error|fatal' } | Select-Object -First 8 | ForEach-Object { Write-Host "::error::$_" }; throw 'Qt adapter test compile failed' }
+          $env:PATH = "$(Join-Path $env:SA6I_QT_ROOT 'bin');$env:PATH"
+          & $hostExe $fixture 2>&1 | ForEach-Object { Write-Host "::notice::$_" }
+          if ($LASTEXITCODE -ne 0) { throw 'Qt adapter smoke test failed' }

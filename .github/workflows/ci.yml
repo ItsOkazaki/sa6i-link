@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
   QT_VERSION: "6.12.0"
   # The crates that build without Qt or the Android NDK.
-  CORE_CRATES: -p nectarlink-protocol -p nectarlink-core -p nectarlink-ffi -p nectarlink-cli -p nectarlink-adb -p xtask
+  CORE_CRATES: -p sa6i-link-protocol -p sa6i-link-core -p sa6i-link-ffi -p sa6i-link-cli -p sa6i-link-adb -p sa6i-link-intel -p sa6i-link-intel-win -p xtask
 
 jobs:
   # Whether anything but docs changed (docs-only.sh). A push or pull request
@@ -121,9 +121,9 @@ jobs:
           # Qt 6.12's repository layout needs a current aqtinstall.
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Clippy
-        run: cargo clippy --locked -p nectarlink-desktop -p nectarlink-vcam -p s1-qt-rust --all-targets -- -D warnings
+        run: cargo clippy --locked -p sa6i-link -p sa6i-vcam -p s1-qt-rust --all-targets -- -D warnings
       - name: Tests
-        run: cargo test --locked -p nectarlink-desktop -p nectarlink-vcam
+        run: cargo test --locked -p sa6i-link -p sa6i-vcam
       - name: QML tests
         shell: pwsh
         run: ./scripts/qml-tests.ps1
@@ -149,7 +149,7 @@ jobs:
           # Qt 6.12's repository layout needs a current aqtinstall.
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Release build
-        run: cargo build --locked --release -p nectarlink-desktop -p nectarlink-vcam
+        run: cargo build --locked --release -p sa6i-link -p sa6i-vcam
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -168,7 +168,7 @@ jobs:
         run: ./scripts/smoke-installer.ps1
       - uses: actions/upload-artifact@v7
         with:
-          name: nectarlink-windows-x64
+          name: sa6i-link-windows-x64
           path: target/package/*-setup.exe
           retention-days: 14
 
@@ -205,7 +205,7 @@ jobs:
         run: ./scripts/package.ps1 -Arch arm64
       - uses: actions/upload-artifact@v7
         with:
-          name: nectarlink-windows-arm64
+          name: sa6i-link-windows-arm64
           path: target/package/*-setup.exe
           retention-days: 14
 
@@ -229,9 +229,9 @@ jobs:
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Clippy
-        run: cargo clippy --locked -p nectarlink-desktop --all-targets -- -D warnings
+        run: cargo clippy --locked -p sa6i-link --all-targets -- -D warnings
       - name: Tests
-        run: cargo test --locked -p nectarlink-desktop
+        run: cargo test --locked -p sa6i-link
 
   desktop-macos-release:
     name: macOS app (release build)
@@ -253,7 +253,7 @@ jobs:
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Release build
-        run: cargo build --locked --release -p nectarlink-desktop
+        run: cargo build --locked --release -p sa6i-link
 
   desktop-linux:
     name: Linux app (x64)
@@ -297,15 +297,15 @@ jobs:
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Clippy
-        run: cargo clippy --locked -p nectarlink-desktop -p nectarlink-vcam -p s1-qt-rust --all-targets -- -D warnings
+        run: cargo clippy --locked -p sa6i-link -p sa6i-vcam -p s1-qt-rust --all-targets -- -D warnings
       - name: Tests
-        run: cargo test --locked -p nectarlink-desktop -p nectarlink-vcam
+        run: cargo test --locked -p sa6i-link -p sa6i-vcam
       - name: Video adapter fallback
         run: bash desktop/app/tests/linux_video_dispatch_test.sh
       - name: Check without the optional FFmpeg backend
         env:
           LIBAVCODEC_NO_PKG_CONFIG: "1"
-        run: cargo check --locked -p nectarlink-desktop --tests
+        run: cargo check --locked -p sa6i-link --tests
 
   desktop-linux-release:
     name: Linux app (x64, release build)
@@ -349,7 +349,7 @@ jobs:
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git
       - name: Release build
-        run: cargo build --locked --release -p nectarlink-desktop -p nectarlink-vcam
+        run: cargo build --locked --release -p sa6i-link -p sa6i-vcam
 
   linux-install:
     name: Linux packages and install.sh
@@ -398,7 +398,7 @@ jobs:
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
       - uses: actions/upload-artifact@v7
         with:
-          name: nectarlink-android-debug
+          name: sa6i-link-android-debug
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
 

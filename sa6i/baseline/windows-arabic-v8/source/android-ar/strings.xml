@@ -151,7 +151,7 @@
     <string name="transfer_pause">يوقف</string>
     <string name="transfer_resume">سيرة ذاتية</string>
     <string name="transfer_paused_progress">متوقف مؤقتًا · %1$s / %2$s</string>
-    <string name="transfer_received_from">من %1$s · في التنزيل/Nectarlink</string>
+    <string name="transfer_received_from">من %1$s · في التنزيل/Sa6iLink</string>
     <string name="transfer_sent_to">تم الإرسال إلى %1$s</string>
     <string name="transfer_cancelled">تم الإلغاء</string>
     <string name="transfer_denied">%1$s لا يقبل الملفات من هذا الهاتف.</string>
@@ -914,7 +914,7 @@
     <string name="guide_files_pc_1">اسحب الملفات إلى نافذة Sa6i Link أو الجزيرة العلوية على جهاز الحاسوب الخاص بك.</string>
     <string name="guide_files_opt_1">إرسال الملفات / إرسال مجلد: لنقل الملفات الفردية أو شجرة المجلدات الكاملة.</string>
     <string name="guide_files_opt_2">إيقاف مؤقت/استئناف: استئناف عمليات النقل المتقطعة دون إعادة إرسال وحدات البايت المكتملة.</string>
-    <string name="guide_files_privacy">يتم بث الملفات عبر QUIC TLS 1.3 مع التحقق من سلامة BLAKE3 في التنزيل/Nectarlink.</string>
+    <string name="guide_files_privacy">يتم بث الملفات عبر QUIC TLS 1.3 مع التحقق من سلامة BLAKE3 في التنزيل/Sa6iLink.</string>
     <string name="guide_files_limits">ما يصل إلى 5000 ملف لكل دفعة.</string>
     <string name="guide_queue_title">قائمة انتظار الإرسال</string>
     <string name="guide_queue_summary">ضع الملفات والارتباطات والمقاطع والتسجيلات في قائمة الانتظار عندما يكون جهاز الحاسوب الخاص بك غير متصل بالإنترنت وقم بتسليمها عند إعادة الاتصال.</string>

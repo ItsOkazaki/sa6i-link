@@ -14,7 +14,7 @@ use std::{
     time::{Instant, SystemTime},
 };
 
-use nectarlink_core::{RecordingMarker, Transfer, TransferState};
+use sa6i_link_core::{RecordingMarker, Transfer, TransferState};
 #[cfg(windows)]
 use windows::{
     Win32::{
@@ -71,15 +71,15 @@ pub fn set_format(format: RecordingFormat) {
     cfg.updated_at = Some(SystemTime::now());
 }
 
-/// Default folder: `Documents\Nectarlink Recordings`.
+/// Default folder: `Documents\Sa6iLink Recordings`.
 pub fn default_folder() -> PathBuf {
     dirs::document_dir()
         .unwrap_or_else(|| core_host::host().data_dir.join("recordings"))
-        .join("Nectarlink Recordings")
+        .join("Sa6iLink Recordings")
 }
 
 /// The folder where recordings go right now (`configured` if set, otherwise
-/// `Documents\Nectarlink Recordings`).
+/// `Documents\Sa6iLink Recordings`).
 pub fn effective_folder(configured: Option<&Path>) -> PathBuf {
     configured.filter(|p| !p.as_os_str().is_empty()).map(Path::to_path_buf).unwrap_or_else(default_folder)
 }
@@ -1210,7 +1210,7 @@ pub fn on_done(transfer: Transfer) {
             };
             node.update_timeline_by_ref(
                 &transfer.id,
-                nectarlink_core::TimelineKind::Recording,
+                sa6i_link_core::TimelineKind::Recording,
                 &file_name,
                 &detail,
                 &final_path_str,
@@ -1236,7 +1236,7 @@ pub fn on_done(transfer: Transfer) {
             key: final_path.to_string_lossy().into_owned(),
             title: tr!("Recordings", "Recording from %1 saved", device),
             body,
-            attribution: "NectarLink".into(),
+            attribution: "Sa6i Link".into(),
             icon: None,
             image: None,
             actions: vec![(ACTION_OPEN.into(), "Open".into()), (ACTION_SHOW.into(), "Show in folder".into())],

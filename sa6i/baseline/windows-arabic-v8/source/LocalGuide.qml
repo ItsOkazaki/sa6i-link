@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Sa6i Link's local quick guide. No external URLs; Arabic follows the application language setting.
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 Item {
     id: guide

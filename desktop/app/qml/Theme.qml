@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma Singleton
 import QtQuick
-import app.nectarlink
+import sa6i.link
 
 // The active theme: Bloom (Material You, seed presets, the default), Hive
-// (honey on charcoal or wax), Glass, or Graphite (paper and slate), light
-// or dark, resolved from Preferences and the system. Colors
+// (honey on charcoal or wax), Signal (the Sa6i ecosystem brand: Midnight and
+// Deep Navy, electric violet on cyan), Glass, or Graphite (paper and slate),
+// light or dark, resolved from Preferences and the system. Colors
 // come from Tokens (generated from docs/design/tokens.json); Material's
 // "onX" roles are named "xContent" because QML reserves the "on" prefix.
 QtObject {
@@ -14,6 +15,7 @@ QtObject {
     readonly property bool hive: Preferences.theme === "hive"
     readonly property bool graphite: Preferences.theme === "graphite"
     readonly property bool glass: Preferences.theme === "glass" || Preferences.theme === "blurry"
+    readonly property bool signal: Preferences.theme === "signal"
     readonly property bool dark: Preferences.colorMode === "dark"
                                  || (Preferences.colorMode === "system" && AppController.systemDark)
     readonly property bool amoled: dark && Preferences.amoled && (graphite || Preferences.seed === "black")
@@ -112,10 +114,12 @@ QtObject {
           : (seed === "wallpaper" ? wallpaperSeed : bloomSeeds[seed])
     readonly property var palette: hive
         ? Tokens.data.themes.hive.variants[dark ? "comb" : "wax"]
-        : (graphite
-            ? Tokens.data.themes.graphite.variants[dark ? "slate" : "paper"]
-            : seedColors[dark ? "dark" : "light"])
-    readonly property var status: graphite || hive ? palette : Tokens.data.themes.bloom.status[dark ? "dark" : "light"]
+        : graphite
+          ? Tokens.data.themes.graphite.variants[dark ? "slate" : "paper"]
+          : signal
+            ? Tokens.data.themes.signal.variants[dark ? "midnight" : "daylight"]
+            : seedColors[dark ? "dark" : "light"]
+    readonly property var status: graphite || hive || signal ? palette : Tokens.data.themes.bloom.status[dark ? "dark" : "light"]
 
     // ---- Color roles ----
     readonly property color primary: palette.primary
@@ -153,6 +157,7 @@ QtObject {
             return Qt.rgba(c.r, c.g, c.b, dark ? 0.90 : 0.92)
         })()
         : graphite ? "transparent"
+        : signal ? surfaceContainer
         : (glass
             ? Qt.tint(
                 Qt.rgba(surfaceContainer.r, surfaceContainer.g, surfaceContainer.b, amoled ? 0.56 : (dark ? 0.36 : 0.52)),
@@ -170,6 +175,7 @@ QtObject {
     readonly property color cardBorder: hive
         ? Qt.rgba(primary.r, primary.g, primary.b, dark ? 0.14 : 0.16)
         : graphite ? outlineVariant
+        : signal ? outlineVariant
         : (glass
             ? (dark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.28))
             : (artworkAmbientActive
@@ -178,6 +184,7 @@ QtObject {
     readonly property color tileColor: hive
         ? Qt.tint(surfaceContainerHigh, Qt.rgba(primaryContainer.r, primaryContainer.g, primaryContainer.b, dark ? 0.14 : 0.20))
         : graphite ? "transparent"
+        : signal ? surfaceContainerHigh
         : (glass
             ? Qt.tint(
                 Qt.rgba(1, 1, 1, dark ? 0.08 : 0.48),
@@ -202,7 +209,7 @@ QtObject {
         )
     readonly property color heroContent: graphite ? surfaceContent : primaryContainerContent
     // Hive's rail is the comb itself.
-    readonly property color railColor: graphite || hive ? "transparent"
+    readonly property color railColor: graphite || hive || signal ? "transparent"
         : (glass
             ? Qt.rgba(surfaceLow.r, surfaceLow.g, surfaceLow.b, amoled ? 0.48 : (dark ? 0.28 : 0.42))
             : (artworkAmbientActive
@@ -221,8 +228,11 @@ QtObject {
     readonly property color scrim: Qt.rgba(0, 0, 0, dark ? 0.5 : 0.32)
 
     // ---- Shape ----
-    readonly property var shape: graphite ? Tokens.data.themes.graphite.shape
-        : (hive ? Tokens.data.themes.hive.shape : Tokens.data.themes.bloom.shape)
+    readonly property var shape: graphite
+        ? Tokens.data.themes.graphite.shape
+        : hive
+          ? Tokens.data.themes.hive.shape
+          : signal ? Tokens.data.themes.signal.shape : Tokens.data.themes.bloom.shape
     readonly property int radiusXs: shape.xs
     readonly property int radiusSm: shape.sm
     readonly property int radiusMd: shape.md
@@ -236,13 +246,17 @@ QtObject {
     readonly property string fontUi: "Figtree"
     readonly property string fontDisplay: graphite ? "Instrument Serif" : "Figtree"
     readonly property string fontMono: "Space Mono"
-    // Caption button glyphs: Segoe Fluent Icons ships with Windows 11 only;
-    // Windows 10's Segoe MDL2 Assets has the same code points.
+    // Windows 7 may have neither icon font. An empty family makes caption
+    // buttons use their vector paths instead of unrelated fallback glyphs.
     readonly property string captionIconFont: Qt.fontFamilies().indexOf("Segoe Fluent Icons") >= 0
-        ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
+        ? "Segoe Fluent Icons"
+        : (Qt.fontFamilies().indexOf("Segoe MDL2 Assets") >= 0 ? "Segoe MDL2 Assets" : "")
     readonly property var typography: Tokens.data.typography
-    readonly property var labelStyle: graphite ? Tokens.data.themes.graphite.label
-        : (hive ? Tokens.data.themes.hive.label : Tokens.data.themes.bloom.label)
+    readonly property var labelStyle: graphite
+        ? Tokens.data.themes.graphite.label
+        : hive
+          ? Tokens.data.themes.hive.label
+          : signal ? Tokens.data.themes.signal.label : Tokens.data.themes.bloom.label
 
     // ---- Layout and spacing ----
     readonly property var layout: Tokens.data.layout.desktop

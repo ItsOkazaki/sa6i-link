@@ -12,7 +12,7 @@ spec.loader.exec_module(release)
 
 
 def synthetic_table(count=10):
-    strings = [f'Download/Nectarlink {i}' for i in range(count)] + ['unchanged']
+    strings = [f'Download/Sa6iLink {i}' for i in range(count)] + ['unchanged']
     payload, offsets = bytearray(), []
     for s in strings:
         raw = s.encode()
@@ -31,7 +31,7 @@ class ReleaseCandidateTest(unittest.TestCase):
         old = synthetic_table()
         new = release.patch_resource_table(old)
         self.assertEqual(new.count(b'Download/Sa6i Link'), 10)
-        self.assertNotIn(b'Download/Nectarlink', new)
+        self.assertNotIn(b'Download/Sa6iLink', new)
         self.assertIn(b'unchanged\0', new)
         self.assertTrue(new.endswith(b'package chunk unchanged'))
         self.assertEqual(struct.unpack_from('<I', new, 4)[0], len(new))

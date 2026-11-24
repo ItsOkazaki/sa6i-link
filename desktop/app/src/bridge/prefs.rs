@@ -81,7 +81,7 @@ pub mod qobject {
         #[qproperty(i32, battery_full_threshold)]
         /// Folder where voice recordings from phones are saved.
         #[qproperty(QString, recordings_folder)]
-        /// Whether `recordings_folder` is the default (`Documents\Nectarlink Recordings`).
+        /// Whether `recordings_folder` is the default (`Documents\Sa6iLink Recordings`).
         #[qproperty(bool, recordings_folder_is_default)]
         /// "m4a", "mp3", "wav" or "flac".
         #[qproperty(QString, recordings_format)]
@@ -107,16 +107,16 @@ pub mod qobject {
         #[qproperty(bool, open_shared_files)]
         /// Send the clipboard to the phone when control moves to it.
         #[qproperty(bool, flow_follow_clipboard)]
-        /// Floating Nectar Island pill at the top center of the screen.
-        #[qproperty(bool, nectar_island)]
-        /// Trigger Nectar Island for phone calls.
-        #[qproperty(bool, nectar_island_calls)]
-        /// Trigger Nectar Island for file transfers.
-        #[qproperty(bool, nectar_island_transfers)]
-        /// Trigger Nectar Island for media playback.
-        #[qproperty(bool, nectar_island_media)]
-        /// Trigger Nectar Island for phone notifications.
-        #[qproperty(bool, nectar_island_notifications)]
+        /// Floating Sa6i Island pill at the top center of the screen.
+        #[qproperty(bool, island)]
+        /// Trigger Sa6i Island for phone calls.
+        #[qproperty(bool, island_calls)]
+        /// Trigger Sa6i Island for file transfers.
+        #[qproperty(bool, island_transfers)]
+        /// Trigger Sa6i Island for media playback.
+        #[qproperty(bool, island_media)]
+        /// Trigger Sa6i Island for phone notifications.
+        #[qproperty(bool, island_notifications)]
         /// Stream PC system audio to the connected phone via WASAPI loopback.
         #[qproperty(bool, stream_pc_audio_to_phone)]
         /// Share PC user folders (Downloads, Documents, Desktop, Pictures) with phones.
@@ -190,7 +190,7 @@ pub mod qobject {
         /// Sets the folder where voice recordings are saved (from a `file:` URL or path).
         #[qinvokable]
         fn choose_recordings_folder(self: Pin<&mut Preferences>, url: &QString);
-        /// Resets the recordings folder to `Documents\Nectarlink Recordings`.
+        /// Resets the recordings folder to `Documents\Sa6iLink Recordings`.
         #[qinvokable]
         fn reset_recordings_folder(self: Pin<&mut Preferences>);
         /// Adds a folder sync rule between a phone folder and a PC folder.
@@ -337,11 +337,11 @@ pub struct PreferencesRust {
     clipboard_auto_copy_received_files: bool,
     open_shared_files: bool,
     flow_follow_clipboard: bool,
-    nectar_island: bool,
-    nectar_island_calls: bool,
-    nectar_island_transfers: bool,
-    nectar_island_media: bool,
-    nectar_island_notifications: bool,
+    island: bool,
+    island_calls: bool,
+    island_transfers: bool,
+    island_media: bool,
+    island_notifications: bool,
     stream_pc_audio_to_phone: bool,
     share_pc_storage: bool,
     forward_pc_notifications_to_phone: bool,
@@ -375,6 +375,7 @@ impl cxx_qt::Initialize for qobject::Preferences {
             Theme::Bloom => "bloom",
             Theme::Glass => "glass",
             Theme::Graphite => "graphite",
+            Theme::Signal => "signal",
         }));
         self.as_mut().set_seed(QString::from(&settings.seed));
         self.as_mut().set_color_mode(QString::from(match settings.color_mode {
@@ -433,11 +434,11 @@ impl cxx_qt::Initialize for qobject::Preferences {
         self.as_mut().set_clipboard_auto_copy_received_files(settings.clipboard_auto_copy_received_files);
         self.as_mut().set_open_shared_files(settings.open_shared_files);
         self.as_mut().set_flow_follow_clipboard(settings.flow_follow_clipboard);
-        self.as_mut().set_nectar_island(settings.nectar_island);
-        self.as_mut().set_nectar_island_calls(settings.nectar_island_calls);
-        self.as_mut().set_nectar_island_transfers(settings.nectar_island_transfers);
-        self.as_mut().set_nectar_island_media(settings.nectar_island_media);
-        self.as_mut().set_nectar_island_notifications(settings.nectar_island_notifications);
+        self.as_mut().set_island(settings.island);
+        self.as_mut().set_island_calls(settings.island_calls);
+        self.as_mut().set_island_transfers(settings.island_transfers);
+        self.as_mut().set_island_media(settings.island_media);
+        self.as_mut().set_island_notifications(settings.island_notifications);
         self.as_mut().set_stream_pc_audio_to_phone(settings.stream_pc_audio_to_phone);
         self.as_mut().set_share_pc_storage(settings.share_pc_storage);
         self.as_mut().set_forward_pc_notifications_to_phone(settings.forward_pc_notifications_to_phone);
@@ -604,9 +605,9 @@ impl cxx_qt::Initialize for qobject::Preferences {
             .on_timeline_retention_days_changed(|p| {
                 let days = p.timeline_retention_days.max(0) as u32;
                 if let Some(node) = core_host::node() {
-                    let _ = node.set_timeline_retention(nectarlink_core::TimelineRetention {
+                    let _ = node.set_timeline_retention(sa6i_link_core::TimelineRetention {
                         max_days: days,
-                        max_entries: nectarlink_core::DEFAULT_TIMELINE_MAX_ENTRIES,
+                        max_entries: sa6i_link_core::DEFAULT_TIMELINE_MAX_ENTRIES,
                     });
                 }
                 p.save();
@@ -697,15 +698,15 @@ impl cxx_qt::Initialize for qobject::Preferences {
             })
             .release();
         self.as_mut()
-            .on_nectar_island_changed(|p| {
-                crate::settings::set_nectar_island(p.nectar_island);
+            .on_island_changed(|p| {
+                crate::settings::set_island(p.island);
                 p.save();
             })
             .release();
-        self.as_mut().on_nectar_island_calls_changed(|p| p.save()).release();
-        self.as_mut().on_nectar_island_transfers_changed(|p| p.save()).release();
-        self.as_mut().on_nectar_island_media_changed(|p| p.save()).release();
-        self.as_mut().on_nectar_island_notifications_changed(|p| p.save()).release();
+        self.as_mut().on_island_calls_changed(|p| p.save()).release();
+        self.as_mut().on_island_transfers_changed(|p| p.save()).release();
+        self.as_mut().on_island_media_changed(|p| p.save()).release();
+        self.as_mut().on_island_notifications_changed(|p| p.save()).release();
         self.as_mut()
             .on_stream_pc_audio_to_phone_changed(|p| {
                 crate::settings::set_stream_pc_audio_to_phone(p.stream_pc_audio_to_phone);
@@ -760,6 +761,7 @@ impl qobject::Preferences {
             Theme::Bloom => "bloom",
             Theme::Glass => "glass",
             Theme::Graphite => "graphite",
+            Theme::Signal => "signal",
         });
         let disk_mode = QString::from(match disk.color_mode {
             ColorMode::System => "system",
@@ -1045,6 +1047,7 @@ impl qobject::Preferences {
                 "hive" => Theme::Hive,
                 "graphite" => Theme::Graphite,
                 "glass" | "blurry" => Theme::Glass,
+                "signal" => Theme::Signal,
                 _ => Theme::Bloom,
             },
             seed: String::from(&p.seed),
@@ -1095,11 +1098,11 @@ impl qobject::Preferences {
             open_shared_files: p.open_shared_files,
             flow_follow_clipboard: p.flow_follow_clipboard,
             folder_sync_rules: crate::settings::folder_sync_rules(),
-            nectar_island: p.nectar_island,
-            nectar_island_calls: p.nectar_island_calls,
-            nectar_island_transfers: p.nectar_island_transfers,
-            nectar_island_media: p.nectar_island_media,
-            nectar_island_notifications: p.nectar_island_notifications,
+            island: p.island,
+            island_calls: p.island_calls,
+            island_transfers: p.island_transfers,
+            island_media: p.island_media,
+            island_notifications: p.island_notifications,
             automation_rules: crate::settings::automation_rules(),
             stream_pc_audio_to_phone: p.stream_pc_audio_to_phone,
             share_pc_storage: p.share_pc_storage,

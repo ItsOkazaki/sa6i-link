@@ -1,6 +1,6 @@
 # Licences and attribution
 
-Sa6i Link is a private test rebrand of **NectarLink 0.1.5**, originally created by thtbee. This is not an official NectarLink build.
+Sa6i Link is a private test rebrand of **Sa6i Link 0.1.5**, originally created by thtbee. This is not an official Sa6i Link build.
 
 | Part | Licence | Where |
 |---|---|---|
@@ -16,11 +16,11 @@ The v8 package also ships copies of the licence texts in
 
 ## Trademarks
 
-NectarLink's [`TRADEMARKS.md`](../TRADEMARKS.md) says modified versions must
+Sa6i Link's [`TRADEMARKS.md`](../TRADEMARKS.md) says modified versions must
 use their own name and logo. Sa6i Link does so (supplied logo and
 `Sa6i-Link.ico`); internal package paths, update URLs and credits were left
 intact by the original patch chain. Do not distribute a modified build under
-the NectarLink name or logo, or imply endorsement.
+the Sa6i Link name or logo, or imply endorsement.
 
 ## Review tools
 

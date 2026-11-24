@@ -1,0 +1,13 @@
+{
+  "name": "disk-slow-transfers-just-under",
+  "about": "99 ms per transfer for twelve minutes: one millisecond under the line, held well past the window. A mechanical disk doing a backup looks exactly like this and is not being reported as failing.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 20,
+      "memory_percent": 50,
+      "disk_seconds_per_transfer": 0.099
+    }
+  ],
+  "quiets": ["disk.slow_transfers"]
+}

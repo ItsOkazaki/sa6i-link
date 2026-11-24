@@ -1,0 +1,12 @@
+{
+  "name": "memory-commit-eighty-nine-is-not-ninety",
+  "about": "Commit sits at 89.5 % for six minutes: adjacent to the threshold, never over it, and held for longer than the window. The cheap near-miss - a machine nowhere near the number - would not catch an off-by-one.",
+  "segments": [
+    {
+      "minutes": 6,
+      "memory_percent": 50,
+      "commit_percent": 89.5
+    }
+  ],
+  "quiets": ["memory.commit_pressure"]
+}

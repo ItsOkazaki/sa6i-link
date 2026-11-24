@@ -1,0 +1,20 @@
+# The numbers the commit-charge rule decides with.
+#
+# Separate from `memory.toml` because the two rules answer different questions:
+# `memory.pressure` asks whether RAM is running out, this one whether the system
+# has run out of promises. A machine can be at 50 % of RAM and 97 % of commit,
+# and it is the second number that closes programs.
+
+[[rule]]
+id = "memory.commit_pressure"
+severity = "warning"
+confidence = "likely"
+requires = ["memory.commit_used_bytes", "memory.commit_limit_bytes"]
+
+# Higher than the physical-memory threshold on purpose: commit includes the
+# pagefile, so 90 % of it is a warning where 90 % of RAM is already a problem.
+warn_percent = 90.0
+sustained = "5m"
+
+firing = "memory-commit-tight-for-six-minutes"
+near_miss = "memory-commit-two-minutes-is-not-five"

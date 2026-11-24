@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline QA: LanguageTool localhost and AyaSpell/Hunspell. Reports, never auto-replaces."""
 import xml.etree.ElementTree as E, re, csv, json, bisect, subprocess, collections, os, requests, concurrent.futures
-P='/home/user/Sa6i-Arabic-work'; OUT=os.environ.get('AUDIT_PREFIX',''); win=os.environ.get('AUDIT_WIN','nectarlink_ar-DRAFT.ts'); android=os.environ.get('AUDIT_ANDROID','android-ar-DRAFT-strings.xml'); records=[]
+P='/home/user/Sa6i-Arabic-work'; OUT=os.environ.get('AUDIT_PREFIX',''); win=os.environ.get('AUDIT_WIN','sa6i-link_ar-DRAFT.ts'); android=os.environ.get('AUDIT_ANDROID','android-ar-DRAFT-strings.xml'); records=[]
 t=E.parse(P+'/'+win)
 for c in t.findall('./context'):
  ctx=c.findtext('name') or ''

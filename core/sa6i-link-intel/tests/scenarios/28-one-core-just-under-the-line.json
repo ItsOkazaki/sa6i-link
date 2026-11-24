@@ -1,0 +1,13 @@
+{
+  "name": "one-core-just-under-the-line",
+  "about": "Core 0 at 94 % for twelve minutes: one point under the pin threshold and held well past the window. A program that is merely busy on one thread is not a pinned core, and a rule that said so would fire on every browser tab.",
+  "segments": [
+    {
+      "minutes": 12,
+      "cpu_percent": 22,
+      "memory_percent": 50,
+      "cores": [94, 11, 12, 9, 13, 10, 11, 12]
+    }
+  ],
+  "quiets": ["cpu.one_core_pinned", "cpu.sustained_high"]
+}

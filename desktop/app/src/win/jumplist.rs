@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Windows Taskbar Jump List: quick user tasks when right-clicking the
-//! NectarLink icon on the taskbar or Start menu (`ICustomDestinationList`).
+//! Sa6i Link icon on the taskbar or Start menu (`ICustomDestinationList`).
 
 use std::path::Path;
 
@@ -20,7 +20,7 @@ use windows::{
 
 use super::with_com;
 
-/// The command-line flag Jump List tasks pass back to NectarLink.
+/// The command-line flag Jump List tasks pass back to Sa6i Link.
 pub const ARG: &str = "--task";
 
 /// The 5 user tasks shown in the Windows Taskbar Jump List: `(action, title, description)`.
@@ -44,6 +44,11 @@ pub fn build_task_arguments(action: &str, custom_data_dir: Option<&Path>) -> Str
 
 /// Registers the 5 user tasks in the Windows Taskbar Jump List for [`crate::win::toast::AUMID`].
 pub fn register(custom_data_dir: Option<&Path>) {
+    // The Jump List is shared by app ID, not by --data-dir. Never replace a
+    // user's normal links with links to the experimental executable.
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     let Ok(exe) = std::env::current_exe() else { return };
     if let Err(e) = try_register(&exe, custom_data_dir) {
         tracing::debug!(error = %e, "couldn't update the taskbar Jump List");
@@ -89,6 +94,9 @@ fn try_register(exe: &Path, custom_data_dir: Option<&Path>) -> windows::core::Re
 
 /// Removes the app's Jump List when uninstalling.
 pub fn unregister() {
+    if cfg!(sa6i_clean_experiment) {
+        return;
+    }
     with_com(|| {
         // SAFETY: Standard Win32 Shell COM call on `ICustomDestinationList`.
         unsafe {
@@ -108,10 +116,10 @@ mod tests {
     #[test]
     fn task_arguments_preserve_custom_data_dir() {
         assert_eq!(build_task_arguments("send-files", None), "--task send-files");
-        let custom = Path::new(r"C:\Temp\nectarlink-test");
+        let custom = Path::new(r"C:\Temp\sa6i-link-test");
         assert_eq!(
             build_task_arguments("find-phone", Some(custom)),
-            r#"--data-dir "C:\Temp\nectarlink-test" --task find-phone"#
+            r#"--data-dir "C:\Temp\sa6i-link-test" --task find-phone"#
         );
         assert_eq!(TASKS.len(), 5);
     }
