@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Desktop report
+
+# Why this exists. ci.yml builds the app on three platforms, and on the first run it
+# ever did, every app job stopped at Clippy or at Release build. The step name tells
+# you where it stopped and nothing else: a job's log is a signed blob URL that the
+# machine this repository is worked from cannot fetch. So this workflow runs the same
+# two commands with the same Qt, and publishes what they said into one rolling issue -
+# the channel rust-check.yml already uses, for the same reason.
+#
+# It is not a replacement for ci.yml and it should be deleted once the app builds. It
+# builds nothing, tests nothing and ships nothing; it explains.
+
+on:
+  push:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "core/**"
+      - "desktop/**"
+      - "spikes/**"
+      - "tools/xtask/**"
+      - ".github/workflows/desktop-report.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: desktop-report-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: never
+  CARGO_INCREMENTAL: "0"
+  QT_VERSION: "6.12.0"
+
+jobs:
+  windows:
+    name: The app, as ci.yml builds it
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+          # Qt 6.12's repository layout needs a current aqtinstall.
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git
+
+      - name: Clippy the app, and build it in release
+        run: |
+          set +e
+          {
+            echo "## toolchain"
+            rustc --version || true
+            echo
+            echo "## cargo clippy -p sa6i-link -p sa6i-vcam -p s1-qt-rust --all-targets -- -D warnings"
+            cargo clippy --locked -p sa6i-link -p sa6i-vcam -p s1-qt-rust \
+              --all-targets -- -D warnings 2>&1
+            echo "EXIT:clippy:$?"
+            echo
+            echo "## cargo build --locked --release -p sa6i-link -p sa6i-vcam"
+            cargo build --locked --release -p sa6i-link -p sa6i-vcam 2>&1
+            echo "EXIT:release:$?"
+          } > "$RUNNER_TEMP/report.txt"
+          exit 0
+
+      - name: Publish what it said
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### Desktop report - $(date -u +%Y-%m-%dT%H:%MZ)"
+            echo
+            echo "Commit [\`${GITHUB_SHA:0:7}\`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) ·"
+            echo "[\`run\`](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) ·"
+            echo "exit codes: \`$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | tr '\n' ' ')\`"
+            echo
+            echo "#### What it refused"
+            echo '```text'
+            grep -E -A 6 '^(error(\[E[0-9]+\])?:|warning: unused)' "$RUNNER_TEMP/report.txt" \
+              | head -300 || true
+            echo '```'
+            echo
+            echo "#### The last forty lines"
+            echo '```text'
+            tail -40 "$RUNNER_TEMP/report.txt"
+            echo '```'
+          } > "$RUNNER_TEMP/body.md"
+          head -c 55000 "$RUNNER_TEMP/body.md" > "$RUNNER_TEMP/body.cut.md"
+          n=$(gh issue list --search 'in:title "Desktop report"' --limit 20 \
+                --json number,title --jq '.[] | select(.title == "Desktop report") | .number' \
+                | head -1 || true)
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body-file "$RUNNER_TEMP/body.cut.md" \
+              || echo "could not update issue #$n"
+          else
+            gh issue create --title "Desktop report" --body-file "$RUNNER_TEMP/body.cut.md" \
+              || echo "could not file the report"
+          fi
+
+      - name: Fail when either command did
+        run: |
+          codes=$(grep -o 'EXIT:[a-z]*:[0-9]*' "$RUNNER_TEMP/report.txt" | cut -d: -f3 | sort -u | tr '\n' ' ')
+          echo "exit codes: $codes"
+          if grep -q 'EXIT:[a-z]*:[1-9]' "$RUNNER_TEMP/report.txt"; then
+            exit 1
+          fi
