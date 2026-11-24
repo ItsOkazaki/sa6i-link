@@ -60,8 +60,9 @@ jobs:
       - name: Unused Python, by vulture
         run: |
           python3 -m pip install --quiet vulture
+          { vulture --version; echo "--- whole tree, 60 % confidence"; } > vulture.txt
           vulture . --min-confidence 60 \
-            --exclude "node_modules,third_party,.git,target" | tee vulture.txt || true
+            --exclude "node_modules,third_party,.git,target" >> vulture.txt 2>&1 || true
 
       - uses: taiki-e/install-action@v2
         with:
@@ -70,7 +71,14 @@ jobs:
       - name: Unused Rust dependencies, by cargo-machete
         run: |
           # No build: machete reads manifests and greps the crates' sources.
-          cargo machete --with-metadata . 2>&1 | tee machete.txt || true
+          # Its exit code is the answer - 0 none, 1 unused found, 2 error - so it
+          # is written into the file instead of being thrown away by `|| true`.
+          { cargo machete --version; echo "--- every crate in the workspace"; } > machete.txt
+          set +e
+          cargo machete . >> machete.txt 2>&1
+          code=$?
+          set -e
+          echo "--- exit $code (0 = none, 1 = found some, 2 = error)" >> machete.txt
 
       - name: Say what the scans are allowed to mean
         if: always()
@@ -78,6 +86,16 @@ jobs:
           echo "Nothing was deleted: these jobs run scanners, not 'cut'."
           echo "A cut may only follow a check that passes, and this repository has no"
           echo "compiled test suite yet; see docs/audit/DEAD-CODE-SCAN.md."
+
+      - name: Prove each scanner actually ran
+        # `|| true` keeps a candidate list from turning the build red, but it also
+        # makes "found nothing" and "never ran" look identical in the artifact. Each
+        # file starts with its tool's version, so this step can tell them apart.
+        run: |
+          grep -q "shrink-anything" shrink-scan.txt || { echo "shrink-anything did not run"; exit 1; }
+          grep -q "vulture" vulture.txt || { echo "vulture did not run"; exit 1; }
+          grep -q "machete" machete.txt || { echo "cargo-machete did not run"; exit 1; }
+          echo "all three scanners ran"
 
       - uses: actions/upload-artifact@v4
         if: always()
