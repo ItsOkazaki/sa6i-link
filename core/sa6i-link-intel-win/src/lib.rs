@@ -331,7 +331,9 @@ mod platform {
         let bytes = (written as usize).min(buffer.len() * WORD);
         let count = bytes / PER_PROCESSOR;
         let mut cores = Vec::with_capacity(count);
-        for processor in buffer[..count * 6].chunks_exact(6) {
+        // `as_chunks` rather than `chunks_exact`: clippy names it, and it hands out
+        // `&[u64; 6]`, so the six-word shape is the type rather than a comment.
+        for processor in buffer[..count * 6].as_chunks::<6>().0 {
             cores.push(CpuTimes { idle: processor[0], kernel: processor[1], user: processor[2] });
         }
         Some(cores)

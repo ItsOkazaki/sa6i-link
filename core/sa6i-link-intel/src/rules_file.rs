@@ -295,7 +295,8 @@ fn apply(id: &str, entry: &Entry, limits: &mut Thresholds, refusals: &mut Vec<Re
             if let (Some(warn), Some(critical)) = (warn, critical)
                 && warn >= critical
             {
-                refusals.push(Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" });
+                refusals
+                    .push(Refusal::InvertedRange { id: "disk.low_free_space", key: "critical_percent" });
             }
             if let Some(warn) = warn {
                 limits.disk_warn_percent = warn;
