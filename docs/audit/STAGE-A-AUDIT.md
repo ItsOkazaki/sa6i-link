@@ -72,8 +72,15 @@ Evidence types:
 | **Doctor** | System diagnosis, event log analysis, disk health, startup analysis | **absent** | `doctor.rs` is the *Connection* Doctor only |
 | **Monitor** | CPU/RAM/disk/GPU telemetry, process list, history | **absent** | only `GetDiskFreeSpace`-class calls in `win/mod.rs` and `transfer.rs` |
 | **Security** | Config checks, persistence inspection, network inspection | **absent** | — |
-| **Assistant** | Natural language, shared context, explainable diagnosis | **absent** | zero `ollama`/`llm` references in the tree |
+| **Assistant** | Natural language, shared context, explainable diagnosis | **absent** | no `.rs`, `.qml` or `.toml` file mentions `ollama` or an LLM; see the correction below |
 | **Intelligence** | Rule engine, evidence model, action registry, audit log | **absent** | — |
+
+**Correction, 2026-11-16.** The Assistant row used to read *zero `ollama`/`llm`
+references in the tree*, which the row's own text contradicted and which stops being
+true the moment a document explains what is missing. What was checked, and is true,
+is narrower: no source file — no `.rs`, `.qml` or `.toml` — mentions either, so the
+absence is in the code and not only in the prose. The documents that name Ollama are
+the ones saying it is not built.
 
 Everything under "Link" is the genuine asset here: a working, tested bridge
 with a capability matrix, not a mock-up. Everything under Doctor/Monitor/
