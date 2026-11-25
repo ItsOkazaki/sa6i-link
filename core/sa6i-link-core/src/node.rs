@@ -1543,7 +1543,7 @@ fn handle_dial_result(
     }
 }
 
-/// Accepts `sa6i-link/0` sessions from paired devices.
+/// Accepts `nectarlink/0` sessions from paired devices.
 #[derive(Debug, Clone)]
 struct SessionProtocol(Weak<Shared>);
 
@@ -1575,7 +1575,7 @@ impl ProtocolHandler for SessionProtocol {
     }
 }
 
-/// Accepts `sa6i-link-pair/0` connections while pairing.
+/// Accepts `nectarlink-pair/0` connections while pairing.
 #[derive(Debug, Clone)]
 struct PairProtocol(Weak<Shared>);
 
@@ -4211,7 +4211,8 @@ fn start_lan_discovery(shared: &Arc<Shared>, name: &str) -> Result<()> {
 /// [`MDNS_SLOW`], in place of the one running. iroh can't drop a single
 /// address lookup, so a swap clears them all and puts the others back.
 fn install_mdns(shared: &Arc<Shared>, fast: bool) -> Result<()> {
-    let builder = MdnsAddressLookup::builder().service_name("sa6i-link").discovery_cadence(if fast {
+    // Service name is a compatibility identifier, not a user-visible brand.
+    let builder = MdnsAddressLookup::builder().service_name("nectarlink").discovery_cadence(if fast {
         MDNS_FAST
     } else {
         MDNS_SLOW

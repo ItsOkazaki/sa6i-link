@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! The pairing ceremony (protocol §9) over the `sa6i-link-pair/0` ALPN.
+//! The pairing ceremony (protocol §9) over the `nectarlink-pair/0` ALPN.
 //!
 //! Two flows:
 //! - **QR**: the host (PC) shows a pairing link with a one-time secret; the

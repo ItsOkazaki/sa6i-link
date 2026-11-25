@@ -19,10 +19,11 @@ pub use frame::{MAX_FRAME_LEN, decode_frame, encode_frame, read_frame, write_fra
 pub use id::{DeviceId, ParseDeviceIdError};
 pub use video::{MAX_VIDEO_PACKET, PacketKind, VideoPacket, read_video_packet, video_packet_header};
 
+/// Wire identifiers intentionally retain the upstream name for compatibility.
 /// ALPN for normal sessions between paired devices.
-pub const ALPN_SESSION: &[u8] = b"sa6i-link/0";
+pub const ALPN_SESSION: &[u8] = b"nectarlink/0";
 /// ALPN for the pairing ceremony.
-pub const ALPN_PAIR: &[u8] = b"sa6i-link-pair/0";
+pub const ALPN_PAIR: &[u8] = b"nectarlink-pair/0";
 
 /// Protocol version spoken by this implementation.
 pub const PROTOCOL_VERSION: u32 = 0;
@@ -43,6 +44,12 @@ pub fn negotiate_version(local: (u32, u32), remote: (u32, u32)) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn legacy_phone_wire_identifiers_are_stable() {
+        assert_eq!(ALPN_SESSION, b"nectarlink/0");
+        assert_eq!(ALPN_PAIR, b"nectarlink-pair/0");
+    }
 
     #[test]
     fn negotiates_lowest_common_version() {

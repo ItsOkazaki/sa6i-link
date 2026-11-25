@@ -18,8 +18,9 @@ pub const SECRET_LEN: usize = 16;
 /// Length of the nonces used in the nearby (numeric comparison) flow.
 pub const NONCE_LEN: usize = 16;
 
-const PROOF_LABEL: &[u8] = b"sa6i-link-pair-v0";
-const SAS_LABEL: &[u8] = b"sa6i-link-sas-v0";
+// These labels and the URI scheme are protocol values, not product branding.
+const PROOF_LABEL: &[u8] = b"nectarlink-pair-v0";
+const SAS_LABEL: &[u8] = b"nectarlink-sas-v0";
 
 /// Contents of the pairing QR code shown by the PC.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,9 +44,9 @@ pub enum PairingUriError {
 }
 
 impl PairingUri {
-    /// `sa6i-link://pair?v=0&id=…&s=…&n=…[&a=ip:port,…]`
+    /// `nectarlink://pair?v=0&id=…&s=…&n=…[&a=ip:port,…]`
     pub fn to_uri(&self) -> String {
-        let mut url = Url::parse("sa6i-link://pair").expect("static URL");
+        let mut url = Url::parse("nectarlink://pair").expect("static URL");
         {
             let mut q = url.query_pairs_mut();
             q.append_pair("v", "0");
@@ -62,7 +63,7 @@ impl PairingUri {
 
     pub fn parse(uri: &str) -> Result<Self, PairingUriError> {
         let url = Url::parse(uri.trim()).map_err(|_| PairingUriError::NotPairing)?;
-        if url.scheme() != "sa6i-link" || url.host_str() != Some("pair") {
+        if url.scheme() != "nectarlink" || url.host_str() != Some("pair") {
             return Err(PairingUriError::NotPairing);
         }
         let get = |key: &str| url.query_pairs().find(|(k, _)| k == key).map(|(_, v)| v.into_owned());
@@ -102,7 +103,7 @@ fn proof_mac(secret: &[u8; SECRET_LEN], joining: &DeviceId, host: &DeviceId) -> 
 }
 
 /// Proof that the joining device (phone) scanned the host's (PC's) QR code:
-/// `HMAC-SHA256(S, "sa6i-link-pair-v0" || joining_id || host_id)`.
+/// `HMAC-SHA256(S, "nectarlink-pair-v0" || joining_id || host_id)`.
 pub fn pair_proof(secret: &[u8; SECRET_LEN], joining: &DeviceId, host: &DeviceId) -> [u8; 32] {
     proof_mac(secret, joining, host).finalize().into_bytes().into()
 }
@@ -131,7 +132,7 @@ pub fn verify_commitment(commitment_bytes: &[u8], n_a: &[u8]) -> bool {
 }
 
 /// The 6-digit short authentication string both screens show:
-/// `uint32(HMAC-SHA256(nA || nB, "sa6i-link-sas-v0" || idA || idB)[0..4]) mod 1,000,000`,
+/// `uint32(HMAC-SHA256(nA || nB, "nectarlink-sas-v0" || idA || idB)[0..4]) mod 1,000,000`,
 /// where A is the initiator and B the responder.
 pub fn sas_code(n_a: &[u8], n_b: &[u8], id_a: &DeviceId, id_b: &DeviceId) -> String {
     let mut key = Vec::with_capacity(n_a.len() + n_b.len());
@@ -163,7 +164,7 @@ mod tests {
             addrs: vec!["192.168.1.20:41641".parse().unwrap(), "[fe80::1]:41641".parse().unwrap()],
         };
         let text = uri.to_uri();
-        assert!(text.starts_with("sa6i-link://pair?v=0&id="));
+        assert!(text.starts_with("nectarlink://pair?v=0&id="));
         assert_eq!(PairingUri::parse(&text).unwrap(), uri);
     }
 
@@ -177,17 +178,31 @@ mod tests {
     fn uri_errors() {
         assert_eq!(PairingUri::parse("https://example.com"), Err(PairingUriError::NotPairing));
         assert_eq!(
-            PairingUri::parse("sa6i-link://pair?v=9&id=x&s=y"),
+            PairingUri::parse("nectarlink://pair?v=9&id=x&s=y"),
             Err(PairingUriError::UnsupportedVersion("9".into()))
         );
         assert_eq!(
-            PairingUri::parse("sa6i-link://pair?v=0&s=AAAA"),
+            PairingUri::parse("nectarlink://pair?v=0&s=AAAA"),
             Err(PairingUriError::Missing("device ID"))
         );
         let good =
             PairingUri { id: id(1), secret: [0; SECRET_LEN], name: "x".into(), addrs: vec![] }.to_uri();
         let bad_secret = good.replace("s=AAAAAAAAAAAAAAAAAAAAAA", "s=AAAA");
         assert_eq!(PairingUri::parse(&bad_secret), Err(PairingUriError::Invalid("secret")));
+    }
+
+    #[test]
+    fn legacy_pairing_vectors() {
+        // Fixed vectors independently derived from the original v0 protocol.
+        assert_eq!(
+            pair_proof(&[5; SECRET_LEN], &id(1), &id(2)),
+            [
+                0x5a, 0xd5, 0xe5, 0x1f, 0xd9, 0xee, 0x1b, 0xa3, 0xa9, 0x19, 0x54, 0x62, 0xde, 0x24, 0x7c,
+                0x5d, 0xf8, 0x79, 0xb4, 0x57, 0x90, 0xc4, 0xe9, 0x20, 0x7a, 0x0a, 0xa3, 0xd3, 0x8d, 0x4e,
+                0xda, 0xd6,
+            ]
+        );
+        assert_eq!(sas_code(&[1; NONCE_LEN], &[2; NONCE_LEN], &id(1), &id(2)), "394142");
     }
 
     #[test]
