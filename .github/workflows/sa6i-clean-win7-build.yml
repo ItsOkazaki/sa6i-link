@@ -83,8 +83,8 @@ jobs:
           data = Path('target/package/Sa6iLink/sa6i-link.exe').read_bytes()
           checks = (
               'Sa6i Clean Integration.exe'.encode('utf-16le'),
-              bytes.fromhex('e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f'),
-              bytes.fromhex('b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f'),
+              bytes.fromhex('2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74'),
+              bytes.fromhex('4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba'),
           )
           if not all(check in data for check in checks):
               raise SystemExit('Full-cleaner fixture markers missing from the desktop binary')

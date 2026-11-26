@@ -20,8 +20,8 @@ CURRENT_PINS = (
     ('62b7546a12ddac85b6fc506b0fb151acd15944ce3a809f9f4c8390965ef1080a', 'resources/app.asar'),
 )
 THEMED_PINS = (
-    ('e991d57efbb8de204a7fb9e9f5b3ef5fe34531e37e77556f66f079545a866a3f', 'Sa6i Clean Integration.exe'),
-    ('b3af2dd8355194905fc929ccd1d40dcaa78542208cc4b0d0612c50bf9d93e83f', 'resources/app.asar'),
+    ('2c9bdd29209ebc58103753a2a66d8b9c840d94054eea368239566b5d42408d74', 'Sa6i Clean Integration.exe'),
+    ('4cbe981c5a473d61a7b679e61db49b4c5a0a052ba5783ce903054b46562a10ba', 'resources/app.asar'),
 )
 
 
