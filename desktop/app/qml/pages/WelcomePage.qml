@@ -32,7 +32,7 @@ Item {
             Txt {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("Welcome to Sa6i Link")
+                text: qsTr("Welcome to Sa6i Hub")
                 role: "displaySmall"
             }
             Txt {
@@ -43,7 +43,7 @@ Item {
                 muted: true
                 text: page.status === "failed"
                       ? qsTr("Sa6i Link couldn't start.")
-                      : qsTr("Your phone and this PC, together. Pair once and they find each other from then on.")
+                      : qsTr("Use Sa6i Link to connect your phone and this PC. Pair once and they can find each other again.")
             }
         }
 

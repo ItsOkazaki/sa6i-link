@@ -161,7 +161,8 @@ NativeWindow {
 
     width: normalWidth
     height: normalHeight
-    title: "Sa6i Link"
+    // Visible window label only; application identity and profile stay unchanged.
+    title: "Sa6i Hub"
 
     function screenKey(s) {
         if (!s) return ""
@@ -763,7 +764,10 @@ NativeWindow {
                 anchors.left: backToHome.visible ? backToHome.right : parent.left
                 anchors.leftMargin: backToHome.visible ? 6 : Theme.contentPadding
                 anchors.verticalCenter: parent.verticalCenter
-                text: window.page === "home" ? qsTr("Home")
+                // Keep the current Link pages while making the active tool clear.
+                width: Math.max(0, Math.min(implicitWidth, topBarActions.x - x - 12))
+                elide: Text.ElideRight
+                text: qsTr("Link") + " · " + (window.page === "home" ? qsTr("Home")
                     : window.page === "timeline" ? qsTr("Timeline")
                     : window.page === "messages" ? qsTr("Messages")
                     : window.page === "calls" ? qsTr("Calls")
@@ -772,7 +776,7 @@ NativeWindow {
                     : window.page === "monitor" ? qsTr("Monitor")
                     : window.page === "deck" ? qsTr("Deck")
                     : window.page === "guide" ? qsTr("Features guide")
-                    : qsTr("Settings")
+                    : qsTr("Settings"))
                 role: "headline"
                 size: 20
             }

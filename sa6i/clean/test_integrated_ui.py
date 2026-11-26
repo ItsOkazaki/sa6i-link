@@ -26,6 +26,19 @@ class IntegratedUiTests(unittest.TestCase):
         self.assertNotIn('CleanEntry {', integration)
         self.assertNotIn('anchors.rightMargin: 160', integration)
 
+    def test_hub_shell_keeps_link_and_clean_navigation_separate(self):
+        main = (ROOT / 'desktop/app/qml/MainWindow.qml').read_text(encoding='utf-8')
+        welcome = (ROOT / 'desktop/app/qml/pages/WelcomePage.qml').read_text(encoding='utf-8')
+        integration = (ROOT / 'desktop/app/qml/components/Sa6iCleanIntegration.qml').read_text(encoding='utf-8')
+        self.assertIn('title: "Sa6i Hub"', main)
+        self.assertIn('qsTr("Link") + " · "', main)
+        self.assertIn('topBarActions.x - x - 12', main)
+        self.assertIn('Welcome to Sa6i Hub', welcome)
+        self.assertIn('Sa6i Link to connect your phone', welcome)
+        self.assertIn('sa6iCleanLoader.item.openClean()', main)
+        self.assertIn('Back to Sa6i Link', integration)
+        self.assertIn('function requestClose(action)', integration)
+
     def test_window_patch_preserves_other_code_and_removes_overlay(self):
         with tempfile.TemporaryDirectory() as tmp:
             main = Path(tmp) / 'main.js'
