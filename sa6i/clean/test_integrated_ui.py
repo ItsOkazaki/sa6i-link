@@ -22,7 +22,7 @@ class IntegratedUiTests(unittest.TestCase):
         self.assertIn('iconPath: Icons.sparkle', actions)
         self.assertIn('sa6iCleanLoader.item.openClean()', actions)
         self.assertIn('id: welcomeCleanBtn', main)
-        self.assertIn('visible: window.welcome && !!sa6iCleanLoader.item', main)
+        self.assertIn('visible: window.welcome && !window.hubActive && !!sa6iCleanLoader.item', main)
         self.assertNotIn('CleanEntry {', integration)
         self.assertNotIn('anchors.rightMargin: 160', integration)
 
@@ -38,6 +38,24 @@ class IntegratedUiTests(unittest.TestCase):
         self.assertIn('sa6iCleanLoader.item.openClean()', main)
         self.assertIn('Back to Sa6i Link', integration)
         self.assertIn('function requestClose(action)', integration)
+
+    def test_dashboard_and_back_paths_keep_link_and_clean_coordinated(self):
+        main = (ROOT / 'desktop/app/qml/MainWindow.qml').read_text(encoding='utf-8')
+        integration = (ROOT / 'desktop/app/qml/components/Sa6iCleanIntegration.qml').read_text(encoding='utf-8')
+        self.assertIn('property bool hubActive: true', main)
+        self.assertIn('objectName: "hubHome"', main)
+        self.assertIn('objectName: "hubOpenLink"', main)
+        self.assertIn('objectName: "hubOpenClean"', main)
+        self.assertIn('objectName: "hubFromLinkButton"', main)
+        self.assertIn('objectName: "hubFromWelcomeButton"', main)
+        self.assertIn('onBackRequested: window.hubActive = true', main)
+        self.assertIn('visible: !window.welcome && !window.hubActive', main)
+        self.assertIn('MouseArea { anchors.fill: parent }', main)
+        self.assertIn('function goBack()', integration)
+        self.assertIn('cleanOpen = false', integration)
+        self.assertIn('backRequested()', integration)
+        self.assertIn('Keys.onReturnPressed: root.goBack()', integration)
+        self.assertIn('onClicked: root.goBack()', integration)
 
     def test_window_patch_preserves_other_code_and_removes_overlay(self):
         with tempfile.TemporaryDirectory() as tmp:

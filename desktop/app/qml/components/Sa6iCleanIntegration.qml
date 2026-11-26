@@ -13,6 +13,8 @@ Item {
     property color headerTextColor: "white"
     // Supplied by the host; used for the cleaner's initial color mode.
     property bool darkTheme: false
+    // Back returns to the tool that opened the cleaner.
+    property bool backToHub: false
     property bool cleanOpen: false
     property bool shuttingDown: false
     // Native child windows do not obey QML z-order. The owner must report
@@ -38,6 +40,11 @@ Item {
     readonly property bool available: !!backend && testDirectory.length > 0
     readonly property bool closePending: closeGate.pending
     signal closeApproved(string action)
+    signal backRequested()
+    function goBack() {
+        cleanOpen = false
+        backRequested()
+    }
 
     function requestHide() {
         if (hideAttemptActive) return false
@@ -155,15 +162,15 @@ Item {
                  : (backMouse.containsMouse ? Qt.rgba(0.5, 0.5, 0.5, 0.14) : "transparent")
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
-            Accessible.name: qsTr("Back to Sa6i Link")
-            Keys.onReturnPressed: root.cleanOpen = false
-            Keys.onSpacePressed: root.cleanOpen = false
+            Accessible.name: root.backToHub ? qsTr("Back to Sa6i Hub") : qsTr("Back to Sa6i Link")
+            Keys.onReturnPressed: root.goBack()
+            Keys.onSpacePressed: root.goBack()
             Component.onCompleted: root.hostWindow.addCaptionHole(backButton)
             Component.onDestruction: root.hostWindow.removeCaptionHole(backButton)
             Text {
                 id: backText
                 anchors.centerIn: parent
-                text: qsTr("Back to Sa6i Link")
+                text: root.backToHub ? qsTr("Back to Sa6i Hub") : qsTr("Back to Sa6i Link")
                 color: root.headerTextColor
                 font.pixelSize: 14
             }
@@ -171,7 +178,7 @@ Item {
                 id: backMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                onClicked: root.cleanOpen = false
+                onClicked: root.goBack()
             }
         }
     }

@@ -11,6 +11,8 @@ NativeWindow {
 
     // Null in normal builds. The experimental backend fails closed if its
     // coordinator cannot be loaded; it must never be unloaded while tracked.
+    // Hub selection is presentation state only. The Link core stays running.
+    property bool hubActive: true
     signal sa6iCloseApproved(string action)
     function requestSa6iClose(action) {
         if (!sa6iCleanBackend) return false
@@ -35,6 +37,8 @@ NativeWindow {
         active: !!window.sa6iCleanBackend
         sourceComponent: Sa6iCleanIntegration {
             hostWindow: window
+            backToHub: true
+            onBackRequested: window.hubActive = true
             titleBarHeight: Theme.topBarHeight
             captionButtonsWidth: captionButtons.width
             headerColor: window.windowSurface
@@ -599,7 +603,7 @@ NativeWindow {
     // ---- Navigation rail ----
     Rectangle {
         id: rail
-        visible: !window.welcome
+        visible: !window.welcome && !window.hubActive
         width: Theme.railWidth
         height: parent.height
         color: "transparent"
@@ -739,7 +743,7 @@ NativeWindow {
     // ---- Title bar and pages ----
     Item {
         id: main
-        visible: !window.welcome
+        visible: !window.welcome && !window.hubActive
         anchors.left: rail.right
         anchors.right: parent.right
         height: parent.height
@@ -870,6 +874,17 @@ NativeWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
 
+                IconButton {
+                    id: hubTopBtn
+                    objectName: "hubFromLinkButton"
+                    anchors.verticalCenter: parent.verticalCenter
+                    iconPath: Icons.home
+                    text: qsTr("Hub")
+                    label: qsTr("Back to Sa6i Hub")
+                    onClicked: window.hubActive = true
+                    Component.onCompleted: window.addCaptionHole(hubTopBtn)
+                    Component.onDestruction: window.removeCaptionHole(hubTopBtn)
+                }
                 // Part of the action row, so Refresh and the other controls
                 // reserve space for Clean rather than drawing underneath it.
                 IconButton {
@@ -1055,6 +1070,7 @@ NativeWindow {
     // ---- First run ----
     Loader {
         anchors.fill: parent
+        visible: !window.hubActive
         active: AppController.status !== "ready"
         source: active ? "qrc:/qt/qml/sa6i/link/qml/pages/WelcomePage.qml" : ""
     }
@@ -1062,6 +1078,7 @@ NativeWindow {
     Loader {
         id: walkthroughLoader
         anchors.fill: parent
+        visible: !window.hubActive
         active: window.showWalkthrough
         source: active ? "qrc:/qt/qml/sa6i/link/qml/pages/WalkthroughPage.qml" : ""
         onLoaded: {
@@ -1071,6 +1088,116 @@ NativeWindow {
                 item.deviceName = Qt.binding(() => window.currentDeviceName)
             item.completed.connect(() => { window.page = "home" })
             item.openGuideRequested.connect(() => { window.page = "guide" })
+        }
+    }
+
+    // Hub home overlays the Link pages without unloading them. Dialog sheets
+    // (z=100), caption buttons and the Clean coordinator stay above it.
+    Item {
+        id: hubHome
+        objectName: "hubHome"
+        anchors.fill: parent
+        z: 10
+        visible: window.hubActive && !(sa6iCleanLoader.item && sa6iCleanLoader.item.cleanOpen)
+
+        Rectangle {
+            anchors.fill: parent
+            color: window.windowSurface
+            // Prevent mouse clicks on the hidden Link view from passing through.
+            MouseArea { anchors.fill: parent }
+        }
+        // Native caption controls remain outside the hub header.
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.rightMargin: captionButtons.width
+            height: Theme.topBarHeight
+            color: window.windowSurface
+            Txt {
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.contentPadding
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Sa6i Hub")
+                role: "headline"
+                size: 20
+            }
+        }
+        Column {
+            id: hubContent
+            anchors.centerIn: parent
+            width: Math.max(0, Math.min(700, parent.width - 48))
+            spacing: 24
+            Txt {
+                width: parent.width
+                text: qsTr("Welcome to Sa6i Hub")
+                horizontalAlignment: Text.AlignHCenter
+                role: "displaySmall"
+            }
+            Txt {
+                width: parent.width
+                text: qsTr("Choose a tool to get started.")
+                horizontalAlignment: Text.AlignHCenter
+                role: "body"
+                muted: true
+                wrapMode: Text.WordWrap
+            }
+            Row {
+                width: parent.width
+                spacing: 20
+                Card {
+                    width: (parent.width - parent.spacing) / 2
+                    height: 220
+                    padding: 24
+                    Column {
+                        width: parent.width
+                        spacing: 16
+                        Txt { width: parent.width; text: qsTr("Sa6i Link"); role: "headline"; size: 20 }
+                        Txt {
+                            width: parent.width; height: 56
+                            text: qsTr("Connect your phone, mirror its screen and share files.")
+                            role: "body"; muted: true; wrapMode: Text.WordWrap
+                        }
+                        Button {
+                            objectName: "hubOpenLink"
+                            text: qsTr("Open Link")
+                            iconPath: Icons.phone
+                            onClicked: window.hubActive = false
+                        }
+                    }
+                }
+                Card {
+                    width: (parent.width - parent.spacing) / 2
+                    height: 220
+                    padding: 24
+                    Column {
+                        width: parent.width
+                        spacing: 16
+                        Txt { width: parent.width; text: qsTr("Sa6i Clean"); role: "headline"; size: 20 }
+                        Txt {
+                            width: parent.width; height: 56
+                            text: qsTr("Explore storage and review PC cleaning tools.")
+                            role: "body"; muted: true; wrapMode: Text.WordWrap
+                        }
+                        Button {
+                            objectName: "hubOpenClean"
+                            text: qsTr("Open Clean")
+                            iconPath: Icons.sparkle
+                            variant: "tonal"
+                            enabled: !!sa6iCleanLoader.item && sa6iCleanLoader.item.available
+                                && !sa6iCleanLoader.item.externalOverlayOpen
+                                && !sa6iCleanLoader.item.closePending && !sa6iCleanLoader.item.shuttingDown
+                            onClicked: if (sa6iCleanLoader.item) sa6iCleanLoader.item.openClean()
+                        }
+                        Txt {
+                            width: parent.width
+                            visible: !(sa6iCleanLoader.item && sa6iCleanLoader.item.available)
+                            text: qsTr("Clean is not available in this build.")
+                            role: "caption"; muted: true; wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1276,6 +1403,24 @@ NativeWindow {
         }
     }
 
+    // Link's first-run screens also need a route back to Hub.
+    IconButton {
+        id: welcomeHubBtn
+        objectName: "hubFromWelcomeButton"
+        z: 1001
+        anchors.right: welcomeCleanBtn.visible ? welcomeCleanBtn.left : captionButtons.left
+        anchors.rightMargin: 10
+        y: Math.max(0, (Theme.topBarHeight - height) / 2)
+        visible: window.welcome && !window.hubActive
+            && !(sa6iCleanLoader.item && sa6iCleanLoader.item.cleanOpen)
+        iconPath: Icons.home
+        text: qsTr("Hub")
+        label: qsTr("Back to Sa6i Hub")
+        onClicked: window.hubActive = true
+        Component.onCompleted: window.addCaptionHole(welcomeHubBtn)
+        Component.onDestruction: window.removeCaptionHole(welcomeHubBtn)
+    }
+
     // The normal action row is hidden on the welcome and walkthrough screens.
     // Retain access there without placing an extra control over the action row.
     IconButton {
@@ -1285,7 +1430,7 @@ NativeWindow {
         anchors.right: captionButtons.left
         anchors.rightMargin: 10
         y: Math.max(0, (Theme.topBarHeight - height) / 2)
-        visible: window.welcome && !!sa6iCleanLoader.item && sa6iCleanLoader.item.available
+        visible: window.welcome && !window.hubActive && !!sa6iCleanLoader.item && sa6iCleanLoader.item.available
             && !sa6iCleanLoader.item.cleanOpen && !sa6iCleanLoader.item.externalOverlayOpen
             && !sa6iCleanLoader.item.closePending && !sa6iCleanLoader.item.shuttingDown
         iconPath: Icons.sparkle
@@ -1305,6 +1450,7 @@ NativeWindow {
 
     Loader {
         id: doctorLoader
+        z: 120
         anchors.fill: parent
         active: false
         source: active ? "qrc:/qt/qml/sa6i/link/qml/components/DoctorSheet.qml" : ""
@@ -1332,6 +1478,7 @@ NativeWindow {
 
     Loader {
         id: commandPaletteLoader
+        z: 150
         anchors.fill: parent
         active: AppController.commandPaletteOpen
         source: active ? "qrc:/qt/qml/sa6i/link/qml/components/CommandPalette.qml" : ""

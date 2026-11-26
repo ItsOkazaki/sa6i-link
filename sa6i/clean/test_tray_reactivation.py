@@ -13,7 +13,7 @@ try:
     from PySide6.QtCore import QObject, QPoint, Qt, QUrl
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlComponent, QQmlEngine
-    from PySide6.QtTest import QTest
+    from PySide6.QtTest import QSignalSpy, QTest
 except ModuleNotFoundError:
     QGuiApplication = None
 
@@ -123,6 +123,8 @@ Window {
         self.app.processEvents()
 
     def test_clean_view_uses_single_integrated_header_and_back_button(self):
+        self.integration.setProperty('backToHub', True)
+        back = QSignalSpy(self.integration.backRequested)
         self.integration.setProperty('cleanOpen', True)
         self.app.processEvents()
         header = self.window.findChild(QObject, 'cleanIntegratedHeader')
@@ -137,6 +139,7 @@ Window {
         QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, QPoint(30, 24))
         self.app.processEvents()
         self.assertFalse(self.integration.property('cleanOpen'))
+        self.assertEqual(back.count(), 1)
         self.assertFalse(header.property('visible'))
         self.assertTrue(self.backend.property('processTracked'))
 
