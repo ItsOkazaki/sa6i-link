@@ -11,6 +11,21 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class IntegratedUiTests(unittest.TestCase):
+    def test_clean_entry_uses_title_action_row_and_welcome_fallback(self):
+        # Source-level regression: the normal entry must participate in the
+        # same Row as Refresh, not be absolutely positioned over that Row.
+        main = (ROOT / 'desktop/app/qml/MainWindow.qml').read_text(encoding='utf-8')
+        integration = (ROOT / 'desktop/app/qml/components/Sa6iCleanIntegration.qml').read_text(encoding='utf-8')
+        actions = main.split('id: topBarActions', 1)[1].split('id: pages', 1)[0]
+        self.assertIn('id: cleanTopBtn', actions)
+        self.assertIn('id: refresh', actions)
+        self.assertIn('iconPath: Icons.sparkle', actions)
+        self.assertIn('sa6iCleanLoader.item.openClean()', actions)
+        self.assertIn('id: welcomeCleanBtn', main)
+        self.assertIn('visible: window.welcome && !!sa6iCleanLoader.item', main)
+        self.assertNotIn('CleanEntry {', integration)
+        self.assertNotIn('anchors.rightMargin: 160', integration)
+
     def test_window_patch_preserves_other_code_and_removes_overlay(self):
         with tempfile.TemporaryDirectory() as tmp:
             main = Path(tmp) / 'main.js'

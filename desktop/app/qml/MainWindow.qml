@@ -866,6 +866,22 @@ NativeWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
 
+                // Part of the action row, so Refresh and the other controls
+                // reserve space for Clean rather than drawing underneath it.
+                IconButton {
+                    id: cleanTopBtn
+                    objectName: "sa6iCleanEntry"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: !!sa6iCleanLoader.item && sa6iCleanLoader.item.available
+                        && !sa6iCleanLoader.item.cleanOpen && !sa6iCleanLoader.item.externalOverlayOpen
+                        && !sa6iCleanLoader.item.closePending && !sa6iCleanLoader.item.shuttingDown
+                    iconPath: Icons.sparkle
+                    text: qsTr("Sa6i Clean")
+                    label: qsTr("Open Sa6i Clean")
+                    onClicked: if (sa6iCleanLoader.item) sa6iCleanLoader.item.openClean()
+                    Component.onCompleted: window.addCaptionHole(cleanTopBtn)
+                    Component.onDestruction: window.removeCaptionHole(cleanTopBtn)
+                }
                 IconButton {
                     id: paletteTopBtn
                     anchors.verticalCenter: parent.verticalCenter
@@ -1254,6 +1270,26 @@ NativeWindow {
                 }
             }
         }
+    }
+
+    // The normal action row is hidden on the welcome and walkthrough screens.
+    // Retain access there without placing an extra control over the action row.
+    IconButton {
+        id: welcomeCleanBtn
+        objectName: "sa6iCleanWelcomeEntry"
+        z: 1001
+        anchors.right: captionButtons.left
+        anchors.rightMargin: 10
+        y: Math.max(0, (Theme.topBarHeight - height) / 2)
+        visible: window.welcome && !!sa6iCleanLoader.item && sa6iCleanLoader.item.available
+            && !sa6iCleanLoader.item.cleanOpen && !sa6iCleanLoader.item.externalOverlayOpen
+            && !sa6iCleanLoader.item.closePending && !sa6iCleanLoader.item.shuttingDown
+        iconPath: Icons.sparkle
+        text: qsTr("Sa6i Clean")
+        label: qsTr("Open Sa6i Clean")
+        onClicked: if (sa6iCleanLoader.item) sa6iCleanLoader.item.openClean()
+        Component.onCompleted: window.addCaptionHole(welcomeCleanBtn)
+        Component.onDestruction: window.removeCaptionHole(welcomeCleanBtn)
     }
 
     CaptionButtons {

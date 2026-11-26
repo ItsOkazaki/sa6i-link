@@ -129,21 +129,6 @@ Item {
     onExternalOverlayOpenChanged: syncViewport()
     onVisibleChanged: syncViewport()
 
-    CleanEntry {
-        id: entry
-        objectName: "sa6iCleanEntry"
-        anchors.right: parent.right
-        anchors.rightMargin: 160
-        y: Math.max(0, (root.titleBarHeight - height) / 2)
-        width: 112
-        height: 36
-        visible: root.available && !root.cleanOpen && !root.externalOverlayOpen && !closeGate.pending && !root.shuttingDown
-        available: visible
-        onOpenRequested: root.openClean()
-        Component.onCompleted: root.hostWindow.addCaptionHole(entry)
-        Component.onDestruction: root.hostWindow.removeCaptionHole(entry)
-    }
-
     // Replace the app's existing title content while retaining its native
     // caption buttons at the right. The cleaner does not own another window
     // toolbar in the Qt layout.
