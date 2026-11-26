@@ -1095,6 +1095,7 @@ NativeWindow {
     // (z=100), caption buttons and the Clean coordinator stay above it.
     Item {
         id: hubHome
+        property bool dzFixOpen: false
         objectName: "hubHome"
         anchors.fill: parent
         z: 10
@@ -1125,6 +1126,7 @@ NativeWindow {
         }
         Column {
             id: hubContent
+            visible: !hubHome.dzFixOpen
             anchors.centerIn: parent
             width: Math.max(0, Math.min(700, parent.width - 48))
             spacing: 24
@@ -1194,6 +1196,71 @@ NativeWindow {
                             visible: !(sa6iCleanLoader.item && sa6iCleanLoader.item.available)
                             text: qsTr("Clean is not available in this build.")
                             role: "caption"; muted: true; wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+            }
+            Button {
+                objectName: "hubOpenDzFix"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("Open DZ FIX — diagnostic preview")
+                variant: "outline"
+                onClicked: hubHome.dzFixOpen = true
+            }
+        }
+        Flickable {
+            id: dzFixView
+            objectName: "dzFixView"
+            visible: hubHome.dzFixOpen
+            anchors.top: parent.top
+            anchors.topMargin: Theme.topBarHeight + 12
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            clip: true
+            contentHeight: dzContent.height + 24
+            Column {
+                id: dzContent
+                x: Math.max(24, (dzFixView.width - width) / 2)
+                width: Math.max(0, Math.min(700, dzFixView.width - 48))
+                spacing: 16
+                Button {
+                    objectName: "dzFixBack"
+                    text: qsTr("Back to Hub")
+                    variant: "text"
+                    onClicked: hubHome.dzFixOpen = false
+                }
+                Txt { text: qsTr("DZ FIX — diagnostic preview"); role: "headline"; width: parent.width; wrapMode: Text.WordWrap }
+                Txt {
+                    width: parent.width; wrapMode: Text.WordWrap; role: "body"
+                    text: qsTr("This local scan checks network status and Windows drive space. It makes no internet requests or repairs and does not need administrator approval.")
+                }
+                Button {
+                    objectName: "dzFixScan"
+                    text: AppController.dzFixBusy ? qsTr("Checking…") : qsTr("Run local scan")
+                    enabled: !AppController.dzFixBusy
+                    onClicked: AppController.runDzFixScan()
+                }
+                Txt {
+                    visible: !AppController.dzFixBusy && AppController.dzFixChecks.length === 0
+                    width: parent.width; wrapMode: Text.WordWrap; muted: true
+                    text: qsTr("No checks run yet. Internet testing and repairs are not included in this preview.")
+                }
+                Repeater {
+                    model: {
+                        if (!AppController.dzFixChecks) return []
+                        try { return JSON.parse(AppController.dzFixChecks) } catch (e) { return [] }
+                    }
+                    delegate: Card {
+                        required property var modelData
+                        width: dzContent.width
+                        height: resultColumn.implicitHeight + padding * 2
+                        Column {
+                            id: resultColumn
+                            width: parent.width
+                            spacing: 6
+                            Txt { width: parent.width; role: "title"; wrapMode: Text.WordWrap; text: modelData.title + " — " + modelData.status }
+                            Txt { width: parent.width; wrapMode: Text.WordWrap; text: modelData.detail }
                         }
                     }
                 }

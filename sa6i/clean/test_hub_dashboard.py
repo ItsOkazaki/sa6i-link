@@ -28,7 +28,7 @@ class HubDashboardTests(unittest.TestCase):
         start = source.index('    Item {\n        id: hubHome\n')
         end = source.index('    // ---- Overlays ----', start)
         body = source[start:end].replace('Theme.', 'theme.').replace('Icons.', 'icons.')
-        body = body.replace('sa6iCleanLoader.item', 'cleaner')
+        body = body.replace('sa6iCleanLoader.item', 'cleaner').replace('AppController.', 'controller.')
         with TemporaryDirectory() as tmp:
             directory = Path(tmp)
             (directory / 'Card.qml').write_text(
@@ -52,6 +52,7 @@ property alias dashboard: hubHome
 QtObject { id: theme; property int topBarHeight: 52; property int contentPadding: 22 }
 QtObject { id: icons; property string phone: "phone"; property string sparkle: "sparkle" }
 QtObject { id: captionButtons; property int width: 138 }
+QtObject { id: controller; property bool dzFixBusy: false; property string dzFixChecks: ""; function runDzFixScan() { dzFixChecks = '[{"title":"Network","status":"unknown","detail":"Test"}]' } }
 QtObject { id: cleaner; property bool cleanOpen: false; property bool available: true
     property bool externalOverlayOpen: false; property bool closePending: false
     property bool shuttingDown: false; function openClean() { cleanOpen = true } }
@@ -82,6 +83,21 @@ QtObject { id: cleaner; property bool cleanOpen: false; property bool available:
             self.assertFalse(window.property('hubActive'))
             window.setProperty('hubActive', True)
             app.processEvents()
+            dz = window.findChild(QQuickItem, 'hubOpenDzFix')
+            self.assertIsNotNone(dz)
+            point = dz.mapToScene(QPointF(10, 10))
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
+            app.processEvents()
+            self.assertTrue(window.findChild(QQuickItem, 'dzFixView').property('visible'))
+            scan = window.findChild(QQuickItem, 'dzFixScan')
+            point = scan.mapToScene(QPointF(10, 10))
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
+            app.processEvents()
+            back = window.findChild(QQuickItem, 'dzFixBack')
+            point = back.mapToScene(QPointF(10, 10))
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
+            app.processEvents()
+            self.assertFalse(window.findChild(QQuickItem, 'dzFixView').property('visible'))
             point = clean.mapToScene(QPointF(10, 10))
             QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
             app.processEvents()

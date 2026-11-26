@@ -146,6 +146,19 @@ pub fn networks() -> windows::core::Result<Vec<Network>> {
     })
 }
 
+/// DZ FIX: check whether Windows lists a connected network. Unlike the
+/// connection-doctor helper, propagate enumeration errors as unknown.
+pub fn has_connected_network() -> windows::core::Result<bool> {
+    with_com(|| unsafe {
+        let manager: INetworkListManager = CoCreateInstance(&NetworkListManager, None, CLSCTX_INPROC_SERVER)?;
+        let list = manager.GetNetworks(NLM_ENUM_NETWORK_CONNECTED)?;
+        let mut item: [Option<INetwork>; 1] = [None];
+        let mut fetched = 0;
+        list.Next(&mut item, Some(&mut fetched))?;
+        Ok(fetched > 0 && item[0].is_some())
+    })
+}
+
 /// What the network adapters say: whether one has a local address, and
 /// whether a VPN is up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

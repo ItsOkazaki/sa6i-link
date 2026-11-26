@@ -72,6 +72,9 @@ pub mod qobject {
         #[qproperty(QString, doctor_checks)]
         /// Checking, or fixing.
         #[qproperty(bool, doctor_busy)]
+        /// DZ FIX read-only local scan results.
+        #[qproperty(QString, dz_fix_checks)]
+        #[qproperty(bool, dz_fix_busy)]
         /// This copy updates itself (it's installed).
         #[qproperty(bool, can_update)]
         /// A newer version that's available ("" when none).
@@ -329,6 +332,10 @@ pub mod qobject {
         #[qinvokable]
         fn doctor_fix(self: Pin<&mut AppController>, fix: &QString);
 
+        /// Starts a read-only local DZ FIX scan.
+        #[qinvokable]
+        fn run_dz_fix_scan(self: Pin<&mut AppController>);
+
         /// Checks for an update now and says what it found.
         #[qinvokable]
         fn check_for_updates(self: Pin<&mut AppController>);
@@ -438,6 +445,8 @@ pub struct AppControllerRust {
     version: QString,
     doctor_checks: QString,
     doctor_busy: bool,
+    dz_fix_checks: QString,
+    dz_fix_busy: bool,
     can_update: bool,
     update_version: QString,
     update_busy: bool,
@@ -1806,6 +1815,25 @@ impl qobject::AppController {
 
     pub fn install_update(self: Pin<&mut Self>) {
         install_update_in_background();
+    }
+
+    pub fn run_dz_fix_scan(mut self: Pin<&mut Self>) {
+        if self.dz_fix_busy { return; }
+        self.as_mut().set_dz_fix_busy(true);
+        self.as_mut().set_dz_fix_checks(QString::from(""));
+        let qt = self.qt_thread();
+        let spawned = std::thread::Builder::new().name("dz-fix-scan".into()).spawn(move || {
+            let result = std::panic::catch_unwind(crate::dz_fix::scan_json)
+                .unwrap_or_else(|_| "[{\"title\":\"Scan\",\"status\":\"unknown\",\"detail\":\"The scan could not be completed.\"}]".into());
+            let _ = qt.queue(move |mut object| {
+                object.as_mut().set_dz_fix_checks(QString::from(&result));
+                object.set_dz_fix_busy(false);
+            });
+        });
+        if spawned.is_err() {
+            self.as_mut().set_dz_fix_checks(QString::from("[{\"title\":\"Scan\",\"status\":\"unknown\",\"detail\":\"The scan could not start.\"}]"));
+            self.set_dz_fix_busy(false);
+        }
     }
 
     pub fn run_doctor(mut self: Pin<&mut Self>) {

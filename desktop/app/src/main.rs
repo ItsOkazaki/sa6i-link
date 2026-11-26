@@ -18,6 +18,7 @@ mod continuity_camera;
 mod core_host;
 mod deck;
 mod doctor;
+mod dz_fix;
 mod feed;
 mod folder_sync;
 mod hotspot;
