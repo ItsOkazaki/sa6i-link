@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 import prepare_integrated_ui as ui
-import harden_candidate as hardened
+import remove_support_navigation as cleaner
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -55,13 +55,13 @@ class IntegratedUiTests(unittest.TestCase):
         arrays = re.findall(r'static const BYTE expected_(?:exe|asar)\[32\] = \{([^}]+)\}', block)
         self.assertEqual(len(arrays), 2)
         actual = [bytes(int(n, 16) for n in re.findall(r'0x([0-9a-fA-F]{2})', arr)).hex() for arr in arrays]
-        self.assertEqual(actual, [hardened.NEW_EXE_SHA, hardened.NEW_ASAR_SHA])
+        self.assertEqual(actual, [cleaner.OUTPUT_EXE_SHA, cleaner.OUTPUT_ASAR_SHA])
         workflow = (ROOT / '.github/workflows/sa6i-clean-win7-build.yml').read_text(encoding='utf-8')
-        self.assertIn(hardened.NEW_EXE_SHA, workflow)
-        self.assertIn(hardened.NEW_ASAR_SHA, workflow)
+        self.assertIn(cleaner.OUTPUT_EXE_SHA, workflow)
+        self.assertIn(cleaner.OUTPUT_ASAR_SHA, workflow)
         smoke_helper = (ROOT / 'sa6i/clean/tests/prepare_synthetic_desktop.py').read_text(encoding='utf-8')
-        self.assertIn(hardened.NEW_EXE_SHA, smoke_helper)
-        self.assertIn(hardened.NEW_ASAR_SHA, smoke_helper)
+        self.assertIn(cleaner.OUTPUT_EXE_SHA, smoke_helper)
+        self.assertIn(cleaner.OUTPUT_ASAR_SHA, smoke_helper)
 
 
 if __name__ == '__main__':

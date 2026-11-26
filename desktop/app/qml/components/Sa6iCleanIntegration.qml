@@ -174,15 +174,6 @@ Item {
                 onClicked: root.cleanOpen = false
             }
         }
-        Text {
-            anchors.left: backButton.right
-            anchors.leftMargin: 20
-            anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("Sa6i Clean")
-            color: root.headerTextColor
-            font.pixelSize: 18
-            font.bold: true
-        }
     }
 
     // Keep a neutral strip between the header and the native child when the
