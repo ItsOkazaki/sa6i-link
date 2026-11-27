@@ -1824,14 +1824,14 @@ impl qobject::AppController {
         let qt = self.qt_thread();
         let spawned = std::thread::Builder::new().name("dz-fix-scan".into()).spawn(move || {
             let result = std::panic::catch_unwind(crate::dz_fix::scan_json)
-                .unwrap_or_else(|_| "[{\"title\":\"Scan\",\"status\":\"unknown\",\"detail\":\"The scan could not be completed.\"}]".into());
+                .unwrap_or_else(|_| r#"{"error":"The scan could not be completed."}"#.into());
             let _ = qt.queue(move |mut object| {
                 object.as_mut().set_dz_fix_checks(QString::from(&result));
                 object.set_dz_fix_busy(false);
             });
         });
         if spawned.is_err() {
-            self.as_mut().set_dz_fix_checks(QString::from("[{\"title\":\"Scan\",\"status\":\"unknown\",\"detail\":\"The scan could not start.\"}]"));
+            self.as_mut().set_dz_fix_checks(QString::from(r#"{"error":"The scan could not start."}"#));
             self.set_dz_fix_busy(false);
         }
     }

@@ -15,6 +15,7 @@ name = "sa6i-link"
 path = "src/main.rs"
 
 [dependencies]
+dzfix-core = { path = "../../core/dzfix-core" }
 anyhow.workspace = true
 blake3.workspace = true
 cxx.workspace = true

@@ -28,6 +28,7 @@ const QML: &[&str] = &[
     "qml/components/CallCard.qml",
     "qml/components/CaptionButtons.qml",
     "qml/components/Card.qml",
+    "qml/components/DzFixOverview.qml",
     "qml/components/CleanEntry.qml",
     "qml/components/CleanView.qml",
     "qml/components/CleanCloseGate.qml",

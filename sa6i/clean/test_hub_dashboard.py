@@ -31,6 +31,8 @@ class HubDashboardTests(unittest.TestCase):
         body = body.replace('sa6iCleanLoader.item', 'cleaner').replace('AppController.', 'controller.')
         with TemporaryDirectory() as tmp:
             directory = Path(tmp)
+            overview = (ROOT / 'desktop/app/qml/components/DzFixOverview.qml').read_text(encoding='utf-8')
+            (directory / 'DzFixOverview.qml').write_text(overview.replace('import sa6i.link\n', ''), encoding='utf-8')
             (directory / 'Card.qml').write_text(
                 'import QtQuick\nRectangle {property int padding: 16; '
                 'default property alias content: inner.data; Item {id: inner; '
@@ -49,10 +51,11 @@ property bool hubActive: true
 property color windowSurface: "white"
 property alias cleaner: cleaner
 property alias dashboard: hubHome
+property alias testController: controller
 QtObject { id: theme; property int topBarHeight: 52; property int contentPadding: 22 }
 QtObject { id: icons; property string phone: "phone"; property string sparkle: "sparkle" }
 QtObject { id: captionButtons; property int width: 138 }
-QtObject { id: controller; property bool dzFixBusy: false; property string dzFixChecks: ""; function runDzFixScan() { dzFixChecks = '[{"title":"Network","status":"unknown","detail":"Test"}]' } }
+QtObject { id: controller; property bool dzFixBusy: false; property string dzFixChecks: ""; function runDzFixScan() { dzFixChecks = '{"schema_version":1,"captured_unix_ms":123,"cpu_interval_ms":10000,"cpu_percent":{"state":"available","value":42.0},"memory":{"state":"available","value":{"total":8589934592,"available":2147483648}},"windows_drive":{"state":"unavailable","reason":"error"},"network_connected":{"state":"available","value":true}}' } }
 QtObject { id: cleaner; property bool cleanOpen: false; property bool available: true
     property bool externalOverlayOpen: false; property bool closePending: false
     property bool shuttingDown: false; function openClean() { cleanOpen = true } }
@@ -89,10 +92,20 @@ QtObject { id: cleaner; property bool cleanOpen: false; property bool available:
             QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
             app.processEvents()
             self.assertTrue(window.findChild(QQuickItem, 'dzFixView').property('visible'))
+            self.assertEqual(window.findChild(QQuickItem, 'dzCpuCard').property('value'), '—')
             scan = window.findChild(QQuickItem, 'dzFixScan')
             point = scan.mapToScene(QPointF(10, 10))
             QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))
             app.processEvents()
+            self.assertEqual(window.findChild(QQuickItem, 'dzCpuCard').property('value'), '42.0%')
+            self.assertEqual(window.findChild(QQuickItem, 'dzMemoryCard').property('value'), '2.0 GiB')
+            self.assertEqual(window.findChild(QQuickItem, 'dzDriveCard').property('value'), '—')
+            self.assertEqual(window.findChild(QQuickItem, 'dzNetworkCard').property('value'), 'Connected')
+            controller = window.property('testController')
+            controller.setProperty('dzFixChecks', '{bad json')
+            app.processEvents()
+            self.assertTrue(window.findChild(QQuickItem, 'dzFixError').property('visible'))
+            self.assertEqual(window.findChild(QQuickItem, 'dzCpuCard').property('value'), '—')
             back = window.findChild(QQuickItem, 'dzFixBack')
             point = back.mapToScene(QPointF(10, 10))
             QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(round(point.x()), round(point.y())))

@@ -1053,6 +1053,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
+name = "dzfix-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ed25519"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2486,6 +2494,7 @@ dependencies = [
 name = "sa6i-link"
 version = "0.1.5"
 dependencies = [
+ "dzfix-core",
  "anyhow",
  "blake3",
  "cc",

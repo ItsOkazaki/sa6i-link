@@ -1208,63 +1208,19 @@ NativeWindow {
                 onClicked: hubHome.dzFixOpen = true
             }
         }
-        Flickable {
+        DzFixOverview {
             id: dzFixView
             objectName: "dzFixView"
             visible: hubHome.dzFixOpen
             anchors.top: parent.top
-            anchors.topMargin: Theme.topBarHeight + 12
+            anchors.topMargin: Theme.topBarHeight
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            clip: true
-            contentHeight: dzContent.height + 24
-            Column {
-                id: dzContent
-                x: Math.max(24, (dzFixView.width - width) / 2)
-                width: Math.max(0, Math.min(700, dzFixView.width - 48))
-                spacing: 16
-                Button {
-                    objectName: "dzFixBack"
-                    text: qsTr("Back to Hub")
-                    variant: "text"
-                    onClicked: hubHome.dzFixOpen = false
-                }
-                Txt { text: qsTr("DZ FIX — diagnostic preview"); role: "headline"; width: parent.width; wrapMode: Text.WordWrap }
-                Txt {
-                    width: parent.width; wrapMode: Text.WordWrap; role: "body"
-                    text: qsTr("This local scan checks network status and Windows drive space. It makes no internet requests or repairs and does not need administrator approval.")
-                }
-                Button {
-                    objectName: "dzFixScan"
-                    text: AppController.dzFixBusy ? qsTr("Checking…") : qsTr("Run local scan")
-                    enabled: !AppController.dzFixBusy
-                    onClicked: AppController.runDzFixScan()
-                }
-                Txt {
-                    visible: !AppController.dzFixBusy && AppController.dzFixChecks.length === 0
-                    width: parent.width; wrapMode: Text.WordWrap; muted: true
-                    text: qsTr("No checks run yet. Internet testing and repairs are not included in this preview.")
-                }
-                Repeater {
-                    model: {
-                        if (!AppController.dzFixChecks) return []
-                        try { return JSON.parse(AppController.dzFixChecks) } catch (e) { return [] }
-                    }
-                    delegate: Card {
-                        required property var modelData
-                        width: dzContent.width
-                        height: resultColumn.implicitHeight + padding * 2
-                        Column {
-                            id: resultColumn
-                            width: parent.width
-                            spacing: 6
-                            Txt { width: parent.width; role: "title"; wrapMode: Text.WordWrap; text: modelData.title + " — " + modelData.status }
-                            Txt { width: parent.width; wrapMode: Text.WordWrap; text: modelData.detail }
-                        }
-                    }
-                }
-            }
+            busy: AppController.dzFixBusy
+            payload: AppController.dzFixChecks
+            onBackRequested: hubHome.dzFixOpen = false
+            onScanRequested: AppController.runDzFixScan()
         }
     }
 

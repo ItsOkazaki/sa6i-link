@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "core/dzfix-core",
     "core/sa6i-link-adb",
     "core/sa6i-link-protocol",
     "core/sa6i-link-core",
