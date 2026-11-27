@@ -10,7 +10,8 @@ pub fn scan_json() -> String {
             Err(_) => Reading::Unavailable { reason: UnavailableReason::Error },
         };
         match dzfix_core::windows::collect(std::time::Duration::from_secs(10), network) {
-            Ok(snapshot) => serde_json::to_string(&snapshot).unwrap_or_else(|_| r#"{"error":"The result could not be displayed."}"#.into()),
+            Ok(snapshot) => serde_json::to_string(&snapshot)
+                .unwrap_or_else(|_| r#"{"error":"The result could not be displayed."}"#.into()),
             Err(_) => r#"{"error":"The scan could not be completed."}"#.into(),
         }
     }

@@ -1818,7 +1818,9 @@ impl qobject::AppController {
     }
 
     pub fn run_dz_fix_scan(mut self: Pin<&mut Self>) {
-        if self.dz_fix_busy { return; }
+        if self.dz_fix_busy {
+            return;
+        }
         self.as_mut().set_dz_fix_busy(true);
         self.as_mut().set_dz_fix_checks(QString::from(""));
         let qt = self.qt_thread();
